@@ -1,6 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
-
-// Pages — we'll create these one by one, placeholders for now
+import LandingPage    from "./pages/LandingPage"
 import LoginPage      from "./pages/LoginPage"
 import SignupPage     from "./pages/SignupPage"
 import DashboardPage  from "./pages/DashboardPage"
@@ -10,27 +9,28 @@ import VolunteersPage from "./pages/VolunteersPage"
 import ImpactPage     from "./pages/ImpactPage"
 import VolunteerHome  from "./pages/VolunteerHome"
 
-function App() {
-    return (
-        <BrowserRouter>
-            <Routes>
-                {/* Public routes */}
-                <Route path="/"       element={<Navigate to="/login" replace />} />
-                <Route path="/login"  element={<LoginPage />} />
-                <Route path="/signup" element={<SignupPage />} />
+const App = () => (
+    <BrowserRouter>
+        <Routes>
+            {/* Public */}
+            <Route path="/"       element={<LandingPage />} />
+            <Route path="/login"  element={<LoginPage />} />
+            <Route path="/signup" element={<SignupPage />} />
 
-                {/* Coordinator routes */}
-                <Route path="/dashboard"  element={<DashboardPage />} />
-                <Route path="/heatmap"    element={<HeatmapPage />} />
-                <Route path="/tasks"      element={<TasksPage />} />
-                <Route path="/volunteers" element={<VolunteersPage />} />
-                <Route path="/impact"     element={<ImpactPage />} />
+            {/* Coordinator */}
+            <Route path="/dashboard"  element={<DashboardPage />} />
+            <Route path="/heatmap"    element={<HeatmapPage />} />
+            <Route path="/tasks"      element={<TasksPage />} />
+            <Route path="/volunteers" element={<VolunteersPage />} />
+            <Route path="/impact"     element={<ImpactPage />} />
 
-                {/* Volunteer routes */}
-                <Route path="/home" element={<VolunteerHome />} />
-            </Routes>
-        </BrowserRouter>
-    )
-}
+            {/* Volunteer */}
+            <Route path="/home" element={<VolunteerHome />} />
+
+            {/* Fallback */}
+            <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+    </BrowserRouter>
+)
 
 export default App
