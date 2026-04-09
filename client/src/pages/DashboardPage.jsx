@@ -158,6 +158,12 @@ const Sidebar = ({ active, setActive, collapsed, setCollapsed }) => {
                                    onClick={() => {
                                        setActive(item.key)
                                        if (item.key === "heatmap") navigate("/heatmap")
+                                       if (item.key === "survey") navigate("/survey")
+                                       if (item.key === "analytics") navigate("/analytics")
+                                       if (item.key === "settings") navigate("/settings")
+                                       if (item.key === "reports") navigate("/reports")
+
+
                                    }}
                                    style={{
                                        display:"flex", alignItems:"center", gap:10, padding:"9px 10px",
@@ -285,7 +291,7 @@ const Topbar = ({ collapsed, onNewNeed }) => {
                                style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 14px",
                                    borderRadius:10, background:c.surface, color:c.text, fontWeight:700,
                                    fontSize:12, border:`1px solid ${c.border}`, cursor:"pointer" }}>
-                    <Map size={13} /> Open Heatmap
+                    <MapPin size={13} /> Open Heatmap
                 </motion.button>
 
                 {/* Notifications */}

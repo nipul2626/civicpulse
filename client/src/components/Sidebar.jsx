@@ -1,18 +1,19 @@
 import { NavLink, useNavigate } from "react-router-dom"
 import {
     LayoutDashboard, MapPin, ClipboardList, Users,
-    BarChart3, Package, FileText, LogOut, Zap
+    BarChart3, Package, FileText, LogOut, Zap, Settings, ClipboardCheck
 } from "lucide-react"
 
 const navItems = {
     coordinator: [
-        { to: "/dashboard",   icon: LayoutDashboard, label: "Dashboard"   },
-        { to: "/heatmap",     icon: MapPin,           label: "Heatmap"     },
-        { to: "/tasks",       icon: ClipboardList,    label: "Tasks"       },
-        { to: "/volunteers",  icon: Users,            label: "Volunteers"  },
-        { to: "/impact",      icon: BarChart3,        label: "Impact"      },
-        { to: "/resources",   icon: Package,          label: "Resources"   },
-        { to: "/sitrep",      icon: FileText,         label: "Sitrep"      },
+        { to: "/dashboard",  icon: LayoutDashboard, label: "Dashboard"  },
+        { to: "/heatmap",    icon: MapPin,             label: "Heatmap"    },
+        { to: "/tasks",      icon: ClipboardList,   label: "Task Board" },
+        { to: "/volunteers", icon: Users,           label: "Volunteers" },
+        { to: "/reports",    icon: FileText,        label: "Reports"    },
+        { to: "/survey",     icon: ClipboardCheck,  label: "Survey"     },
+        { to: "/analytics",  icon: BarChart3,       label: "Analytics"  },
+        { to: "/settings",   icon: Settings,        label: "Settings"   },
     ],
     volunteer: [
         { to: "/home",        icon: LayoutDashboard,  label: "Home"        },

@@ -9,6 +9,10 @@ import VolunteersPage from "./pages/VolunteersPage"
 import ImpactPage     from "./pages/ImpactPage"
 import VolunteerHome  from "./pages/VolunteerHome"
 import ReportNeedPage from "./pages/ReportNeedPage"
+import SurveyPage    from "./pages/SurveyPage"
+import ReportsPage   from "./pages/ReportsPage"
+import AnalyticsPage from "./pages/AnalyticsPage"
+import SettingsPage  from "./pages/SettingsPage"
 
 const App = () => (
     <BrowserRouter>
@@ -28,6 +32,11 @@ const App = () => (
 
             {/* Volunteer */}
             <Route path="/home" element={<VolunteerHome />} />
+
+            <Route path="/survey"    element={<SurveyPage />}    />
+            <Route path="/reports"   element={<ReportsPage />}   />
+            <Route path="/analytics" element={<AnalyticsPage />} />
+            <Route path="/settings"  element={<SettingsPage />}  />
 
             {/* Fallback */}
             <Route path="*" element={<Navigate to="/" replace />} />
