@@ -8,6 +8,7 @@ import TasksPage      from "./pages/TasksPage"
 import VolunteersPage from "./pages/VolunteersPage"
 import ImpactPage     from "./pages/ImpactPage"
 import VolunteerHome  from "./pages/VolunteerHome"
+import ReportNeedPage from "./pages/ReportNeedPage"
 
 const App = () => (
     <BrowserRouter>
@@ -23,6 +24,7 @@ const App = () => (
             <Route path="/tasks"      element={<TasksPage />} />
             <Route path="/volunteers" element={<VolunteersPage />} />
             <Route path="/impact"     element={<ImpactPage />} />
+            <Route path="/report"    element={<ReportNeedPage />} />
 
             {/* Volunteer */}
             <Route path="/home" element={<VolunteerHome />} />
