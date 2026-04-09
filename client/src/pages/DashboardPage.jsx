@@ -15,10 +15,10 @@ import {
 const COORDINATOR = { name: "Riya Sharma", org: "Green Horizon Foundation", city: "Mumbai", avatar: "RS" }
 
 const STATS = [
-    { label:"Critical Needs", value:14, delta:"+2", deltaDir:"up", urgent:true,  icon:<Flame size={18}/>,  color:"#E05A3A", bg:"rgba(224,90,58,0.15)"  },
-    { label:"Volunteers Active", value:38, delta:"+3 today", deltaDir:"up", icon:<Users size={18}/>, color:"#5A7863", bg:"rgba(90,120,99,0.15)" },
-    { label:"Resolved Today",  value:62, delta:"↑12%",      deltaDir:"up", icon:<CheckCircle size={18}/>, color:"#3B9E7E", bg:"rgba(59,158,126,0.15)" },
-    { label:"People Helped",   value:847, delta:"This week", deltaDir:"up", icon:<Heart size={18}/>,      color:"#7B68D6", bg:"rgba(123,104,214,0.15)" },
+    { label:"Critical Needs", value:14, delta:"+2", deltaDir:"up", urgent:true,  icon:<Flame size={18}/>,  color:"#dfa292", bg:"rgb(90 39 60)"  },
+    { label:"Volunteers Active", value:38, delta:"+3 today", deltaDir:"up", icon:<Users size={18}/>, color:"#71e494", bg:"rgb(56 119 73 / 0.66)" },
+    { label:"Resolved Today",  value:62, delta:"↑12%",      deltaDir:"up", icon:<CheckCircle size={18}/>, color:"#c0dad2", bg:"rgba(59,158,126,0.15)" },
+    { label:"People Helped",   value:847, delta:"This week", deltaDir:"up", icon:<Heart size={18}/>,      color:"#aca3d5", bg:"rgb(104 89 182 / 0.15)" },
 ]
 
 const WEEKLY = [
@@ -32,11 +32,11 @@ const WEEKLY = [
 ]
 
 const CATEGORIES = [
-    { name:"Food",      count:5,  color:"#E05A3A", pct:35 },
+    { name:"Food",      count:5,  color:"#bf55be", pct:35 },
     { name:"Medical",   count:8,  color:"#E0445A", pct:55 },
     { name:"Shelter",   count:3,  color:"#7B68D6", pct:20 },
     { name:"Water",     count:6,  color:"#4A9FD4", pct:42 },
-    { name:"Education", count:2,  color:"#5A7863", pct:14 },
+    { name:"Education", count:2,  color:"#68e18d", pct:14 },
 ]
 
 const MAP_DOTS = [
@@ -91,13 +91,13 @@ const RECENT_NEEDS = [
 
 /* ─── HELPERS ────────────────────────────────────────────────────────────── */
 const c = {
-    bg:      "#0D1F19",
-    surface: "#142820",
-    card:    "#1A3328",
+    bg:      "#0f0f10",
+    surface: "#202c1f",
+    card:    "#1b3027",
     border:  "rgba(90,120,99,0.2)",
-    text:    "#EBF4DD",
-    muted:   "#7A9B83",
-    accent:  "#5A7863",
+    text:    "#f6f4f4",
+    muted:   "#c4d6c9",
+    accent:  "#097a2c",
 }
 
 const Card = ({ children, style={}, className="" }) => (
@@ -134,7 +134,7 @@ const Sidebar = ({ active, setActive, collapsed, setCollapsed }) => {
             {/* Logo */}
             <div style={{ padding:"18px 14px", display:"flex", alignItems:"center",
                 gap:10, borderBottom:`1px solid ${c.border}` }}>
-                <motion.div style={{ width:34, height:34, borderRadius:10, background:"#5A7863",
+                <motion.div style={{ width:34, height:34, borderRadius:10, background:"#334538",
                     display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                     <Zap size={16} color="#EBF4DD" />
                 </motion.div>
@@ -158,6 +158,14 @@ const Sidebar = ({ active, setActive, collapsed, setCollapsed }) => {
                                    onClick={() => {
                                        setActive(item.key)
                                        if (item.key === "heatmap") navigate("/heatmap")
+                                       if (item.key === "survey") navigate("/survey")
+                                       if (item.key === "analytics") navigate("/analytics")
+                                       if (item.key === "settings") navigate("/settings")
+                                       if (item.key === "reports") navigate("/reports")
+                                       if (item.key === "tasks") navigate("/tasks")
+                                       if (item.key === "volunteers") navigate("/volunteers")
+
+
                                    }}
                                    style={{
                                        display:"flex", alignItems:"center", gap:10, padding:"9px 10px",
@@ -285,7 +293,7 @@ const Topbar = ({ collapsed, onNewNeed }) => {
                                style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 14px",
                                    borderRadius:10, background:c.surface, color:c.text, fontWeight:700,
                                    fontSize:12, border:`1px solid ${c.border}`, cursor:"pointer" }}>
-                    <Map size={13} /> Open Heatmap
+                    <MapPin size={13} /> Open Heatmap
                 </motion.button>
 
                 {/* Notifications */}
@@ -299,7 +307,7 @@ const Topbar = ({ collapsed, onNewNeed }) => {
                         <Bell size={16} />
                         {notifs > 0 && (
                             <span style={{ position:"absolute", top:-4, right:-4, width:16, height:16,
-                                borderRadius:"50%", background:"#E05A3A", color:"#fff",
+                                borderRadius:"50%", background:"#3a160d", color:"#fff",
                                 fontSize:9, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center" }}>
                 {notifs}
               </span>
@@ -348,7 +356,7 @@ const StatCards = () => (
                                     gap:4, padding:"2px 8px", borderRadius:6, background:"rgba(224,90,58,0.2)",
                                     border:"1px solid rgba(224,90,58,0.4)" }}>
                         <AlertTriangle size={9} color="#E05A3A" />
-                        <span style={{ color:"#E05A3A", fontSize:9, fontWeight:700 }}>Urgent</span>
+                        <span style={{ color:"#4a190c", fontSize:9, fontWeight:700 }}>Urgent</span>
                     </motion.div>
                 )}
                 {!s.urgent && (
