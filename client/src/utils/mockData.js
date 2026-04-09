@@ -29,3 +29,37 @@ export const MOCK_STATS = {
     peopleHelped:     1240,
     avgResponseTime:  "38 min",
 }
+
+export const MOCK_TASKS = [
+    { id:1,  title:"Distribute food packets",   category:"food",     urgency:5, zone:"Dharavi",    volunteer:"Priya Sharma",  status:"unassigned", time:"2h ago"  },
+    { id:2,  title:"Medical camp setup",        category:"medical",  urgency:4, zone:"Kurla West",  volunteer:"Rahul Mehta",   status:"assigned",   time:"3h ago"  },
+    { id:3,  title:"Emergency shelter repair",  category:"shelter",  urgency:5, zone:"Chembur",     volunteer:"Vikram Singh",  status:"inprogress", time:"1h ago"  },
+    { id:4,  title:"Water purification drive",  category:"water",    urgency:3, zone:"Ghatkopar",   volunteer:"Sunita Patil",  status:"completed",  time:"5h ago"  },
+    { id:5,  title:"Child tutoring session",    category:"education",urgency:2, zone:"Mankhurd",    volunteer:"Anita Desai",   status:"assigned",   time:"1d ago"  },
+    { id:6,  title:"Flood relief coordination", category:"shelter",  urgency:5, zone:"Vikhroli",    volunteer:"Priya Sharma",  status:"inprogress", time:"30m ago" },
+    { id:7,  title:"Medicine delivery",         category:"medical",  urgency:4, zone:"Sion",        volunteer:"Rahul Mehta",   status:"unassigned", time:"4h ago"  },
+    { id:8,  title:"Community kitchen",         category:"food",     urgency:3, zone:"Govandi",     volunteer:"Anita Desai",   status:"completed",  time:"6h ago"  },
+    { id:9,  title:"Sanitation inspection",     category:"water",    urgency:4, zone:"Bhandup",     volunteer:"Vikram Singh",  status:"assigned",   time:"2h ago"  },
+    { id:10, title:"Trauma support session",    category:"medical",  urgency:3, zone:"Trombay",     volunteer:"Sunita Patil",  status:"inprogress", time:"8h ago"  },
+]
+
+export const MOCK_ACTIVITY = [
+    { id:1, type:"ai",        msg:"AI scored 3 new needs in Dharavi — 2 critical",      time:"2m ago",  color:"#dc2626" },
+    { id:2, type:"assign",    msg:"Priya Sharma assigned to flood relief in Vikhroli",   time:"8m ago",  color:"#2563eb" },
+    { id:3, type:"complete",  msg:"Water purification task completed in Ghatkopar",      time:"22m ago", color:"#16a34a" },
+    { id:4, type:"submit",    msg:"Field Officer C submitted 12 new needs via bulk CSV", time:"35m ago", color:"#d97706" },
+    { id:5, type:"ai",        msg:"Deduplication merged 5 overlapping food needs",       time:"1h ago",  color:"#7c3aed" },
+    { id:6, type:"assign",    msg:"Rahul Mehta assigned to medical camp in Kurla",       time:"2h ago",  color:"#2563eb" },
+    { id:7, type:"complete",  msg:"Community kitchen task verified in Govandi",          time:"3h ago",  color:"#16a34a" },
+    { id:8, type:"submit",    msg:"Emergency flood report submitted — Zone 4 critical",  time:"4h ago",  color:"#dc2626" },
+]
+
+export const MOCK_CHART_DATA = [
+    { day:"Mon", needs:8,  resolved:5  },
+    { day:"Tue", needs:14, resolved:9  },
+    { day:"Wed", needs:11, resolved:8  },
+    { day:"Thu", needs:19, resolved:13 },
+    { day:"Fri", needs:16, resolved:11 },
+    { day:"Sat", needs:23, resolved:17 },
+    { day:"Sun", needs:18, resolved:14 },
+]
