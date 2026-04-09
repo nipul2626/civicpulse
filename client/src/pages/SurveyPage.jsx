@@ -9,12 +9,12 @@ import {
 
 /* ── THEME ── */
 const T = {
-    bg:       "#070B12",
-    surface:  "#0D1525",
-    card:     "#111827",
+    bg:       "#0a0b0a",
+    surface:  "#102514",
+    card:     "#18231d",
     cardHov:  "#151F30",
     border:   "rgba(99,179,237,0.12)",
-    borderHi: "rgba(99,179,237,0.35)",
+    borderHi: "rgb(207 220 234 / 0.73)",
     text:     "#F0F6FF",
     muted:    "#6B8CAE",
     accent:   "#3B82F6",
@@ -1013,7 +1013,7 @@ export default function SurveyPage() {
                                     <span style={{fontSize:12,fontWeight:700,color: tab===t.key ? T.text : T.muted}}>
                     {t.label}
                   </span>
-                                    <span style={{fontSize:9,color: tab===t.key ? T.muted : "#3D5A73",fontWeight:500}}>
+                                    <span style={{fontSize:9,color: tab===t.key ? T.muted : "#96bbda",fontWeight:500}}>
                     {t.desc}
                   </span>
                                 </motion.button>

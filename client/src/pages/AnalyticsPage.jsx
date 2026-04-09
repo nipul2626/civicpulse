@@ -10,9 +10,9 @@ import {
 
 /* ── THEME ── */
 const T={
-    bg:"#050810",surface:"#0A1020",card:"#0F1829",border:"rgba(139,92,246,0.15)",
-    text:"#F0F0FF",muted:"#6B7A9E",accent:"#8B5CF6",green:"#10B981",
-    amber:"#F59E0B",red:"#EF4444",blue:"#3B82F6",cyan:"#06B6D4",pink:"#EC4899",
+    bg:"#000002",surface:"#0A1020",card:"#182019",border:"rgba(139,92,246,0.15)",
+    text:"#eeeef8",muted:"#6B7A9E",accent:"#8B5CF6",green:"#10B981",
+    amber:"#F59E0B",red:"#b10366",blue:"#3B82F6",cyan:"#06B6D4",pink:"#EC4899",
 }
 
 /* ── DATA ── */

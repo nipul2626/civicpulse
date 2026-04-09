@@ -11,7 +11,7 @@ import {
 
 /* ── THEME ── */
 const T={
-    bg:"#070B12",surface:"#0D1525",card:"#111827",border:"rgba(99,179,237,0.12)",
+    bg:"#000000",surface:"#bdf4c5",card:"#182019",border:"rgba(99,179,237,0.12)",
     text:"#F0F6FF",muted:"#6B8CAE",accent:"#3B82F6",green:"#10B981",
     amber:"#F59E0B",red:"#EF4444",purple:"#8B5CF6",cyan:"#06B6D4",
     pink:"#EC4899",
