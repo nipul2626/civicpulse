@@ -9,39 +9,38 @@ import {
 
 /* ── THEME ── */
 const T = {
-    bg:       "#0a0b0a",
-    surface:  "#102514",
-    card:     "#18231d",
-    cardHov:  "#151F30",
-    border:   "rgba(99,179,237,0.12)",
-    borderHi: "rgb(207 220 234 / 0.73)",
-    text:     "#F0F6FF",
-    muted:    "#6B8CAE",
-    accent:   "#3B82F6",
-    accentGlow:"rgba(59,130,246,0.25)",
-    green:    "#10B981",
-    amber:    "#F59E0B",
-    red:      "#EF4444",
-    purple:   "#8B5CF6",
-    cyan:     "#06B6D4",
+    bg:         "#eef2eb",
+    surface:    "#e2e8de",
+    card:       "#ffffff",
+    cardHov:    "#f5f8f3",
+    border:     "rgba(45,90,45,0.12)",
+    borderHi:   "rgba(45,90,45,0.45)",
+    text:       "#1a2e1a",
+    muted:      "#5a7a5a",
+    accent:     "#2d5a2d",
+    accentGlow: "rgba(45,90,45,0.15)",
+    green:      "#1a6b4a",
+    amber:      "#c07a0a",
+    red:        "#b84c2e",
+    purple:     "#5a3a8a",
+    cyan:       "#1a6b7a",
 }
 
 const CATS = [
-    { key:"food",      label:"Food Security",  icon:Utensils, color:"#F59E0B", glow:"rgba(245,158,11,0.2)"  },
-    { key:"medical",   label:"Medical Aid",    icon:Heart,    color:"#EF4444", glow:"rgba(239,68,68,0.2)"   },
-    { key:"shelter",   label:"Shelter",        icon:Home,     color:"#8B5CF6", glow:"rgba(139,92,246,0.2)"  },
-    { key:"water",     label:"Clean Water",    icon:Droplets, color:"#06B6D4", glow:"rgba(6,182,212,0.2)"   },
-    { key:"education", label:"Education",      icon:BookOpen, color:"#10B981", glow:"rgba(16,185,129,0.2)"  },
+    { key:"food",      label:"Food Security", icon:Utensils, color:"#c07a0a", glow:"rgba(192,122,10,0.12)"  },
+    { key:"medical",   label:"Medical Aid",   icon:Heart,    color:"#b84c2e", glow:"rgba(184,76,46,0.12)"   },
+    { key:"shelter",   label:"Shelter",       icon:Home,     color:"#5a3a8a", glow:"rgba(90,58,138,0.12)"   },
+    { key:"water",     label:"Clean Water",   icon:Droplets, color:"#1a6b7a", glow:"rgba(26,107,122,0.12)"  },
+    { key:"education", label:"Education",     icon:BookOpen, color:"#1a6b4a", glow:"rgba(26,107,74,0.12)"   },
 ]
 
 const URGENCY_CFG = [
-    { level:1, label:"Minimal",  color:"#10B981", desc:"Not time sensitive" },
-    { level:2, label:"Low",      color:"#84CC16", desc:"Within a week"      },
-    { level:3, label:"Medium",   color:"#F59E0B", desc:"Within 48 hours"    },
-    { level:4, label:"High",     color:"#F97316", desc:"Within 24 hours"    },
-    { level:5, label:"Critical", color:"#EF4444", desc:"Immediate!"         },
+    { level:1, label:"Minimal",  color:"#1a6b4a", desc:"Not time sensitive" },
+    { level:2, label:"Low",      color:"#4a8a1a", desc:"Within a week"      },
+    { level:3, label:"Medium",   color:"#c07a0a", desc:"Within 48 hours"    },
+    { level:4, label:"High",     color:"#c05a1a", desc:"Within 24 hours"    },
+    { level:5, label:"Critical", color:"#b84c2e", desc:"Immediate!"         },
 ]
-
 const LIVE_FEED = [
     { id:1, cat:"medical",   zone:"Dharavi",   time:"just now", urgency:5, people:47,  status:"scoring"  },
     { id:2, cat:"food",      zone:"Kurla",     time:"2m ago",   urgency:4, people:120, status:"matched"  },

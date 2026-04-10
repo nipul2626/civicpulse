@@ -8,11 +8,22 @@ import {
     Heart, Home, Droplets, BookOpen, Utensils, Shield
 } from "lucide-react"
 
+
 /* ── THEME ── */
-const T={
-    bg:"#000002",surface:"#0A1020",card:"#182019",border:"rgba(139,92,246,0.15)",
-    text:"#eeeef8",muted:"#6B7A9E",accent:"#8B5CF6",green:"#10B981",
-    amber:"#F59E0B",red:"#b10366",blue:"#3B82F6",cyan:"#06B6D4",pink:"#EC4899",
+const T = {
+    bg:      "#eef2eb",
+    surface: "#e2e8de",
+    card:    "#ffffff",
+    border:  "rgba(45,90,45,0.12)",
+    text:    "#1a2e1a",
+    muted:   "#5a7a5a",
+    accent:  "#2d5a2d",
+    green:   "#1a6b4a",
+    amber:   "#c07a0a",
+    red:     "#b84c2e",
+    blue:    "#1a4a8a",
+    cyan:    "#1a6b7a",
+    pink:    "#8a3a5a",
 }
 
 /* ── DATA ── */

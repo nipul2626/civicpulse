@@ -5,28 +5,26 @@ import {
     Users, Zap, Heart, ChevronDown, X, Award, Phone,
     Mail, TrendingUp, Shield, Globe, ArrowUpRight
 } from "lucide-react"
-
-/* ─── PALETTE (forest/sage) ─── */
+/* ─── PALETTE ─── */
 const C = {
-    bg:      "#011004",
-    surface: "#0b231c",
-    card:    "#122018",
-    border:  "rgba(144,171,139,0.15)",
-    text:    "#f3f8f4",
-    muted:   "#7a9b83",
-    faint:   "#2d4a38",
-    f300:    "#a3c09a",
-    f400:    "#7aa375",
-    f500:    "#5A7863",
-    f600:    "#476053",
-    f700:    "#3B4953",
-    amber:   "#c9923a",
-    red:     "#b85547",
-    cyan:    "#4f9191",
-    purple:  "#7a6bb5",
-    s300:    "#A8CE78",
+    bg:      "#eef2eb",
+    surface: "#e2e8de",
+    card:    "#ffffff",
+    border:  "rgba(45,90,45,0.12)",
+    text:    "#1a2e1a",
+    muted:   "#5a7a5a",
+    faint:   "#c8d8c4",
+    f300:    "#4a7a44",
+    f400:    "#3a6a34",
+    f500:    "#2d5a2d",
+    f600:    "#245024",
+    f700:    "#1e441e",
+    amber:   "#c07a0a",
+    red:     "#b84c2e",
+    cyan:    "#1a6b7a",
+    purple:  "#5a3a8a",
+    s300:    "#7ab870",
 }
-
 /* ─── VOLUNTEER DATA ─── */
 const VOLUNTEERS = [
     {
