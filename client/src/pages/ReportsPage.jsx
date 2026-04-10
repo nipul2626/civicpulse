@@ -10,13 +10,21 @@ import {
 } from "lucide-react"
 
 /* ── THEME ── */
-const T={
-    bg:"#000000",surface:"#bdf4c5",card:"#182019",border:"rgba(99,179,237,0.12)",
-    text:"#F0F6FF",muted:"#6B8CAE",accent:"#3B82F6",green:"#10B981",
-    amber:"#F59E0B",red:"#EF4444",purple:"#8B5CF6",cyan:"#06B6D4",
-    pink:"#EC4899",
+const T = {
+    bg:      "#eef2eb",
+    surface: "#e2e8de",
+    card:    "#ffffff",
+    border:  "rgba(45,90,45,0.12)",
+    text:    "#1a2e1a",
+    muted:   "#5a7a5a",
+    accent:  "#2d5a2d",
+    green:   "#1a6b4a",
+    amber:   "#c07a0a",
+    red:     "#b84c2e",
+    purple:  "#5a3a8a",
+    cyan:    "#1a6b7a",
+    pink:    "#8a3a5a",
 }
-
 /* ── MOCK DATA ── */
 const MONTHLY=[
     {m:"Jan",needs:45,resolved:38,volunteers:12},
