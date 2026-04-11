@@ -5,6 +5,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const { startQueueProcessor } = require('./services/aiQueue');
+const { startDailyJobs } = require('./jobs/dailyJobs');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -42,6 +43,8 @@ app.use('/api/auth', require('./routes/auth'));
 app.use('/api/needs', require('./routes/needs'));
 app.use('/api/ai', require('./routes/ai'));
 app.use('/api/volunteers', require('./routes/volunteers'));
+app.use('/api/match', require('./routes/match'));
+app.use('/api/tasks', require('./routes/tasks'));
 
 // ── 404 ───────────────────────────────────────────────────────────────────────
 app.use((req, res) => {
@@ -58,4 +61,5 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
     console.log(`✅ CivicPulse API v2 running on http://localhost:${PORT}`);
     startQueueProcessor();
+    startDailyJobs();
 });
