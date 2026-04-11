@@ -13,12 +13,11 @@ import {
 
 /* ─── MOCK DATA ──────────────────────────────────────────────────────────── */
 const COORDINATOR = { name: "Riya Sharma", org: "Green Horizon Foundation", city: "Mumbai", avatar: "RS" }
-
 const STATS = [
-    { label:"Critical Needs", value:14, delta:"+2", deltaDir:"up", urgent:true,  icon:<Flame size={18}/>,  color:"#E05A3A", bg:"rgba(224,90,58,0.15)"  },
-    { label:"Volunteers Active", value:38, delta:"+3 today", deltaDir:"up", icon:<Users size={18}/>, color:"#5A7863", bg:"rgba(90,120,99,0.15)" },
-    { label:"Resolved Today",  value:62, delta:"↑12%",      deltaDir:"up", icon:<CheckCircle size={18}/>, color:"#3B9E7E", bg:"rgba(59,158,126,0.15)" },
-    { label:"People Helped",   value:847, delta:"This week", deltaDir:"up", icon:<Heart size={18}/>,      color:"#7B68D6", bg:"rgba(123,104,214,0.15)" },
+    { label:"Critical Needs",   value:14,  delta:"+2",      deltaDir:"up", urgent:true,  icon:<Flame size={18}/>,       color:"#b84c2e", bg:"rgba(184,76,46,0.1)"   },
+    { label:"Volunteers Active",value:38,  delta:"+3 today", deltaDir:"up", icon:<Users size={18}/>,        color:"#2d5a2d", bg:"rgba(45,90,45,0.1)"    },
+    { label:"Resolved Today",   value:62,  delta:"↑12%",     deltaDir:"up", icon:<CheckCircle size={18}/>,  color:"#1a6b4a", bg:"rgba(26,107,74,0.1)"   },
+    { label:"People Helped",    value:847, delta:"This week", deltaDir:"up", icon:<Heart size={18}/>,        color:"#5a3a8a", bg:"rgba(90,58,138,0.1)"   },
 ]
 
 const WEEKLY = [
@@ -32,11 +31,11 @@ const WEEKLY = [
 ]
 
 const CATEGORIES = [
-    { name:"Food",      count:5,  color:"#E05A3A", pct:35 },
+    { name:"Food",      count:5,  color:"#bf55be", pct:35 },
     { name:"Medical",   count:8,  color:"#E0445A", pct:55 },
     { name:"Shelter",   count:3,  color:"#7B68D6", pct:20 },
     { name:"Water",     count:6,  color:"#4A9FD4", pct:42 },
-    { name:"Education", count:2,  color:"#5A7863", pct:14 },
+    { name:"Education", count:2,  color:"#68e18d", pct:14 },
 ]
 
 const MAP_DOTS = [
@@ -78,9 +77,18 @@ const INIT_TASKS = [
 ]
 
 const COLUMNS = ["Unassigned","Assigned","In Progress","Completed"]
-const COL_COLORS = { "Unassigned":"#E05A3A", "Assigned":"#E8A838", "In Progress":"#4A9FD4", "Completed":"#3B9E7E" }
-const PRIORITY_BARS = { urgent:"#E05A3A", high:"#E8A838", medium:"#4A9FD4", low:"#5A7863" }
-
+const COL_COLORS = {
+    "Unassigned":  "#c0392b",
+    "Assigned":    "#d4860a",
+    "In Progress": "#1a6b9a",
+    "Completed":   "#1a6b4a"
+}
+const PRIORITY_BARS = {
+    urgent: "#c0392b",
+    high:   "#d4860a",
+    medium: "#1a6b9a",
+    low:    "#2d5a2d"
+}
 const RECENT_NEEDS = [
     { id:"N-201", type:"Medical",  loc:"Dharavi North", reported:"10 min ago", urgency:95, status:"Unassigned" },
     { id:"N-202", type:"Food",     loc:"Bandra East",   reported:"22 min ago", urgency:72, status:"Assigned"   },
@@ -91,13 +99,13 @@ const RECENT_NEEDS = [
 
 /* ─── HELPERS ────────────────────────────────────────────────────────────── */
 const c = {
-    bg:      "#0D1F19",
-    surface: "#142820",
-    card:    "#1A3328",
-    border:  "rgba(90,120,99,0.2)",
-    text:    "#EBF4DD",
-    muted:   "#7A9B83",
-    accent:  "#5A7863",
+    bg:      "#eef2eb",
+    surface: "#e2e8de",
+    card:    "#ffffff",
+    border:  "rgba(45,90,45,0.12)",
+    text:    "#1a2e1a",
+    muted:   "#5a7a5a",
+    accent:  "#2d5a2d",
 }
 
 const Card = ({ children, style={}, className="" }) => (
@@ -126,7 +134,8 @@ const Sidebar = ({ active, setActive, collapsed, setCollapsed }) => {
             animate={{ width: collapsed ? 64 : 220 }}
             transition={{ duration:0.25, ease:"easeInOut" }}
             style={{
-                background:c.surface, borderRight:`1px solid ${c.border}`,
+                background: "#ffffff",
+                borderRight: "1px solid rgba(45,90,45,0.12)",
                 height:"100vh", position:"fixed", top:0, left:0, zIndex:100,
                 display:"flex", flexDirection:"column", overflow:"hidden",
             }}>
@@ -134,7 +143,7 @@ const Sidebar = ({ active, setActive, collapsed, setCollapsed }) => {
             {/* Logo */}
             <div style={{ padding:"18px 14px", display:"flex", alignItems:"center",
                 gap:10, borderBottom:`1px solid ${c.border}` }}>
-                <motion.div style={{ width:34, height:34, borderRadius:10, background:"#5A7863",
+                <motion.div style={{ width:34, height:34, borderRadius:10, background: "#1a2e1a",
                     display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                     <Zap size={16} color="#EBF4DD" />
                 </motion.div>
@@ -142,8 +151,8 @@ const Sidebar = ({ active, setActive, collapsed, setCollapsed }) => {
                     {!collapsed && (
                         <motion.div initial={{ opacity:0, x:-10 }} animate={{ opacity:1, x:0 }}
                                     exit={{ opacity:0, x:-10 }} transition={{ duration:0.15 }}>
-                            <p style={{ color:c.text, fontWeight:800, fontSize:14, margin:0, whiteSpace:"nowrap" }}>CivicPulse</p>
-                            <p style={{ color:c.muted, fontSize:9, margin:0, whiteSpace:"nowrap" }}>NGO Dashboard</p>
+                            <p style={{ color:c.text, fontWeight:800, fontSize:20, margin:0, whiteSpace:"nowrap" }}>CivicPulse</p>
+                            <p style={{ color:"brown", fontSize:9, margin:0, whiteSpace:"nowrap" }}>NGO Dashboard</p>
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -158,6 +167,14 @@ const Sidebar = ({ active, setActive, collapsed, setCollapsed }) => {
                                    onClick={() => {
                                        setActive(item.key)
                                        if (item.key === "heatmap") navigate("/heatmap")
+                                       if (item.key === "survey") navigate("/survey")
+                                       if (item.key === "analytics") navigate("/analytics")
+                                       if (item.key === "settings") navigate("/settings")
+                                       if (item.key === "reports") navigate("/reports")
+                                       if (item.key === "tasks") navigate("/tasks")
+                                       if (item.key === "volunteers") navigate("/volunteers")
+
+
                                    }}
                                    style={{
                                        display:"flex", alignItems:"center", gap:10, padding:"9px 10px",
@@ -223,6 +240,7 @@ const Topbar = ({ collapsed, onNewNeed }) => {
     const [notifs, setNotifs] = useState(3)
     const [showNotifs, setShowNotifs] = useState(false)
     const [search, setSearch] = useState("")
+    const navigate = useNavigate()
 
     useEffect(() => {
         const t = setInterval(() => setTime(new Date()), 1000)
@@ -236,8 +254,9 @@ const Topbar = ({ collapsed, onNewNeed }) => {
 
     return (
         <div style={{
-            position:"sticky", top:0, zIndex:50, background:c.bg,
-            borderBottom:`1px solid ${c.border}`, padding:"14px 24px",
+            position:"sticky", top:0, zIndex:50, background: "#eef2eb",
+            borderBottom: "1px solid rgba(45,90,45,0.12)",
+            padding:"14px 24px",
             display:"flex", alignItems:"center", justifyContent:"space-between",
         }}>
             <div>
@@ -250,7 +269,9 @@ const Topbar = ({ collapsed, onNewNeed }) => {
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
                 {/* Live clock */}
                 <div style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 14px",
-                    borderRadius:10, border:`1px solid ${c.border}`, background:c.surface }}>
+                    borderRadius:10, background: "#ffffff",
+                    border: "1px solid rgba(45,90,45,0.15)",
+                }}>
           <span style={{ width:7, height:7, borderRadius:"50%", background:"#3B9E7E",
               boxShadow:"0 0 8px #3B9E7E", display:"inline-block",
               animation:"pulse 2s infinite" }} />
@@ -265,8 +286,9 @@ const Topbar = ({ collapsed, onNewNeed }) => {
                         transform:"translateY(-50%)", color:c.muted }} />
                     <input value={search} onChange={e => setSearch(e.target.value)}
                            placeholder="Search needs, volunteers..."
-                           style={{ background:c.surface, border:`1px solid ${c.border}`, borderRadius:10,
-                               padding:"7px 14px 7px 32px", color:c.text, fontSize:12, outline:"none", width:200 }}
+                           style={{borderRadius:10,background: "#ffffff",
+                               border: "1px solid rgba(45,90,45,0.15)",
+                               padding:"7px 14px 7px 32px", color:"#07220b", fontSize:12, outline:"none", width:200 }}
                            onFocus={e => e.target.style.borderColor="#5A7863"}
                            onBlur={e => e.target.style.borderColor=c.border} />
                 </div>
@@ -282,10 +304,14 @@ const Topbar = ({ collapsed, onNewNeed }) => {
 
                 {/* Open Heatmap */}
                 <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }}
+                               onClick={() => navigate("/heatmap")}
                                style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 14px",
-                                   borderRadius:10, background:c.surface, color:c.text, fontWeight:700,
-                                   fontSize:12, border:`1px solid ${c.border}`, cursor:"pointer" }}>
-                    <Map size={13} /> Open Heatmap
+                                   borderRadius:10, background: "#ffffff",
+                                   border: "1px solid rgba(45,90,45,0.15)",
+                                   color: "#1a2e1a",
+                                   fontWeight:700,
+                                   fontSize:12,  cursor:"pointer" }}>
+                    <MapPin size={13} /> Open Heatmap
                 </motion.button>
 
                 {/* Notifications */}
@@ -293,13 +319,14 @@ const Topbar = ({ collapsed, onNewNeed }) => {
                     <motion.button whileTap={{ scale:0.95 }}
                                    onClick={() => { setShowNotifs(p=>!p); setNotifs(0) }}
                                    style={{ position:"relative", width:36, height:36, borderRadius:10,
-                                       background:c.surface, border:`1px solid ${c.border}`,
+                                       background: "#ffffff",
+                                       border: "1px solid rgba(45,90,45,0.15)",
                                        display:"flex", alignItems:"center", justifyContent:"center",
                                        cursor:"pointer", color:c.muted }}>
                         <Bell size={16} />
                         {notifs > 0 && (
                             <span style={{ position:"absolute", top:-4, right:-4, width:16, height:16,
-                                borderRadius:"50%", background:"#E05A3A", color:"#fff",
+                                borderRadius:"50%", background:"#3a160d", color:"#fff",
                                 fontSize:9, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center" }}>
                 {notifs}
               </span>
@@ -348,7 +375,7 @@ const StatCards = () => (
                                     gap:4, padding:"2px 8px", borderRadius:6, background:"rgba(224,90,58,0.2)",
                                     border:"1px solid rgba(224,90,58,0.4)" }}>
                         <AlertTriangle size={9} color="#E05A3A" />
-                        <span style={{ color:"#E05A3A", fontSize:9, fontWeight:700 }}>Urgent</span>
+                        <span style={{ color:"#4a190c", fontSize:9, fontWeight:700 }}>Urgent</span>
                     </motion.div>
                 )}
                 {!s.urgent && (
@@ -544,7 +571,9 @@ const ActivityFeed = () => {
                     </div>
                 </div>
                 <div style={{ display:"flex", alignItems:"center", gap:5, padding:"3px 8px",
-                    borderRadius:6, background:"rgba(59,158,126,0.15)", border:"1px solid rgba(59,158,126,0.3)" }}>
+                    borderRadius:6, background: "rgba(26,107,74,0.1)",
+                    border: "1px solid rgba(26,107,74,0.25)",
+                    color: "#1a6b4a" }}>
           <span style={{ width:6, height:6, borderRadius:"50%", background:"#3B9E7E",
               display:"inline-block", animation:"pulse 1.5s infinite" }} />
                     <span style={{ color:"#3B9E7E", fontSize:10, fontWeight:700 }}>Live</span>
@@ -1148,15 +1177,15 @@ const DashboardPage = () => {
     return (
         <div style={{ display:"flex", background:c.bg, minHeight:"100vh", fontFamily:"'DM Sans', sans-serif" }}>
             <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-        ::-webkit-scrollbar { width:4px; height:4px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background:#3B5C38; border-radius:2px; }
-        input::placeholder, textarea::placeholder { color: #7A9B83; }
-        select option { background: #142820; }
-      `}</style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&display=swap');
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  ::-webkit-scrollbar { width:4px; height:4px; }
+  ::-webkit-scrollbar-track { background: #e2e8de; }
+  ::-webkit-scrollbar-thumb { background:#2d5a2d; border-radius:2px; }
+  input::placeholder, textarea::placeholder { color: #8aaa8a; }
+  select option { background: #ffffff; color: #1a2e1a; }
+`}</style>
 
             <Sidebar active={activeNav} setActive={setActiveNav}
                      collapsed={collapsed} setCollapsed={setCollapsed} />
