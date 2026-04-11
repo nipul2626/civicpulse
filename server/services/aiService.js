@@ -11,7 +11,7 @@ async function callAI(prompt, options = {}) {
     // 1. Try Groq
     try {
         const completion = await groq.chat.completions.create({
-            model: 'llama3-70b-8192',
+            model: "llama-3.3-70b-versatile",
             messages: [{ role: 'user', content: prompt }],
             max_tokens: options.maxTokens || 1000,
         });
