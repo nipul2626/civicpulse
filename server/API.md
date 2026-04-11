@@ -110,3 +110,77 @@ Auth: bearer token
 Body: `{ volunteerId, claimedSkill, documentText }`
 Notes: documentText is OCR-extracted text from certificate (Ishu does OCR client-side with Gemini Vision, sends text here)
 Response: `{ verified, confidence: "high|medium|low", badge: "verified|rejected", reason }`
+
+## MATCH
+
+### POST /api/match
+Auth: coordinator only
+Body: `{ needId }`
+Response: `{ needId, matches: [{ volunteerId, name, score, reason, distance, skills, reliabilityScore, matchLevel }] }`
+Notes: matchLevel is "primary" | "expanded" | "broadcast". Cached 5 min.
+
+### POST /api/match/assign
+Auth: coordinator only
+Body: `{ needId, volunteerId, scheduledTime?, resourceIds?: [] }`
+Response: `{ message, taskId, task }`
+
+---
+
+## TASKS
+
+### POST /api/tasks/create
+Auth: coordinator only
+Body: `{ needId, assignedVolunteerId, scheduledTime, orgId, resourceIds?: [] }`
+Response: `{ message, taskId, task }`
+
+### GET /api/tasks
+Auth: bearer token
+Query params: `orgId, volunteerId, status, startDate, endDate`
+Notes: Volunteers only see their own tasks. Coordinators see all in org.
+Response: Array of task documents
+
+### PATCH /api/tasks/:id/status
+Auth: coordinator or assigned volunteer
+Body: `{ status, outcome?, peopleHelped?, durationHours? }`
+Valid transitions: `assigned→inProgress→completed→verified`
+Response: `{ message, taskId, status }`
+
+### GET /api/tasks/:id
+Auth: bearer token
+Response: Task document enriched with `need` and `volunteer` objects
+
+### POST /api/tasks/:id/no-show-check
+Auth: internal (no token check — call from Cloud Tasks or scheduler)
+Response: `{ message }`
+
+---
+
+## VOLUNTEERS (updated)
+
+### GET /api/volunteers
+Auth: coordinator only
+Query params: `skill, available, verified`
+Response: Array of volunteer profiles with displayName
+
+### GET /api/volunteers/burnout-risk
+Auth: coordinator only
+Response: Array of at-risk volunteers with `recommendedAction`
+
+### GET /api/volunteers/:id
+Auth: coordinator only
+Response: Volunteer profile + `taskHistory` (last 20 tasks)
+
+### PUT /api/volunteers/:id/availability
+Auth: own volunteer only
+Body: `{ availabilityGrid: { "mon-morning": true, "mon-afternoon": false, ... } }`
+Response: `{ message }`
+
+### PUT /api/volunteers/:id/location
+Auth: own volunteer only
+Body: `{ lat, lng }`
+Response: `{ message }`
+
+### POST /api/volunteers/verify-skill
+Auth: bearer token
+Body: `{ volunteerId, claimedSkill, documentText }`
+Response: `{ verified, confidence, badge, reason }`
