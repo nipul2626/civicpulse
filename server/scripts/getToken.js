@@ -4,8 +4,9 @@
 
 const { initializeApp } = require('firebase/app');
 const { getAuth, signInWithEmailAndPassword } = require('firebase/auth');
-require('dotenv').config({ path: '../.env' });
-
+require('dotenv').config({ path: require('path').resolve(__dirname, '../.env') });
+console.log("ENV PATH:", require('path').resolve(__dirname, '../../.env'));
+console.log("API KEY:", process.env.FIREBASE_WEB_API_KEY);
 const firebaseConfig = {
     apiKey: process.env.FIREBASE_WEB_API_KEY,   // Add this to .env
     authDomain: `${process.env.FIREBASE_PROJECT_ID}.firebaseapp.com`,
