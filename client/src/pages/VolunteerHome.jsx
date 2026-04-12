@@ -1,551 +1,352 @@
 import { useState, useEffect, useRef } from "react"
-import { motion, AnimatePresence, useScroll, useTransform } from "framer-motion"
-import { useNavigate } from "react-router-dom"
+import { motion, AnimatePresence } from "framer-motion"
 import {
-    Zap, MapPin, Clock, CheckCircle, AlertTriangle, Star,
-    ChevronRight, Bell, Search, LogOut, User, Activity,
-    Heart, Home, Droplets, BookOpen, Utensils, Shield,
-    TrendingUp, Award, Calendar, Filter, Phone, Navigation,
-    RefreshCw, ArrowRight, X, Check, Menu, MessageSquare,
-    Flame, Target, BarChart3, Eye, Layers, Radio
+    Zap, MapPin, Clock, CheckCircle, Star,
+    ChevronRight, Bell, LogOut, User, Activity,
+    Heart, Home, Droplets, BookOpen, Utensils,
+    Award, Filter, Phone, Navigation,
+    RefreshCw, X, Check, Menu, MessageSquare,
+    Flame, Target, BarChart3,
 } from "lucide-react"
 
-
-/* ── LIGHT THEME: Earthy-soft, clean UI ── */
-const T = {
-    bg:       "#F6F8F3",   // very light warm background
-    surface:  "#FFFFFF",   // main surfaces
-    card:     "#EEF3E8",   // soft green tint
-    cardHi:   "#FFFFFF",   // hover stays clean
-
-    border:   "rgba(120,180,80,0.15)",
-    borderHi: "rgba(120,180,80,0.35)",
-
-    text:     "#1F2A1A",   // dark greenish text (not pure black)
-    muted:    "#6B7F63",   // softer muted text
-
-    accent:   "#5FA83F",   // slightly deeper green (better on light bg)
-    accentDim:"rgba(95,168,63,0.15)",
-
-    amber:    "#D48A1B",   // toned-down amber
-    red:      "#D64C2F",   // softer red
-    teal:     "#1FB89A",
-    purple:   "#7A5AF5",
+/* ── THEME ── */
+const C = {
+    bg:       "#F0F4ED",
+    surface:  "#FFFFFF",
+    card:     "#F7F9F5",
+    border:   "rgba(80,140,50,0.12)",
+    borderMd: "rgba(80,140,50,0.25)",
+    borderHi: "rgba(80,140,50,0.45)",
+    text:     "#1A2515",
+    muted:    "#6B8060",
+    faint:    "#9BAD90",
+    green:    "#3D8A25",
+    greenLt:  "rgba(61,138,37,0.12)",
+    amber:    "#C47D0E",
+    amberLt:  "rgba(196,125,14,0.12)",
+    red:      "#C93B22",
+    redLt:    "rgba(201,59,34,0.1)",
+    teal:     "#0F8A7C",
+    tealLt:   "rgba(15,138,124,0.12)",
+    purple:   "#6A42D4",
+    purpleLt: "rgba(106,66,212,0.1)",
+    blue:     "#1A6FBF",
+    blueLt:   "rgba(26,111,191,0.1)",
 }
 
-/* ── MOCK VOLUNTEER DATA ── */
+/* ── DATA ── */
 const VOLUNTEER = {
-    name: "Arjun Patil",
-    init: "AP",
-    badge: "Field Hero",
-    zone: "Dharavi, Mumbai",
-    skills: ["Medical Aid","Water","Logistics"],
-    tasksCompleted: 47,
-    hoursLogged: 183,
-    impactScore: 94,
-    streak: 12,
-    rank: 4,
-    joined: "Mar 2023",
+    name: "Arjun Patil", init: "AP", badge: "Field Hero",
+    zone: "Dharavi, Mumbai", skills: ["Medical Aid", "Water", "Logistics"],
+    tasksCompleted: 47, hoursLogged: 183, impactScore: 94, streak: 12, rank: 4, joined: "Mar 2023",
+    email: "arjun.patil@civicpulse.in", phone: "+91 98200 55133",
 }
 
-const MY_TASKS = [
-    {
-        id:"T-201", title:"Emergency medical kit delivery",
-        cat:"medical", loc:"Dharavi North · Block 7",
-        urgency:5, due:"Today, 3:00 PM",
-        status:"active", people:34, distance:"1.2 km",
-        desc:"Deliver 2 emergency medical kits to the primary care centre. Contact Dr. Meena on arrival.",
-        contact:"+91 98765 11111",
-    },
-    {
-        id:"T-202", title:"Water distribution assist",
-        cat:"water", loc:"Kurla West · Sector B",
-        urgency:4, due:"Today, 5:30 PM",
-        status:"active", people:80, distance:"3.4 km",
-        desc:"Assist NGO coordinator with water tanker distribution. 80 families expected.",
-        contact:"+91 98765 22222",
-    },
-    {
-        id:"T-203", title:"Food packet distribution",
-        cat:"food", loc:"Sion · Camp Area",
-        urgency:3, due:"Tomorrow, 10:00 AM",
-        status:"upcoming", people:120, distance:"4.1 km",
-        desc:"Help distribute 120 food packets at the community camp. Sorting begins at 9:30 AM.",
-        contact:"+91 98765 33333",
-    },
-    {
-        id:"T-204", title:"Shelter assessment survey",
-        cat:"shelter", loc:"Chembur · Zone C",
-        urgency:2, due:"Thu, 11:00 AM",
-        status:"upcoming", people:18, distance:"6.7 km",
-        desc:"Survey 18 families for shelter quality. Fill digital form on arrival.",
-        contact:"+91 98765 44444",
-    },
+const TASKS = [
+    { id:"T-201", title:"Emergency medical kit delivery", cat:"medical", loc:"Dharavi North · Block 7", urgency:5, due:"Today, 3:00 PM", status:"active", people:34, distance:"1.2 km", desc:"Deliver 2 emergency medical kits to the primary care centre. Contact Dr. Meena on arrival.", contact:"+91 98765 11111", coords:{x:33,y:30} },
+    { id:"T-202", title:"Water distribution assist", cat:"water", loc:"Kurla West · Sector B", urgency:4, due:"Today, 5:30 PM", status:"active", people:80, distance:"3.4 km", desc:"Assist NGO coordinator with water tanker distribution. 80 families expected.", contact:"+91 98765 22222", coords:{x:58,y:44} },
+    { id:"T-203", title:"Food packet distribution", cat:"food", loc:"Sion · Camp Area", urgency:3, due:"Tomorrow, 10:00 AM", status:"upcoming", people:120, distance:"4.1 km", desc:"Help distribute 120 food packets at the community camp. Sorting begins at 9:30 AM.", contact:"+91 98765 33333", coords:{x:28,y:52} },
+    { id:"T-204", title:"Shelter assessment survey", cat:"shelter", loc:"Chembur · Zone C", urgency:2, due:"Thu, 11:00 AM", status:"upcoming", people:18, distance:"6.7 km", desc:"Survey 18 families for shelter quality. Fill digital form on arrival.", contact:"+91 98765 44444", coords:{x:48,y:68} },
+    { id:"T-205", title:"Education supply drop", cat:"education", loc:"Mankhurd · School 3", urgency:2, due:"Fri, 9:00 AM", status:"upcoming", people:60, distance:"9.2 km", desc:"Deliver school stationery kits to 3 classrooms. Coordinate with principal.", contact:"+91 98765 55555", coords:{x:82,y:65} },
 ]
 
-const COMPLETED_TASKS = [
-    { id:"T-190", title:"Medical checkup assist", cat:"medical", loc:"Andheri", date:"Yesterday", rating:5 },
-    { id:"T-188", title:"Food delivery – Dharavi",cat:"food",    loc:"Dharavi", date:"Mon",      rating:5 },
-    { id:"T-185", title:"Water purification",     cat:"water",   loc:"Kurla",   date:"Sun",      rating:4 },
+const COMPLETED = [
+    { id:"T-190", title:"Medical checkup assist", cat:"medical", loc:"Andheri", date:"Yesterday", rating:5, people:22, hours:3 },
+    { id:"T-188", title:"Food delivery – Dharavi", cat:"food", loc:"Dharavi", date:"Mon", rating:5, people:60, hours:4 },
+    { id:"T-185", title:"Water purification assist", cat:"water", loc:"Kurla", date:"Sun", rating:4, people:45, hours:2 },
+    { id:"T-182", title:"Shelter camp setup", cat:"shelter", loc:"Sion", date:"Last week", rating:5, people:30, hours:6 },
+    { id:"T-178", title:"Education books drive", cat:"education", loc:"Chembur", date:"Last week", rating:4, people:80, hours:3 },
 ]
 
 const LEADERBOARD = [
-    { rank:1, name:"Priya Mehta",  init:"PM", score:98, tasks:52, badge:"🏆", color:"#E8A020" },
-    { rank:2, name:"Rahul Singh",  init:"RS", score:95, tasks:49, badge:"🥈", color:"#9CA3AF" },
-    { rank:3, name:"Sneha Joshi",  init:"SJ", score:92, tasks:45, badge:"🥉", color:"#CD7F32" },
-    { rank:4, name:"Arjun Patil",  init:"AP", score:94, tasks:47, badge:"⭐", color:T.accent, isMe:true },
-    { rank:5, name:"Divya Nair",   init:"DN", score:89, tasks:41, badge:"",   color:T.purple },
+    { rank:1, name:"Priya Mehta", init:"PM", score:98, tasks:52, hours:210, zone:"Andheri" },
+    { rank:2, name:"Rahul Singh", init:"RS", score:95, tasks:49, hours:196, zone:"Bandra" },
+    { rank:3, name:"Sneha Joshi", init:"SJ", score:92, tasks:45, hours:178, zone:"Kurla" },
+    { rank:4, name:"Arjun Patil", init:"AP", score:94, tasks:47, hours:183, zone:"Dharavi", isMe:true },
+    { rank:5, name:"Divya Nair", init:"DN", score:89, tasks:41, hours:160, zone:"Chembur" },
+    { rank:6, name:"Kiran Desai", init:"KD", score:85, tasks:38, hours:150, zone:"Sion" },
+    { rank:7, name:"Meera Iyer", init:"MI", score:81, tasks:34, hours:135, zone:"Ghatkopar" },
 ]
 
-const HEATMAP_ZONES = [
-    { zone:"Dharavi",   x:33, y:30, intensity:.92, needs:47, cat:"medical", active:true  },
-    { zone:"Kurla",     x:58, y:44, intensity:.73, needs:32, cat:"water",   active:false },
-    { zone:"Sion",      x:28, y:52, intensity:.58, needs:19, cat:"food",    active:false },
-    { zone:"Chembur",   x:48, y:68, intensity:.64, needs:26, cat:"shelter", active:false },
-    { zone:"Andheri",   x:72, y:58, intensity:.48, needs:18, cat:"food",    active:false },
-    { zone:"Ghatkopar", x:76, y:38, intensity:.82, needs:41, cat:"water",   active:false },
-    { zone:"Mankhurd",  x:82, y:65, intensity:.38, needs:14, cat:"education",active:false},
+const MESSAGES_DATA = [
+    { id:1, from:"Coordinator Meena", init:"CM", color:C.red, time:"2m", preview:"Can you confirm you're on the way for T-201?", unread:2, messages:[
+            {from:"them",text:"Hi Arjun, are you available for the medical kit delivery today?",time:"10:12 AM"},
+            {from:"them",text:"Can you confirm you're on the way for T-201?",time:"10:45 AM"},
+            {from:"me",text:"Yes, leaving in 10 minutes!",time:"10:46 AM"},
+        ]},
+    { id:2, from:"NGO Coordinator – Kurla", init:"NK", color:C.blue, time:"15m", preview:"Water tanker arriving at 5 PM sharp", unread:1, messages:[
+            {from:"them",text:"Water tanker arriving at 5 PM sharp",time:"9:30 AM"},
+        ]},
+    { id:3, from:"Zone Lead – Dharavi", init:"ZD", color:C.teal, time:"1h", preview:"Great work on yesterday's task! ⭐", unread:0, messages:[
+            {from:"them",text:"Great work on yesterday's task! ⭐",time:"Yesterday"},
+        ]},
+    { id:4, from:"CivicPulse Bot", init:"CP", color:C.green, time:"2h", preview:"You've been matched to 2 new tasks based on your skills", unread:0, messages:[
+            {from:"them",text:"You've been matched to 2 new tasks based on your skills",time:"Yesterday"},
+        ]},
 ]
 
 const NOTIFS = [
-    { id:1, icon:"🚨", text:"New URGENT task near you — Medical · Dharavi", time:"2m ago", unread:true  },
-    { id:2, icon:"🤖", text:"AI matched you to 2 new tasks based on your skills", time:"15m ago",unread:true },
-    { id:3, icon:"🏅", text:"You earned the 'Field Hero' badge!", time:"1h ago", unread:false },
-    { id:4, icon:"✅", text:"Task T-188 marked complete by coordinator", time:"Yesterday", unread:false },
+    { id:1, type:"urgent", text:"New URGENT task near you — Medical · Dharavi", time:"2m ago", unread:true },
+    { id:2, type:"match",  text:"AI matched you to 2 new tasks based on your skills", time:"15m ago", unread:true },
+    { id:3, type:"badge",  text:"You earned the 'Field Hero' badge!", time:"1h ago", unread:false },
+    { id:4, type:"done",   text:"Task T-188 marked complete by coordinator", time:"Yesterday", unread:false },
+    { id:5, type:"streak", text:"12-day streak! You're on fire!", time:"Yesterday", unread:false },
 ]
+
+const HEATMAP = [
+    { zone:"Dharavi",   x:33, y:30, intensity:.92, needs:47, cat:"medical",   active:true  },
+    { zone:"Kurla",     x:58, y:44, intensity:.73, needs:32, cat:"water",     active:false },
+    { zone:"Sion",      x:28, y:52, intensity:.58, needs:19, cat:"food",      active:false },
+    { zone:"Chembur",   x:48, y:68, intensity:.64, needs:26, cat:"shelter",   active:false },
+    { zone:"Andheri",   x:72, y:58, intensity:.48, needs:18, cat:"food",      active:false },
+    { zone:"Ghatkopar", x:76, y:38, intensity:.82, needs:41, cat:"water",     active:false },
+    { zone:"Mankhurd",  x:82, y:65, intensity:.38, needs:14, cat:"education", active:false },
+]
+
+const CAT = {
+    medical:   { color:C.red,    bg:C.redLt,    label:"Medical",   icon:"+" },
+    food:      { color:C.amber,  bg:C.amberLt,  label:"Food",      icon:"◆" },
+    water:     { color:C.blue,   bg:C.blueLt,   label:"Water",     icon:"~" },
+    shelter:   { color:C.purple, bg:C.purpleLt, label:"Shelter",   icon:"⌂" },
+    education: { color:C.green,  bg:C.greenLt,  label:"Education", icon:"●" },
+}
 
 const CAT_CFG = {
     medical:   { color:"#E05A3A", icon:Heart,    label:"Medical"   },
     food:      { color:"#E8A020", icon:Utensils, label:"Food"      },
     water:     { color:"#06B6D4", icon:Droplets, label:"Water"     },
     shelter:   { color:"#9B7CF8", icon:Home,     label:"Shelter"   },
-    education: { color:T.accent,  icon:BookOpen, label:"Education" },
+    education: { color:C.green,   icon:BookOpen, label:"Education" },
 }
 
-const URGENCY_COLOR = (u) =>
-    u >= 5 ? "#E05A3A" : u === 4 ? "#E8A020" : u === 3 ? "#78B450" : T.muted
+const URGENCY_COLOR = u => u >= 5 ? C.red : u === 4 ? C.amber : u === 3 ? C.green : C.faint
 
-/* ── SHARED UI ── */
-const Card = ({ children, style={}, onClick, hover=true }) => (
-    <motion.div
-        whileHover={hover ? { y:-2, borderColor:T.borderHi } : {}}
-        onClick={onClick}
-        style={{
-            background:T.card, border:`1px solid ${T.border}`,
-            borderRadius:16, transition:"border-color .2s",
-            cursor: onClick ? "pointer" : "default",
-            ...style,
-        }}>
-        {children}
-    </motion.div>
-)
+/* ── PARTICLES (memoised to avoid flicker) ── */
+const PARTICLE_DATA = Array.from({ length: 14 }, (_, i) => ({
+    id: i,
+    x: Math.random() * 100,
+    y: Math.random() * 100,
+    dur: Math.random() * 5 + 4,
+    delay: Math.random() * 3,
+}))
 
-/* ── PARTICLE BG ── */
 const Particles = () => (
-    <div style={{position:"fixed",inset:0,pointerEvents:"none",zIndex:0,overflow:"hidden"}}>
-        {Array.from({length:14},(_,i)=>({
-            id:i, x:Math.random()*100, y:Math.random()*100,
-            dur:Math.random()*5+4, delay:Math.random()*3,
-        })).map(p=>(
+    <div style={{ position:"fixed", inset:0, pointerEvents:"none", zIndex:0, overflow:"hidden" }}>
+        {PARTICLE_DATA.map(p => (
             <motion.div key={p.id}
-                        animate={{y:[0,-24,0],opacity:[0.06,0.22,0.06]}}
-                        transition={{duration:p.dur,delay:p.delay,repeat:Infinity,ease:"easeInOut"}}
+                        animate={{ y:[0,-24,0], opacity:[0.06,0.22,0.06] }}
+                        transition={{ duration:p.dur, delay:p.delay, repeat:Infinity, ease:"easeInOut" }}
                         style={{
-                            position:"absolute",left:`${p.x}%`,top:`${p.y}%`,
-                            width:3,height:3,borderRadius:"50%",background:T.accent,
+                            position:"absolute", left:`${p.x}%`, top:`${p.y}%`,
+                            width:3, height:3, borderRadius:"50%", background:C.green,
                         }}
             />
         ))}
-        {/* Warm glow top-right */}
         <div style={{
-            position:"absolute",top:-100,right:-100,
-            width:500,height:500,borderRadius:"50%",
-            background:`radial-gradient(circle,${T.accent}18 0%,transparent 70%)`,
+            position:"absolute", top:-100, right:-100,
+            width:500, height:500, borderRadius:"50%",
+            background:`radial-gradient(circle,${C.green}18 0%,transparent 70%)`,
             filter:"blur(40px)",
         }}/>
     </div>
 )
 
-/* ── TOPBAR ── */
-const Topbar = ({ onMenuToggle, menuOpen }) => {
-    const navigate = useNavigate()
-    const [notifOpen, setNotifOpen] = useState(false)
-    const unread = NOTIFS.filter(n=>n.unread).length
-
+/* ── INLINE SVG ICON ── */
+const Icon = ({ name, size=16, color="currentColor", style={} }) => {
+    const paths = {
+        home:     "M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z M9 21V12h6v9",
+        tasks:    "M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12l2 2 4-4",
+        map:      "M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7",
+        trophy:   "M8 21h8m-4-4v4M6 3H4v3a4 4 0 004 4h8a4 4 0 004-4V3h-2M6 3h12",
+        chat:     "M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z",
+        user:     "M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2M12 11a4 4 0 100-8 4 4 0 000 8z",
+        bell:     "M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9",
+        menu:     "M4 6h16M4 12h16M4 18h16",
+        x:        "M18 6L6 18M6 6l12 12",
+        check:    "M5 13l4 4L19 7",
+        chevron:  "M9 18l6-6-6-6",
+        pin:      "M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z M15 11a3 3 0 11-6 0 3 3 0 016 0z",
+        clock:    "M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z",
+        fire:     "M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.974 7.974 0 01-2.343 5.657z",
+        nav:      "M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7",
+        phone:    "M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z",
+        send:     "M12 19l9 2-9-18-9 18 9-2zm0 0v-8",
+        star:     "M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z",
+        refresh:  "M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15",
+        zap:      "M13 2L3 14h9l-1 8 10-12h-9l1-8z",
+        target:   "M12 2a10 10 0 100 20A10 10 0 0012 2zM12 6a6 6 0 100 12A6 6 0 0012 6zM12 10a2 2 0 100 4 2 2 0 000-4z",
+        edit:     "M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z",
+        logout:   "M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1",
+    }
     return (
-        <div style={{
-            position:"sticky",top:0,zIndex:100,
-            background:"rgb(236 243 237)",
-            backdropFilter:"blur(16px)",
-            borderBottom:`1px solid ${T.border}`,
-            padding:"14px 24px",
-            display:"flex",alignItems:"center",justifyContent:"space-between",
-            gap:12,
-        }}>
-            {/* Logo + greeting */}
-            <div style={{display:"flex",alignItems:"center",gap:14}}>
-                <motion.button
-                    whileTap={{scale:.9}}
-                    onClick={onMenuToggle}
-                    style={{
-                        width:36,height:36,borderRadius:10,border:`1px solid ${T.border}`,
-                        background:"transparent",display:"flex",alignItems:"center",
-                        justifyContent:"center",cursor:"pointer",color:T.muted,
-                        flexShrink:0,
-                    }}>
-                    {menuOpen ? <X size={16}/> : <Menu size={16}/>}
-                </motion.button>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <div style={{
-                        width:32,height:32,borderRadius:9,
-                        background:`linear-gradient(135deg,${T.accent},#5A9A30)`,
-                        display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,
-                    }}>
-                        <Zap size={15} color="#fff"/>
-                    </div>
-                    <div>
-                        <p style={{fontSize:13,fontWeight:800,color:T.text,margin:0,fontFamily:"'DM Sans',sans-serif"}}>
-                            CivicPulse
-                        </p>
-                        <p style={{fontSize:9,color:T.muted,margin:0,fontWeight:600}}>VOLUNTEER PORTAL</p>
-                    </div>
-                </div>
-            </div>
-
-            {/* Right controls */}
-            <div style={{display:"flex",alignItems:"center",gap:8}}>
-                {/* Live badge */}
-                <motion.div animate={{opacity:[1,.5,1]}} transition={{duration:2,repeat:Infinity}}
-                            style={{
-                                display:"flex",alignItems:"center",gap:5,padding:"5px 10px",
-                                borderRadius:8,background:`${T.accent}15`,border:`1px solid ${T.accent}30`,
-                            }}>
-                    <div style={{width:5,height:5,borderRadius:"50%",background:T.accent,
-                        boxShadow:`0 0 6px ${T.accent}`}}/>
-                    <span style={{fontSize:10,fontWeight:700,color:T.accent}}>2 tasks active</span>
-                </motion.div>
-
-                {/* Notifications */}
-                <div style={{position:"relative"}}>
-                    <motion.button whileTap={{scale:.9}}
-                                   onClick={()=>setNotifOpen(p=>!p)}
-                                   style={{
-                                       width:36,height:36,borderRadius:10,
-                                       background:T.surface,border:`1px solid ${T.border}`,
-                                       display:"flex",alignItems:"center",justifyContent:"center",
-                                       cursor:"pointer",color:T.muted,position:"relative",
-                                   }}>
-                        <Bell size={15}/>
-                        {unread>0 && (
-                            <span style={{
-                                position:"absolute",top:-4,right:-4,
-                                width:16,height:16,borderRadius:"50%",
-                                background:T.red,color:"#191717",fontSize:9,fontWeight:800,
-                                display:"flex",alignItems:"center",justifyContent:"center",
-                            }}>{unread}</span>
-                        )}
-                    </motion.button>
-                    <AnimatePresence>
-                        {notifOpen && (
-                            <motion.div initial={{opacity:0,y:8,scale:.95}}
-                                        animate={{opacity:1,y:0,scale:1}} exit={{opacity:0,y:8,scale:.95}}
-                                        style={{
-                                            position:"absolute",right:0,top:44,width:300,
-                                            background:T.card,border:`1px solid ${T.border}`,
-                                            borderRadius:14,padding:14,zIndex:200,
-                                            boxShadow:"0 20px 60px rgba(0,0,0,0.5)",
-                                        }}>
-                                <p style={{fontSize:12,fontWeight:800,color:T.text,margin:"0 0 10px"}}>Notifications</p>
-                                {NOTIFS.map(n=>(
-                                    <div key={n.id} style={{
-                                        display:"flex",gap:8,padding:"8px 0",
-                                        borderBottom:`1px solid ${T.border}`,
-                                        opacity: n.unread ? 1 : 0.6,
-                                    }}>
-                                        <span style={{fontSize:14,flexShrink:0}}>{n.icon}</span>
-                                        <div>
-                                            <p style={{fontSize:11,color:T.text,margin:0,lineHeight:1.4,fontWeight: n.unread?700:500}}>
-                                                {n.text}
-                                            </p>
-                                            <p style={{fontSize:9,color:T.muted,margin:"2px 0 0"}}>{n.time}</p>
-                                        </div>
-                                    </div>
-                                ))}
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-
-                {/* Avatar */}
-                <div style={{
-                    width:36,height:36,borderRadius:10,
-                    background:`linear-gradient(135deg,${T.accent},#5A9A30)`,
-                    display:"flex",alignItems:"center",justifyContent:"center",
-                    fontSize:11,fontWeight:900,color:"rgb(236 243 237)",cursor:"pointer",
-                }}>
-                    {VOLUNTEER.init}
-                </div>
-            </div>
-        </div>
+        <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
+             stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+             style={{ flexShrink:0, ...style }}>
+            <path d={paths[name] || ""}/>
+        </svg>
     )
 }
 
-/* ── STAT CARD ── */
-const StatCard = ({ label, value, icon:Icon, color, delay=0 }) => (
-    <motion.div initial={{opacity:0,y:16}} animate={{opacity:1,y:0}} transition={{delay}}
-                whileHover={{y:-3}}
-                style={{
-                    background:T.card,border:`1px solid ${T.border}`,
-                    borderRadius:14,padding:"16px 18px",
-                }}>
-        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+/* ── SHARED COMPONENTS ── */
+const Badge = ({ children, color=C.green, bg }) => (
+    <span style={{
+        fontSize:10, fontWeight:700, padding:"2px 8px", borderRadius:20,
+        background: bg || `${color}18`, color, border:`1px solid ${color}25`,
+        letterSpacing:".3px", display:"inline-flex", alignItems:"center",
+    }}>{children}</span>
+)
+
+const Pill = ({ children, active, color=C.green, onClick }) => (
+    <motion.button whileTap={{ scale:.96 }} onClick={onClick} style={{
+        padding:"6px 14px", borderRadius:20, border:`1px solid ${active ? color : C.border}`,
+        background: active ? `${color}15` : "transparent", color: active ? color : C.muted,
+        fontSize:12, fontWeight: active ? 700 : 500, cursor:"pointer",
+        fontFamily:"'Outfit',sans-serif", transition:"all .18s",
+    }}>{children}</motion.button>
+)
+
+const StatCard = ({ label, value, color=C.green, icon, change }) => (
+    <motion.div whileHover={{ y:-2 }} style={{
+        background:C.surface, border:`1px solid ${C.border}`, borderRadius:16,
+        padding:"18px 20px", display:"flex", flexDirection:"column", gap:12,
+    }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
             <div style={{
-                width:32,height:32,borderRadius:9,
-                background:`${color}20`,
-                display:"flex",alignItems:"center",justifyContent:"center",
+                width:36, height:36, borderRadius:10, background:`${color}15`,
+                display:"flex", alignItems:"center", justifyContent:"center",
             }}>
-                <Icon size={15} style={{color}}/>
+                <Icon name={icon} size={16} color={color}/>
             </div>
-            <motion.div animate={{opacity:[1,.4,1]}} transition={{duration:3,repeat:Infinity,delay}}
-                        style={{width:5,height:5,borderRadius:"50%",background:color}}/>
+            {change && <span style={{ fontSize:11, color:C.green, fontWeight:700 }}>+{change}</span>}
         </div>
-        <p style={{fontSize:24,fontWeight:900,color,margin:0,fontFamily:"'DM Sans',sans-serif"}}>{value}</p>
-        <p style={{fontSize:10,color:T.muted,margin:"3px 0 0",fontWeight:600,textTransform:"uppercase",letterSpacing:".5px"}}>
-            {label}
-        </p>
+        <div>
+            <p style={{ fontSize:26, fontWeight:800, color, margin:0, letterSpacing:"-1px", fontFamily:"'Outfit',sans-serif" }}>{value}</p>
+            <p style={{ fontSize:11, color:C.muted, margin:"2px 0 0", fontWeight:600, textTransform:"uppercase", letterSpacing:".6px" }}>{label}</p>
+        </div>
     </motion.div>
 )
 
-/* ── TASK CARD ── */
-const TaskCard = ({ task, onOpen, delay=0 }) => {
-    const cfg = CAT_CFG[task.cat]
-    const uc = URGENCY_COLOR(task.urgency)
-    const isActive = task.status === "active"
-
-    return (
-        <motion.div
-            initial={{opacity:0,x:-12}} animate={{opacity:1,x:0}}
-            transition={{delay}}
-            whileHover={{y:-2,borderColor:isActive?cfg.color:T.borderHi}}
-            onClick={()=>onOpen(task)}
-            style={{
-                background:T.card,
-                border:`1px solid ${isActive ? cfg.color+"40" : T.border}`,
-                borderRadius:14,padding:"14px 16px",cursor:"pointer",
-                transition:"all .2s",
-                position:"relative",overflow:"hidden",
-            }}>
-            {/* Active glow strip */}
-            {isActive && (
-                <div style={{
-                    position:"absolute",top:0,left:0,right:0,height:2,
-                    background:`linear-gradient(90deg,${cfg.color},${cfg.color}60)`,
-                }}/>
-            )}
-
-            <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-                {/* Icon */}
-                <div style={{
-                    width:34,height:34,borderRadius:10,
-                    background:`${cfg.color}20`,flexShrink:0,
-                    display:"flex",alignItems:"center",justifyContent:"center",
-                }}>
-                    <cfg.icon size={16} style={{color:cfg.color}}/>
-                </div>
-
-                <div style={{flex:1,minWidth:0}}>
-                    {/* Title row */}
-                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
-                        <p style={{fontSize:13,fontWeight:800,color:T.text,margin:0}}>{task.title}</p>
-                        {isActive && (
-                            <motion.span animate={{opacity:[1,.4,1]}} transition={{duration:1.5,repeat:Infinity}}
-                                         style={{
-                                             fontSize:9,fontWeight:700,padding:"1px 6px",borderRadius:20,
-                                             background:`${T.red}20`,color:T.red,flexShrink:0,
-                                         }}>LIVE</motion.span>
-                        )}
-                    </div>
-
-                    {/* Meta row */}
-                    <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
-            <span style={{fontSize:10,color:T.muted,display:"flex",alignItems:"center",gap:3}}>
-              <MapPin size={9}/> {task.loc}
-            </span>
-                        <span style={{fontSize:10,color:T.muted,display:"flex",alignItems:"center",gap:3}}>
-              <Clock size={9}/> {task.due}
-            </span>
-                        <span style={{fontSize:10,color:T.accent,fontWeight:700}}>
-              {task.distance}
-            </span>
-                    </div>
-
-                    {/* Bottom row */}
-                    <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginTop:8}}>
-                        <div style={{display:"flex",gap:3,alignItems:"flex-end"}}>
-                            {[1,2,3,4,5].map(b=>(
-                                <div key={b} style={{
-                                    width:3,height:b<=task.urgency?12:5,borderRadius:2,
-                                    background: b<=task.urgency ? uc : "rgba(255,255,255,0.08)",
-                                }}/>
-                            ))}
-                            <span style={{fontSize:9,color:uc,fontWeight:700,marginLeft:3}}>
-                U{task.urgency}
-              </span>
-                        </div>
-                        <span style={{fontSize:10,color:T.muted,fontWeight:600}}>
-              {task.people} people
-            </span>
-                        <ChevronRight size={13} style={{color:T.muted}}/>
-                    </div>
-                </div>
-            </div>
-        </motion.div>
-    )
-}
-
-/* ── TASK DETAIL MODAL ── */
+/* ── TASK MODAL ── */
 const TaskModal = ({ task, onClose }) => {
-    const cfg = CAT_CFG[task.cat]
+    const cfg = CAT[task.cat]
     const [done, setDone] = useState(false)
     const [loading, setLoading] = useState(false)
 
     const markDone = () => {
         setLoading(true)
-        setTimeout(()=>{setLoading(false);setDone(true)},1800)
+        setTimeout(() => { setLoading(false); setDone(true) }, 1600)
     }
 
     return (
-        <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+        <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
                     style={{
-                        position:"fixed",inset:0,background:"rgba(0,0,0,0.75)",
-                        backdropFilter:"blur(10px)",zIndex:500,
-                        display:"flex",alignItems:"center",justifyContent:"center",padding:20,
+                        position:"fixed", inset:0, background:"rgba(10,20,8,0.7)",
+                        backdropFilter:"blur(8px)", zIndex:1000,
+                        display:"flex", alignItems:"center", justifyContent:"center", padding:20,
                     }}
                     onClick={onClose}>
-            <motion.div initial={{scale:.9,y:24}} animate={{scale:1,y:0}}
-                        exit={{scale:.9,y:24}} onClick={e=>e.stopPropagation()}
+            <motion.div initial={{ scale:.93, y:20 }} animate={{ scale:1, y:0 }}
+                        exit={{ scale:.93, y:20 }} transition={{ type:"spring", stiffness:300, damping:28 }}
+                        onClick={e => e.stopPropagation()}
                         style={{
-                            background:T.card,border:`1px solid ${cfg.color}40`,
-                            borderRadius:22,padding:0,width:"100%",maxWidth:420,
-                            overflow:"hidden",boxShadow:"0 40px 100px rgba(0,0,0,0.6)",
+                            background:C.surface, borderRadius:22, width:"100%", maxWidth:460,
+                            overflow:"hidden", border:`1px solid ${cfg.color}30`,
+                            boxShadow:"0 30px 80px rgba(0,0,0,0.25)",
                         }}>
                 {/* Header */}
                 <div style={{
-                    background:`linear-gradient(135deg,${cfg.color}25,${cfg.color}08)`,
-                    borderBottom:`1px solid ${cfg.color}30`,
-                    padding:"18px 20px",
-                    display:"flex",alignItems:"center",justifyContent:"space-between",
+                    background:`${cfg.color}0D`, borderBottom:`1px solid ${cfg.color}20`,
+                    padding:"20px 22px", display:"flex", alignItems:"center", justifyContent:"space-between",
                 }}>
-                    <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    <div style={{ display:"flex", alignItems:"center", gap:12 }}>
                         <div style={{
-                            width:38,height:38,borderRadius:11,
-                            background:`${cfg.color}25`,
-                            display:"flex",alignItems:"center",justifyContent:"center",
-                        }}>
-                            <cfg.icon size={18} style={{color:cfg.color}}/>
-                        </div>
+                            width:42, height:42, borderRadius:12, background:`${cfg.color}18`,
+                            display:"flex", alignItems:"center", justifyContent:"center",
+                            fontSize:20, fontWeight:700, color:cfg.color,
+                        }}>{cfg.icon}</div>
                         <div>
-                            <p style={{fontSize:14,fontWeight:800,color:T.text,margin:0}}>{task.title}</p>
-                            <p style={{fontSize:10,color:T.muted,margin:0}}>{task.id} · {cfg.label}</p>
+                            <p style={{ fontSize:15, fontWeight:800, color:C.text, margin:0, fontFamily:"'Outfit',sans-serif" }}>{task.title}</p>
+                            <p style={{ fontSize:11, color:C.muted, margin:0 }}>{task.id} · {cfg.label}</p>
                         </div>
                     </div>
-                    <button onClick={onClose}
-                            style={{background:"none",border:"none",color:T.muted,cursor:"pointer"}}>
-                        <X size={16}/>
-                    </button>
+                    <motion.button whileTap={{ scale:.9 }} onClick={onClose}
+                                   style={{
+                                       width:32, height:32, borderRadius:8, border:`1px solid ${C.border}`,
+                                       background:"transparent", cursor:"pointer", display:"flex",
+                                       alignItems:"center", justifyContent:"center", color:C.muted,
+                                   }}>
+                        <Icon name="x" size={14} color={C.muted}/>
+                    </motion.button>
                 </div>
 
-                <div style={{padding:20}}>
+                <div style={{ padding:22 }}>
                     {done ? (
-                        <motion.div initial={{opacity:0,scale:.9}} animate={{opacity:1,scale:1}}
-                                    style={{textAlign:"center",padding:"20px 0"}}>
-                            <motion.div initial={{scale:0}} animate={{scale:1}}
-                                        transition={{type:"spring",stiffness:200}}
+                        <motion.div initial={{ opacity:0, scale:.9 }} animate={{ opacity:1, scale:1 }}
+                                    style={{ textAlign:"center", padding:"24px 0" }}>
+                            <motion.div initial={{ scale:0 }} animate={{ scale:1 }}
+                                        transition={{ type:"spring", stiffness:200, delay:.1 }}
                                         style={{
-                                            width:56,height:56,borderRadius:16,background:T.accent,
-                                            display:"flex",alignItems:"center",justifyContent:"center",
-                                            margin:"0 auto 12px",
+                                            width:64, height:64, borderRadius:18, background:C.green,
+                                            display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px",
                                         }}>
-                                <Check size={24} color="#fff"/>
+                                <Icon name="check" size={26} color="#fff"/>
                             </motion.div>
-                            <p style={{fontSize:15,fontWeight:800,color:T.accent,margin:"0 0 6px"}}>Task Marked Done!</p>
-                            <p style={{fontSize:12,color:T.muted,margin:"0 0 16px"}}>
-                                Your coordinator has been notified. +5 impact points added!
+                            <p style={{ fontSize:17, fontWeight:800, color:C.green, margin:"0 0 8px", fontFamily:"'Outfit',sans-serif" }}>Task Complete!</p>
+                            <p style={{ fontSize:13, color:C.muted, margin:"0 0 20px", lineHeight:1.6 }}>
+                                Your coordinator has been notified.<br/>+5 impact points added to your profile!
                             </p>
-                            <button onClick={onClose} style={{
-                                padding:"9px 24px",borderRadius:10,background:T.accent,
-                                color:"#fff",fontWeight:700,border:"none",cursor:"pointer",
-                                fontFamily:"'DM Sans',sans-serif",
-                            }}>Close</button>
+                            <motion.button whileTap={{ scale:.97 }} onClick={onClose}
+                                           style={{
+                                               padding:"10px 28px", borderRadius:12, background:C.green,
+                                               color:"#fff", fontWeight:700, border:"none", cursor:"pointer",
+                                               fontFamily:"'Outfit',sans-serif", fontSize:13,
+                                           }}>Close</motion.button>
                         </motion.div>
                     ) : (
                         <>
-                            {/* Info grid */}
-                            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
-                                {[
-                                    ["Location", task.loc],
-                                    ["Due",      task.due],
-                                    ["People",   `${task.people} affected`],
-                                    ["Distance", task.distance],
-                                ].map(([k,v])=>(
-                                    <div key={k} style={{
-                                        background:T.surface,borderRadius:10,padding:"9px 12px",
-                                        border:`1px solid ${T.border}`,
-                                    }}>
-                                        <p style={{fontSize:9,color:T.muted,fontWeight:700,margin:"0 0 2px",
-                                            textTransform:"uppercase",letterSpacing:".4px"}}>{k}</p>
-                                        <p style={{fontSize:12,color:T.text,fontWeight:700,margin:0}}>{v}</p>
+                            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:16 }}>
+                                {[["Location", task.loc], ["Due", task.due], ["People", `${task.people} affected`], ["Distance", task.distance]].map(([k, v]) => (
+                                    <div key={k} style={{ background:C.card, borderRadius:10, padding:"10px 13px", border:`1px solid ${C.border}` }}>
+                                        <p style={{ fontSize:9, color:C.muted, fontWeight:700, margin:"0 0 3px", textTransform:"uppercase", letterSpacing:".5px" }}>{k}</p>
+                                        <p style={{ fontSize:12, color:C.text, fontWeight:700, margin:0 }}>{v}</p>
                                     </div>
                                 ))}
                             </div>
 
-                            {/* Description */}
-                            <div style={{
-                                padding:"12px 14px",borderRadius:10,marginBottom:12,
-                                background:T.surface,border:`1px solid ${T.border}`,
-                            }}>
-                                <p style={{fontSize:11,fontWeight:700,color:T.muted,margin:"0 0 5px",
-                                    textTransform:"uppercase",letterSpacing:".5px"}}>Instructions</p>
-                                <p style={{fontSize:12,color:T.text,margin:0,lineHeight:1.7}}>{task.desc}</p>
+                            <div style={{ background:C.card, borderRadius:12, padding:"13px 15px", marginBottom:12, border:`1px solid ${C.border}` }}>
+                                <p style={{ fontSize:10, fontWeight:700, color:C.muted, margin:"0 0 6px", textTransform:"uppercase", letterSpacing:".5px" }}>Instructions</p>
+                                <p style={{ fontSize:13, color:C.text, margin:0, lineHeight:1.7 }}>{task.desc}</p>
                             </div>
 
-                            {/* Contact */}
                             <div style={{
-                                display:"flex",alignItems:"center",gap:10,
-                                padding:"10px 14px",borderRadius:10,marginBottom:14,
-                                background:`${T.accent}10`,border:`1px solid ${T.accent}30`,
+                                display:"flex", alignItems:"center", gap:10, padding:"11px 14px", borderRadius:10,
+                                marginBottom:16, background:C.greenLt, border:`1px solid ${C.green}30`,
                             }}>
-                                <Phone size={13} style={{color:T.accent,flexShrink:0}}/>
-                                <span style={{fontSize:12,fontWeight:700,color:T.accent}}>Contact: {task.contact}</span>
+                                <Icon name="phone" size={14} color={C.green}/>
+                                <span style={{ fontSize:12, fontWeight:700, color:C.green }}>Contact: {task.contact}</span>
                             </div>
 
-                            {/* Actions */}
-                            <div style={{display:"flex",gap:8}}>
-                                <motion.button whileHover={{scale:1.03}} whileTap={{scale:.97}}
+                            <div style={{ display:"flex", gap:8 }}>
+                                <motion.button whileHover={{ borderColor:C.borderHi }} whileTap={{ scale:.97 }}
                                                style={{
-                                                   flex:1,padding:"10px",borderRadius:11,
-                                                   border:`1px solid ${T.border}`,background:"transparent",
-                                                   color:T.muted,fontSize:12,fontWeight:700,cursor:"pointer",
-                                                   fontFamily:"'DM Sans',sans-serif",
-                                                   display:"flex",alignItems:"center",justifyContent:"center",gap:5,
+                                                   flex:1, padding:"11px", borderRadius:12, border:`1px solid ${C.border}`,
+                                                   background:"transparent", color:C.muted, fontSize:12, fontWeight:700, cursor:"pointer",
+                                                   fontFamily:"'Outfit',sans-serif", display:"flex", alignItems:"center", justifyContent:"center", gap:6,
                                                }}>
-                                    <Navigation size={12}/> Navigate
+                                    <Icon name="nav" size={13} color={C.muted}/> Navigate
                                 </motion.button>
-                                <motion.button whileHover={{scale:1.03}} whileTap={{scale:.97}}
+                                <motion.button whileHover={{ filter:"brightness(1.05)" }} whileTap={{ scale:.97 }}
                                                onClick={markDone}
                                                style={{
-                                                   flex:2,padding:"10px",borderRadius:11,
-                                                   border:"none",
-                                                   background:`linear-gradient(135deg,${T.accent},#5A9A30)`,
-                                                   color:"#fff",fontSize:12,fontWeight:800,cursor:"pointer",
-                                                   fontFamily:"'DM Sans',sans-serif",
-                                                   display:"flex",alignItems:"center",justifyContent:"center",gap:5,
-                                                   boxShadow:`0 4px 16px ${T.accent}40`,
+                                                   flex:2, padding:"11px", borderRadius:12, border:"none",
+                                                   background:C.green, color:"#fff", fontSize:12, fontWeight:800, cursor:"pointer",
+                                                   fontFamily:"'Outfit',sans-serif", display:"flex", alignItems:"center", justifyContent:"center", gap:6,
                                                }}>
-                                    {loading
-                                        ? <RefreshCw size={13} style={{animation:"spin 1s linear infinite"}}/>
-                                        : <><CheckCircle size={13}/> Mark Complete</>
-                                    }
+                                    {loading ? (
+                                        <motion.span animate={{ rotate:360 }} transition={{ duration:.8, repeat:Infinity, ease:"linear" }}>
+                                            <Icon name="refresh" size={14} color="#fff"/>
+                                        </motion.span>
+                                    ) : <><Icon name="check" size={14} color="#fff"/> Mark Complete</>}
                                 </motion.button>
                             </div>
                         </>
@@ -556,377 +357,893 @@ const TaskModal = ({ task, onClose }) => {
     )
 }
 
-/* ── HEATMAP ── */
-const LiveHeatmap = () => {
-    const [hovered, setHovered] = useState(null)
-    const [myZoneHighlight, setMyZoneHighlight] = useState(true)
-
-    const intensityColor = (v) => {
-        if(v>.85) return "#E05A3A"
-        if(v>.7)  return "#E8A020"
-        if(v>.55) return "#78B450"
-        return "#06B6D4"
-    }
+/* ── TASK ROW (used in Dashboard & Tasks page) ── */
+const TaskRow = ({ task, onOpen, delay=0 }) => {
+    const cfg = CAT[task.cat]
+    const uc = URGENCY_COLOR(task.urgency)
+    const isActive = task.status === "active"
 
     return (
-        <Card style={{padding:18}} hover={false}>
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:12}}>
-                <div style={{display:"flex",alignItems:"center",gap:8}}>
-                    <div style={{
-                        width:28,height:28,borderRadius:8,background:`${T.accent}20`,
-                        display:"flex",alignItems:"center",justifyContent:"center",
-                    }}>
-                        <BarChart3 size={13} style={{color:T.accent}}/>
-                    </div>
-                    <div>
-                        <p style={{fontSize:13,fontWeight:800,color:T.text,margin:0}}>Need Heatmap</p>
-                        <p style={{fontSize:9,color:T.muted,margin:0}}>Mumbai · Live density</p>
-                    </div>
-                </div>
-                <motion.div animate={{opacity:[1,.4,1]}} transition={{duration:2,repeat:Infinity}}
-                            style={{display:"flex",alignItems:"center",gap:4,
-                                padding:"3px 8px",borderRadius:6,
-                                background:`${T.accent}15`,border:`1px solid ${T.accent}30`}}>
-                    <div style={{width:5,height:5,borderRadius:"50%",background:T.accent,
-                        boxShadow:`0 0 6px ${T.accent}`}}/>
-                    <span style={{fontSize:9,fontWeight:700,color:T.accent}}>Live</span>
-                </motion.div>
-            </div>
-
-            {/* Map */}
-            <div style={{
-                position:"relative",height:200,borderRadius:12,overflow:"hidden",
-                background:"linear-gradient(135deg,#050F08 0%,#0A1A0C 60%,#050F08 100%)",
-            }}>
-                {/* Scan line */}
-                <motion.div
-                    animate={{top:["0%","100%"]}}
-                    transition={{duration:4,repeat:Infinity,ease:"linear"}}
+        <motion.div initial={{ opacity:0, x:-10 }} animate={{ opacity:1, x:0 }} transition={{ delay }}
+                    whileHover={{ x:3, borderColor:cfg.color + "60" }}
+                    onClick={() => onOpen(task)}
                     style={{
-                        position:"absolute",left:0,right:0,height:2,zIndex:5,
-                        background:`linear-gradient(90deg,transparent,${T.accent}50,transparent)`,
-                        pointerEvents:"none",
-                    }}
-                />
-
-                {/* Grid */}
-                <svg style={{position:"absolute",inset:0,width:"100%",height:"100%",opacity:.08}}>
-                    {[15,30,45,60,75,90].map(p=>(
-                        <g key={p}>
-                            <line x1={`${p}%`} y1="0" x2={`${p}%`} y2="100%" stroke={T.accent} strokeWidth=".5"/>
-                            <line x1="0" y1={`${p}%`} x2="100%" y2={`${p}%`} stroke={T.accent} strokeWidth=".5"/>
-                        </g>
-                    ))}
-                </svg>
-
-                {/* Dots */}
-                {HEATMAP_ZONES.map((dot,i)=>{
-                    const col = intensityColor(dot.intensity)
-                    const sz = dot.intensity*55+15
-                    const isMe = dot.active
-                    return (
-                        <div key={dot.zone} style={{
-                            position:"absolute",
-                            left:`${dot.x}%`,top:`${dot.y}%`,
-                            transform:"translate(-50%,-50%)",zIndex:2,
-                        }}>
-                            {/* Glow blob */}
-                            <motion.div
-                                animate={{scale:[1,1.2,1],opacity:[0.35,0.6,0.35]}}
-                                transition={{duration:2.5+i*.3,repeat:Infinity}}
-                                style={{
-                                    position:"absolute",
-                                    width:sz,height:sz,borderRadius:"50%",
-                                    background:`radial-gradient(circle,${col}60,${col}00)`,
-                                    transform:"translate(-50%,-50%)",left:"50%",top:"50%",
-                                }}
-                            />
-                            {/* Dot */}
-                            <motion.div
-                                whileHover={{scale:1.5}}
-                                onHoverStart={()=>setHovered(i)}
-                                onHoverEnd={()=>setHovered(null)}
-                                style={{
-                                    width:isMe?14:10,height:isMe?14:10,borderRadius:"50%",
-                                    background:col,cursor:"pointer",position:"relative",zIndex:3,
-                                    boxShadow:`0 0 ${isMe?16:8}px ${col}`,
-                                    border:isMe?`2px solid ${T.text}`:undefined,
-                                }}
-                            />
-                            {/* "You" label */}
-                            {isMe && (
-                                <div style={{
-                                    position:"absolute",top:-20,left:"50%",transform:"translateX(-50%)",
-                                    fontSize:8,fontWeight:800,color:T.accent,
-                                    background:T.card,padding:"1px 5px",borderRadius:4,
-                                    whiteSpace:"nowrap",border:`1px solid ${T.accent}40`,
-                                }}>📍 You're here</div>
-                            )}
-                            {/* Tooltip */}
-                            <AnimatePresence>
-                                {hovered===i && (
-                                    <motion.div initial={{opacity:0,y:6}} animate={{opacity:1,y:0}} exit={{opacity:0}}
-                                                style={{
-                                                    position:"absolute",bottom:"calc(100%+8px)",
-                                                    left:"50%",transform:"translateX(-50%)",
-                                                    whiteSpace:"nowrap",
-                                                    background:"rgba(10,15,8,0.97)",
-                                                    border:`1px solid ${col}50`,borderRadius:7,
-                                                    padding:"5px 8px",fontSize:9,color:T.text,
-                                                    zIndex:10,pointerEvents:"none",
-                                                }}>
-                                        <p style={{fontWeight:700,margin:"0 0 1px"}}>{dot.zone}</p>
-                                        <p style={{color:T.muted,margin:0}}>{dot.needs} needs · {dot.cat}</p>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    )
-                })}
-
-                {/* Legend */}
-                <div style={{position:"absolute",bottom:8,right:8,display:"flex",gap:8}}>
-                    {[{l:"Critical",c:"#E05A3A"},{l:"High",c:"#E8A020"},{l:"Low",c:T.accent}].map(x=>(
-                        <div key={x.l} style={{display:"flex",alignItems:"center",gap:3}}>
-                            <div style={{width:6,height:6,borderRadius:"50%",background:x.c}}/>
-                            <span style={{fontSize:8,color:T.muted}}>{x.l}</span>
-                        </div>
+                        background:C.surface, border:`1px solid ${isActive ? cfg.color + "30" : C.border}`,
+                        borderRadius:14, padding:"14px 16px", cursor:"pointer", display:"flex",
+                        alignItems:"center", gap:12, transition:"all .18s", position:"relative", overflow:"hidden",
+                    }}>
+            {isActive && <div style={{ position:"absolute", left:0, top:0, bottom:0, width:3, background:cfg.color, borderRadius:"3px 0 0 3px" }}/>}
+            <div style={{
+                width:38, height:38, borderRadius:11, background:cfg.bg, flexShrink:0,
+                display:"flex", alignItems:"center", justifyContent:"center",
+                fontSize:18, fontWeight:700, color:cfg.color,
+            }}>{cfg.icon}</div>
+            <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+                    <p style={{
+                        fontSize:13, fontWeight:800, color:C.text, margin:0,
+                        fontFamily:"'Outfit',sans-serif", whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis",
+                    }}>{task.title}</p>
+                    {isActive && (
+                        <motion.span animate={{ opacity:[1,.4,1] }} transition={{ duration:1.4, repeat:Infinity }}
+                                     style={{ fontSize:9, fontWeight:700, padding:"1px 7px", borderRadius:20, background:C.redLt, color:C.red, flexShrink:0 }}>LIVE</motion.span>
+                    )}
+                </div>
+                <div style={{ display:"flex", alignItems:"center", gap:12, flexWrap:"wrap" }}>
+                    <span style={{ fontSize:10, color:C.muted, display:"flex", alignItems:"center", gap:3 }}>
+                        <Icon name="pin" size={10} color={C.faint}/>{task.loc}
+                    </span>
+                    <span style={{ fontSize:10, color:C.muted, display:"flex", alignItems:"center", gap:3 }}>
+                        <Icon name="clock" size={10} color={C.faint}/>{task.due}
+                    </span>
+                    <span style={{ fontSize:10, color:C.green, fontWeight:700 }}>{task.distance}</span>
+                </div>
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:5, flexShrink:0 }}>
+                <div style={{ display:"flex", gap:2, alignItems:"flex-end" }}>
+                    {[1,2,3,4,5].map(b => (
+                        <div key={b} style={{ width:3, height:b <= task.urgency ? 12 : 5, borderRadius:2, background:b <= task.urgency ? uc : "rgba(0,0,0,0.06)" }}/>
                     ))}
                 </div>
-                <p style={{
-                    position:"absolute",bottom:8,left:8,
-                    fontSize:8,color:T.muted,fontWeight:700,letterSpacing:".1em",
-                }}>MUMBAI CITY</p>
+                <span style={{ fontSize:10, color:C.muted }}>{task.people} people</span>
             </div>
-        </Card>
+            <Icon name="chevron" size={14} color={C.faint}/>
+        </motion.div>
     )
 }
 
-/* ── LEADERBOARD ── */
-const Leaderboard = () => (
-    <Card style={{padding:18}} hover={false}>
-        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
-            <div style={{width:28,height:28,borderRadius:8,background:`${T.amber}20`,
-                display:"flex",alignItems:"center",justifyContent:"center"}}>
-                <Award size={13} style={{color:T.amber}}/>
-            </div>
-            <div>
-                <p style={{fontSize:13,fontWeight:800,color:T.text,margin:0}}>Leaderboard</p>
-                <p style={{fontSize:9,color:T.muted,margin:0}}>This month · Your zone</p>
-            </div>
-        </div>
-        {LEADERBOARD.map((v,i)=>(
-            <motion.div key={v.rank}
-                        initial={{opacity:0,x:10}} animate={{opacity:1,x:0}}
-                        transition={{delay:i*.06}}
-                        whileHover={{background:`${T.accent}06`}}
-                        style={{
-                            display:"flex",alignItems:"center",gap:8,
-                            padding:"9px 8px",borderRadius:9,
-                            border:`1px solid ${v.isMe ? T.accent+"40":"transparent"}`,
-                            background: v.isMe ? `${T.accent}08` : "transparent",
-                            transition:"all .15s",marginBottom:4,
-                        }}>
-                <span style={{fontSize:14,width:20,textAlign:"center"}}>{v.badge||`#${v.rank}`}</span>
-                <div style={{
-                    width:30,height:30,borderRadius:9,background:v.color,
-                    display:"flex",alignItems:"center",justifyContent:"center",
-                    fontSize:10,fontWeight:900,color:"#fff",flexShrink:0,
-                }}>{v.init}</div>
-                <div style={{flex:1}}>
-                    <p style={{fontSize:12,fontWeight:700,color:T.text,margin:0}}>
-                        {v.name} {v.isMe&&<span style={{fontSize:9,color:T.accent,fontWeight:700}}>(you)</span>}
-                    </p>
-                    <p style={{fontSize:9,color:T.muted,margin:0}}>{v.tasks} tasks</p>
-                </div>
-                <div style={{
-                    padding:"2px 8px",borderRadius:20,
-                    background:`${v.color}20`,color:v.color,
-                    fontSize:10,fontWeight:800,
-                }}>{v.score}%</div>
-            </motion.div>
-        ))}
-    </Card>
-)
+/* ── PAGE: DASHBOARD ── */
+const Dashboard = ({ onTaskOpen }) => {
+    const active = TASKS.filter(t => t.status === "active")
+    const upcoming = TASKS.filter(t => t.status === "upcoming")
 
-/* ── COMPLETED TASKS ── */
-const CompletedTasks = () => (
-    <Card style={{padding:18}} hover={false}>
-        <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
-            <div style={{width:28,height:28,borderRadius:8,background:`${T.teal}20`,
-                display:"flex",alignItems:"center",justifyContent:"center"}}>
-                <CheckCircle size={13} style={{color:T.teal}}/>
+    return (
+        <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+            {/* Welcome banner */}
+            <motion.div initial={{ opacity:0, y:-10 }} animate={{ opacity:1, y:0 }}
+                        style={{
+                            background:`linear-gradient(120deg,${C.green}18,${C.teal}10)`,
+                            borderRadius:20, padding:"24px 28px",
+                            border:`1px solid ${C.green}20`,
+                            display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:16,
+                        }}>
+                <div>
+                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+                        <motion.div animate={{ rotate:[0,10,0] }} transition={{ duration:2, repeat:Infinity }}
+                                    style={{ fontSize:22 }}>👋</motion.div>
+                        <h1 style={{ fontSize:22, fontWeight:800, color:C.text, margin:0, fontFamily:"'Outfit',sans-serif", letterSpacing:"-0.5px" }}>
+                            Good afternoon, Arjun
+                        </h1>
+                    </div>
+                    <p style={{ fontSize:13, color:C.muted, margin:0 }}>
+                        You have <strong style={{ color:C.red }}>{active.length} active</strong> and{" "}
+                        <strong style={{ color:C.amber }}>{upcoming.length} upcoming</strong> tasks today
+                    </p>
+                </div>
+                <div style={{ display:"flex", gap:8, flexWrap:"wrap" }}>
+                    <motion.div animate={{ opacity:[1,.5,1] }} transition={{ duration:2, repeat:Infinity }}
+                                style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 14px", borderRadius:12, background:C.surface, border:`1px solid ${C.border}` }}>
+                        <div style={{ width:7, height:7, borderRadius:"50%", background:C.green, boxShadow:`0 0 8px ${C.green}` }}/>
+                        <span style={{ fontSize:12, fontWeight:700, color:C.green }}>2 Active Now</span>
+                    </motion.div>
+                    <div style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 14px", borderRadius:12, background:C.surface, border:`1px solid ${C.border}` }}>
+                        <Icon name="fire" size={14} color={C.amber}/>
+                        <span style={{ fontSize:12, fontWeight:700, color:C.amber }}>{VOLUNTEER.streak}-day streak</span>
+                    </div>
+                </div>
+            </motion.div>
+
+            {/* Stats */}
+            <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:12 }}>
+                {[
+                    { label:"Tasks Done",   value:VOLUNTEER.tasksCompleted,    icon:"check",  color:C.green, change:"5"   },
+                    { label:"Hours Logged", value:`${VOLUNTEER.hoursLogged}h`, icon:"clock",  color:C.amber, change:"12h" },
+                    { label:"Impact Score", value:`${VOLUNTEER.impactScore}%`, icon:"target", color:C.teal,  change:"2%"  },
+                    { label:"Day Streak",   value:VOLUNTEER.streak,            icon:"fire",   color:C.red,   change:""    },
+                ].map((s, i) => (
+                    <motion.div key={s.label} initial={{ opacity:0, y:16 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*.07 }}>
+                        <StatCard {...s}/>
+                    </motion.div>
+                ))}
             </div>
-            <p style={{fontSize:13,fontWeight:800,color:T.text,margin:0}}>Completed</p>
-        </div>
-        {COMPLETED_TASKS.map((t,i)=>{
-            const cfg = CAT_CFG[t.cat]
-            return (
-                <motion.div key={t.id}
-                            initial={{opacity:0}} animate={{opacity:1}} transition={{delay:i*.06}}
-                            style={{
-                                display:"flex",alignItems:"center",gap:10,
-                                padding:"9px 0",
-                                borderBottom: i<COMPLETED_TASKS.length-1?`1px solid ${T.border}`:"none",
-                            }}>
-                    <div style={{
-                        width:28,height:28,borderRadius:8,
-                        background:`${cfg.color}18`,flexShrink:0,
-                        display:"flex",alignItems:"center",justifyContent:"center",
-                    }}>
-                        <cfg.icon size={12} style={{color:cfg.color}}/>
+
+            {/* Tasks + Side panel */}
+            <div style={{ display:"grid", gridTemplateColumns:"1fr 320px", gap:16 }}>
+                <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+                    <div>
+                        <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:12 }}>
+                            <motion.div animate={{ scale:[1,1.3,1] }} transition={{ duration:1.5, repeat:Infinity }}
+                                        style={{ width:8, height:8, borderRadius:"50%", background:C.red, boxShadow:`0 0 10px ${C.red}` }}/>
+                            <span style={{ fontSize:11, fontWeight:800, color:C.red, textTransform:"uppercase", letterSpacing:".8px" }}>Active Now</span>
+                        </div>
+                        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                            {active.map((t, i) => <TaskRow key={t.id} task={t} onOpen={onTaskOpen} delay={i*.05}/>)}
+                        </div>
                     </div>
-                    <div style={{flex:1}}>
-                        <p style={{fontSize:12,fontWeight:700,color:T.text,margin:0}}>{t.title}</p>
-                        <p style={{fontSize:10,color:T.muted,margin:0}}>{t.loc} · {t.date}</p>
+                    <div>
+                        <div style={{ display:"flex", alignItems:"center", gap:7, marginBottom:12, marginTop:8 }}>
+                            <div style={{ width:8, height:8, borderRadius:"50%", background:C.amber }}/>
+                            <span style={{ fontSize:11, fontWeight:800, color:C.amber, textTransform:"uppercase", letterSpacing:".8px" }}>Upcoming</span>
+                        </div>
+                        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                            {upcoming.map((t, i) => <TaskRow key={t.id} task={t} onOpen={onTaskOpen} delay={i*.05+.1}/>)}
+                        </div>
                     </div>
-                    <div style={{display:"flex",gap:1}}>
-                        {[...Array(5)].map((_,si)=>(
-                            <Star key={si} size={9}
-                                  style={{color: si<t.rating ? T.amber : "rgba(255,255,255,0.1)"}}
-                                  fill={si<t.rating ? T.amber : "none"}
-                            />
+                </div>
+
+                {/* Right panel */}
+                <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:"18px 20px" }}>
+                        <p style={{ fontSize:12, fontWeight:800, color:C.text, margin:"0 0 14px", fontFamily:"'Outfit',sans-serif" }}>Quick Summary</p>
+                        {[
+                            { label:"Your zone rank", value:`#${VOLUNTEER.rank}`, color:C.purple },
+                            { label:"People helped",  value:"239",                color:C.teal   },
+                            { label:"Tasks this month",value:"12",               color:C.green  },
+                            { label:"Avg rating",     value:"4.8 ★",             color:C.amber  },
+                        ].map(s => (
+                            <div key={s.label} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"8px 0", borderBottom:`1px solid ${C.border}` }}>
+                                <span style={{ fontSize:12, color:C.muted }}>{s.label}</span>
+                                <span style={{ fontSize:13, fontWeight:800, color:s.color, fontFamily:"'Outfit',sans-serif" }}>{s.value}</span>
+                            </div>
                         ))}
                     </div>
-                </motion.div>
-            )
-        })}
-    </Card>
-)
 
-/* ── PROFILE SIDE ── */
-const ProfileCard = () => (
-    <Card style={{padding:20}} hover={false}>
-        {/* Avatar + name */}
-        <div style={{textAlign:"center",marginBottom:18}}>
-            <div style={{
-                width:60,height:60,borderRadius:16,
-                background:`linear-gradient(135deg,${T.accent},#5A9A30)`,
-                display:"flex",alignItems:"center",justifyContent:"center",
-                fontSize:20,fontWeight:900,color:"#fff",
-                margin:"0 auto 10px",
-                boxShadow:`0 4px 20px ${T.accent}40`,
-            }}>{VOLUNTEER.init}</div>
-            <p style={{fontSize:15,fontWeight:800,color:T.text,margin:0}}>{VOLUNTEER.name}</p>
-            <p style={{fontSize:10,color:T.muted,margin:"3px 0 8px"}}>{VOLUNTEER.zone}</p>
-            <span style={{
-                fontSize:10,fontWeight:700,padding:"3px 10px",borderRadius:20,
-                background:`${T.amber}20`,color:T.amber,
-                border:`1px solid ${T.amber}30`,
-            }}>🏅 {VOLUNTEER.badge}</span>
-        </div>
+                    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:"18px 20px" }}>
+                        <p style={{ fontSize:12, fontWeight:800, color:C.text, margin:"0 0 14px", fontFamily:"'Outfit',sans-serif" }}>Leaderboard Top 3</p>
+                        {LEADERBOARD.slice(0, 3).map((v, i) => (
+                            <div key={v.rank} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:i < 2 ? 10 : 0 }}>
+                                <span style={{ fontSize:16, width:20 }}>{["🥇","🥈","🥉"][i]}</span>
+                                <div style={{ width:30, height:30, borderRadius:9, background:`${[C.amber,C.muted,C.red][i]}20`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:800, color:[C.amber,C.muted,C.red][i] }}>{v.init}</div>
+                                <div style={{ flex:1 }}>
+                                    <p style={{ fontSize:12, fontWeight:700, color:C.text, margin:0 }}>{v.name}</p>
+                                    <p style={{ fontSize:10, color:C.muted, margin:0 }}>{v.tasks} tasks</p>
+                                </div>
+                                <span style={{ fontSize:12, fontWeight:800, color:[C.amber,C.muted,C.red][i] }}>{v.score}%</span>
+                            </div>
+                        ))}
+                    </div>
 
-        {/* Streak */}
-        <div style={{
-            padding:"10px 14px",borderRadius:10,marginBottom:14,
-            background:`${T.accent}10`,border:`1px solid ${T.accent}30`,
-            display:"flex",alignItems:"center",gap:8,
-        }}>
-            <Flame size={14} style={{color:T.accent}}/>
-            <div>
-                <p style={{fontSize:12,fontWeight:800,color:T.accent,margin:0}}>
-                    {VOLUNTEER.streak}-day streak! 🔥
-                </p>
-                <p style={{fontSize:9,color:T.muted,margin:0}}>Keep it going!</p>
+                    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:"18px 20px" }}>
+                        <p style={{ fontSize:12, fontWeight:800, color:C.text, margin:"0 0 14px", fontFamily:"'Outfit',sans-serif" }}>Recent Alerts</p>
+                        {NOTIFS.slice(0, 3).map((n, i) => (
+                            <div key={n.id} style={{ display:"flex", gap:10, padding:"8px 0", borderBottom:i < 2 ? `1px solid ${C.border}` : "none", opacity:n.unread ? 1 : .6 }}>
+                                <div style={{ width:28, height:28, borderRadius:8, flexShrink:0, background:n.unread ? C.redLt : C.card, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13 }}>{n.unread ? "🔔" : "✓"}</div>
+                                <div>
+                                    <p style={{ fontSize:11, color:C.text, margin:0, lineHeight:1.4, fontWeight:n.unread ? 700 : 400 }}>{n.text}</p>
+                                    <p style={{ fontSize:9, color:C.muted, margin:"2px 0 0" }}>{n.time}</p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
             </div>
         </div>
+    )
+}
 
-        {/* Skills */}
-        <div style={{marginBottom:14}}>
-            <p style={{fontSize:9,fontWeight:700,color:T.muted,margin:"0 0 7px",
-                textTransform:"uppercase",letterSpacing:".6px"}}>My Skills</p>
-            <div style={{display:"flex",flexWrap:"wrap",gap:5}}>
-                {VOLUNTEER.skills.map(s=>(
-                    <span key={s} style={{
-                        fontSize:10,fontWeight:700,padding:"3px 9px",borderRadius:20,
-                        background:`${T.accent}15`,color:T.accent,
-                        border:`1px solid ${T.accent}25`,
-                    }}>{s}</span>
+/* ── PAGE: TASKS ── */
+const CompletedRow = ({ task }) => {
+    const cfg = CAT[task.cat]
+    return (
+        <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:"14px 16px", display:"flex", alignItems:"center", gap:12, opacity:.75 }}>
+            <div style={{ width:38, height:38, borderRadius:11, background:C.greenLt, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <Icon name="check" size={16} color={C.green}/>
+            </div>
+            <div style={{ flex:1 }}>
+                <p style={{ fontSize:13, fontWeight:700, color:C.text, margin:"0 0 3px", fontFamily:"'Outfit',sans-serif" }}>{task.title}</p>
+                <p style={{ fontSize:11, color:C.muted, margin:0 }}>{task.loc} · {task.date}</p>
+            </div>
+            <div style={{ display:"flex", gap:2 }}>
+                {[...Array(5)].map((_, i) => (
+                    <span key={i} style={{ color:i < task.rating ? C.amber : "#ddd", fontSize:12 }}>★</span>
+                ))}
+            </div>
+            <Badge color={C.teal} bg={C.tealLt}>Done</Badge>
+        </div>
+    )
+}
+
+const Tasks = ({ onTaskOpen }) => {
+    const [filter, setFilter] = useState("all")
+    const [catFilter, setCatFilter] = useState("all")
+    const [search, setSearch] = useState("")
+
+    const allTasks = [...TASKS, ...COMPLETED.map(t => ({ ...t, status:"done" }))]
+    const filtered = allTasks.filter(t => {
+        if (filter === "active" && t.status !== "active") return false
+        if (filter === "upcoming" && t.status !== "upcoming") return false
+        if (filter === "done" && t.status !== "done") return false
+        if (catFilter !== "all" && t.cat !== catFilter) return false
+        if (search && !t.title.toLowerCase().includes(search.toLowerCase())) return false
+        return true
+    })
+
+    return (
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+            <div>
+                <h2 style={{ fontSize:20, fontWeight:800, color:C.text, margin:"0 0 4px", fontFamily:"'Outfit',sans-serif" }}>My Tasks</h2>
+                <p style={{ fontSize:13, color:C.muted, margin:0 }}>{filtered.length} tasks shown</p>
+            </div>
+
+            <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                <div style={{ position:"relative" }}>
+                    <Icon name="tasks" size={15} color={C.faint} style={{ position:"absolute", left:14, top:"50%", transform:"translateY(-50%)" }}/>
+                    <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tasks..."
+                           style={{ width:"100%", padding:"10px 14px 10px 40px", borderRadius:12, border:`1px solid ${C.border}`, background:C.surface, color:C.text, fontSize:13, fontFamily:"'Outfit',sans-serif", outline:"none", boxSizing:"border-box" }}/>
+                </div>
+                <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                    {["all","active","upcoming","done"].map(f => (
+                        <Pill key={f} active={filter === f} onClick={() => setFilter(f)}
+                              color={f === "active" ? C.red : f === "upcoming" ? C.amber : f === "done" ? C.teal : C.green}>
+                            {f.charAt(0).toUpperCase() + f.slice(1)}
+                        </Pill>
+                    ))}
+                    <div style={{ width:1, background:C.border, margin:"0 4px" }}/>
+                    {["all","medical","food","water","shelter","education"].map(c => (
+                        <Pill key={c} active={catFilter === c} onClick={() => setCatFilter(c)} color={c === "all" ? C.green : CAT[c]?.color || C.green}>
+                            {c === "all" ? "All Cats" : CAT[c]?.label || c}
+                        </Pill>
+                    ))}
+                </div>
+            </div>
+
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                <AnimatePresence>
+                    {filtered.map((t, i) => (
+                        <motion.div key={t.id} initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-10 }} transition={{ delay:i*.04 }}>
+                            {t.status === "done" ? <CompletedRow task={t}/> : <TaskRow task={t} onOpen={onTaskOpen}/>}
+                        </motion.div>
+                    ))}
+                </AnimatePresence>
+                {filtered.length === 0 && (
+                    <div style={{ textAlign:"center", padding:"40px 0", color:C.muted }}>
+                        <p style={{ fontSize:32, marginBottom:8 }}>🔍</p>
+                        <p style={{ fontSize:14, fontWeight:600 }}>No tasks found</p>
+                    </div>
+                )}
+            </div>
+        </div>
+    )
+}
+
+/* ── PAGE: HEATMAP ── */
+const MapPage = () => {
+    const [hovered, setHovered] = useState(null)
+    const [selected, setSelected] = useState(null)
+    const [view, setView] = useState("heatmap")
+
+    const intensityColor = v => v > .85 ? C.red : v > .7 ? C.amber : v > .55 ? C.green : C.teal
+
+    return (
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
+                <div>
+                    <h2 style={{ fontSize:20, fontWeight:800, color:C.text, margin:"0 0 4px", fontFamily:"'Outfit',sans-serif" }}>Need Heatmap</h2>
+                    <p style={{ fontSize:13, color:C.muted, margin:0 }}>Mumbai · Live density data</p>
+                </div>
+                <div style={{ display:"flex", gap:6 }}>
+                    {["heatmap","list"].map(v => (
+                        <Pill key={v} active={view === v} onClick={() => setView(v)}>
+                            {v === "heatmap" ? "Map View" : "List View"}
+                        </Pill>
+                    ))}
+                </div>
+            </div>
+
+            {view === "heatmap" ? (
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 280px", gap:14 }}>
+                    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:18, overflow:"hidden" }}>
+                        <div style={{ position:"relative", height:420, background:"linear-gradient(135deg,#0d1f0a 0%,#0a1807 60%,#0d1f0a 100%)" }}>
+                            <motion.div animate={{ top:["0%","100%"] }} transition={{ duration:5, repeat:Infinity, ease:"linear" }}
+                                        style={{ position:"absolute", left:0, right:0, height:1, zIndex:5, pointerEvents:"none", background:`linear-gradient(90deg,transparent,${C.green}60,transparent)` }}/>
+                            <svg style={{ position:"absolute", inset:0, width:"100%", height:"100%", opacity:.06 }}>
+                                {[15,30,45,60,75,90].map(p => (
+                                    <g key={p}>
+                                        <line x1={`${p}%`} y1="0" x2={`${p}%`} y2="100%" stroke={C.green} strokeWidth=".5"/>
+                                        <line x1="0" y1={`${p}%`} x2="100%" y2={`${p}%`} stroke={C.green} strokeWidth=".5"/>
+                                    </g>
+                                ))}
+                            </svg>
+                            {HEATMAP.map((dot, i) => {
+                                const col = intensityColor(dot.intensity)
+                                const sz = dot.intensity * 60 + 20
+                                return (
+                                    <div key={dot.zone} style={{ position:"absolute", left:`${dot.x}%`, top:`${dot.y}%`, transform:"translate(-50%,-50%)", zIndex:2 }}>
+                                        <motion.div animate={{ scale:[1,1.3,1], opacity:[.3,.55,.3] }} transition={{ duration:2.5+i*.4, repeat:Infinity }}
+                                                    style={{ position:"absolute", width:sz, height:sz, borderRadius:"50%", background:`radial-gradient(circle,${col}55,transparent)`, transform:"translate(-50%,-50%)", left:"50%", top:"50%" }}/>
+                                        <motion.div whileHover={{ scale:1.6 }} onClick={() => setSelected(dot)}
+                                                    onHoverStart={() => setHovered(i)} onHoverEnd={() => setHovered(null)}
+                                                    style={{ width:dot.active?16:12, height:dot.active?16:12, borderRadius:"50%", background:col, cursor:"pointer", position:"relative", zIndex:3, boxShadow:`0 0 ${dot.active?18:10}px ${col}80`, border:dot.active?"2px solid rgba(255,255,255,0.3)":"none" }}/>
+                                        {dot.active && (
+                                            <div style={{ position:"absolute", top:-22, left:"50%", transform:"translateX(-50%)", fontSize:9, fontWeight:800, color:C.green, background:"rgba(10,20,8,.9)", padding:"2px 6px", borderRadius:5, whiteSpace:"nowrap", border:`1px solid ${C.green}40` }}>📍 You</div>
+                                        )}
+                                        <AnimatePresence>
+                                            {hovered === i && (
+                                                <motion.div initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0 }}
+                                                            style={{ position:"absolute", bottom:"calc(100%+8px)", left:"50%", transform:"translateX(-50%)", whiteSpace:"nowrap", background:"rgba(8,15,6,0.96)", border:`1px solid ${col}40`, borderRadius:8, padding:"6px 10px", zIndex:10, pointerEvents:"none" }}>
+                                                    <p style={{ fontWeight:800, margin:"0 0 2px", color:"#fff", fontSize:11 }}>{dot.zone}</p>
+                                                    <p style={{ color:"rgba(255,255,255,.5)", margin:0, fontSize:9 }}>{dot.needs} needs · {dot.cat}</p>
+                                                </motion.div>
+                                            )}
+                                        </AnimatePresence>
+                                    </div>
+                                )
+                            })}
+                            <div style={{ position:"absolute", bottom:12, left:12, display:"flex", gap:10 }}>
+                                {[{l:"Critical",c:C.red},{l:"High",c:C.amber},{l:"Moderate",c:C.green},{l:"Low",c:C.teal}].map(x => (
+                                    <div key={x.l} style={{ display:"flex", alignItems:"center", gap:4 }}>
+                                        <div style={{ width:7, height:7, borderRadius:"50%", background:x.c }}/>
+                                        <span style={{ fontSize:9, color:"rgba(255,255,255,.5)" }}>{x.l}</span>
+                                    </div>
+                                ))}
+                            </div>
+                            <div style={{ position:"absolute", top:12, left:12 }}>
+                                <motion.div animate={{ opacity:[1,.5,1] }} transition={{ duration:2, repeat:Infinity }}
+                                            style={{ display:"flex", alignItems:"center", gap:5, padding:"4px 10px", borderRadius:7, background:"rgba(8,15,6,0.8)", border:`1px solid ${C.green}30` }}>
+                                    <div style={{ width:6, height:6, borderRadius:"50%", background:C.green }}/>
+                                    <span style={{ fontSize:10, fontWeight:700, color:C.green }}>Live</span>
+                                </motion.div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                        {selected ? (
+                            <motion.div initial={{ opacity:0, x:10 }} animate={{ opacity:1, x:0 }}
+                                        style={{ background:C.surface, border:`1px solid ${intensityColor(selected.intensity)}30`, borderRadius:16, padding:"18px 20px" }}>
+                                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:14 }}>
+                                    <p style={{ fontSize:15, fontWeight:800, color:C.text, margin:0, fontFamily:"'Outfit',sans-serif" }}>{selected.zone}</p>
+                                    <motion.button whileTap={{ scale:.9 }} onClick={() => setSelected(null)}
+                                                   style={{ background:"none", border:"none", cursor:"pointer", color:C.muted }}>
+                                        <Icon name="x" size={14} color={C.muted}/>
+                                    </motion.button>
+                                </div>
+                                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8, marginBottom:12 }}>
+                                    {[["Needs",selected.needs],["Category",selected.cat],["Intensity",`${Math.round(selected.intensity*100)}%`],["Status",selected.active?"Your zone":"Active"]].map(([k,v]) => (
+                                        <div key={k} style={{ background:C.card, borderRadius:9, padding:"9px 11px", border:`1px solid ${C.border}` }}>
+                                            <p style={{ fontSize:9, color:C.muted, fontWeight:700, margin:"0 0 2px", textTransform:"uppercase", letterSpacing:".4px" }}>{k}</p>
+                                            <p style={{ fontSize:12, color:C.text, fontWeight:700, margin:0, textTransform:"capitalize" }}>{v}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                                <div style={{ height:4, borderRadius:2, background:C.card, marginBottom:12 }}>
+                                    <motion.div initial={{ width:0 }} animate={{ width:`${selected.intensity*100}%` }}
+                                                style={{ height:"100%", borderRadius:2, background:intensityColor(selected.intensity) }}/>
+                                </div>
+                                <motion.button whileTap={{ scale:.97 }}
+                                               style={{ width:"100%", padding:"10px", borderRadius:11, background:C.green, color:"#fff", fontWeight:700, border:"none", cursor:"pointer", fontFamily:"'Outfit',sans-serif", fontSize:12 }}>
+                                    View Tasks in This Zone
+                                </motion.button>
+                            </motion.div>
+                        ) : (
+                            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:"18px 20px" }}>
+                                <p style={{ fontSize:12, fontWeight:700, color:C.muted, margin:"0 0 4px" }}>Click a zone dot</p>
+                                <p style={{ fontSize:11, color:C.faint, margin:0 }}>to see details</p>
+                            </div>
+                        )}
+                        {[...HEATMAP].sort((a, b) => b.intensity - a.intensity).map((z, i) => (
+                            <motion.div key={z.zone} whileHover={{ x:2 }} onClick={() => setSelected(z)}
+                                        style={{ background:selected?.zone === z.zone ? `${intensityColor(z.intensity)}08` : C.surface, border:`1px solid ${selected?.zone === z.zone ? intensityColor(z.intensity)+"40" : C.border}`, borderRadius:12, padding:"11px 14px", cursor:"pointer", transition:"all .15s" }}>
+                                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                                    <div style={{ width:8, height:8, borderRadius:"50%", flexShrink:0, background:intensityColor(z.intensity) }}/>
+                                    <span style={{ flex:1, fontSize:12, fontWeight:700, color:C.text }}>{z.zone}</span>
+                                    <span style={{ fontSize:11, color:C.muted }}>{z.needs} needs</span>
+                                    <div style={{ width:50, height:3, borderRadius:2, background:C.card }}>
+                                        <div style={{ height:"100%", borderRadius:2, width:`${z.intensity*100}%`, background:intensityColor(z.intensity) }}/>
+                                    </div>
+                                </div>
+                            </motion.div>
+                        ))}
+                    </div>
+                </div>
+            ) : (
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                    {[...HEATMAP].sort((a, b) => b.intensity - a.intensity).map((z, i) => (
+                        <motion.div key={z.zone} initial={{ opacity:0, x:-10 }} animate={{ opacity:1, x:0 }} transition={{ delay:i*.05 }} whileHover={{ x:3 }}
+                                    style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:14, padding:"16px 18px", display:"flex", alignItems:"center", gap:14 }}>
+                            <div style={{ width:44, height:44, borderRadius:12, background:`${intensityColor(z.intensity)}15`, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                                <div style={{ width:16, height:16, borderRadius:"50%", background:intensityColor(z.intensity) }}/>
+                            </div>
+                            <div style={{ flex:1 }}>
+                                <p style={{ fontSize:14, fontWeight:800, color:C.text, margin:"0 0 4px", fontFamily:"'Outfit',sans-serif" }}>{z.zone}</p>
+                                <p style={{ fontSize:11, color:C.muted, margin:0, textTransform:"capitalize" }}>{z.cat} · {z.needs} needs</p>
+                            </div>
+                            <div style={{ width:80, height:5, borderRadius:3, background:C.card }}>
+                                <motion.div initial={{ width:0 }} animate={{ width:`${z.intensity*100}%` }} transition={{ delay:i*.05+.2 }}
+                                            style={{ height:"100%", borderRadius:3, background:intensityColor(z.intensity) }}/>
+                            </div>
+                            <span style={{ fontSize:13, fontWeight:800, color:intensityColor(z.intensity), minWidth:36, textAlign:"right", fontFamily:"'Outfit',sans-serif" }}>
+                                {Math.round(z.intensity * 100)}%
+                            </span>
+                        </motion.div>
+                    ))}
+                </div>
+            )}
+        </div>
+    )
+}
+
+/* ── PAGE: LEADERBOARD ── */
+const LeaderboardPage = () => {
+    const [period, setPeriod] = useState("month")
+    const me = LEADERBOARD.find(v => v.isMe)
+
+    return (
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
+                <div>
+                    <h2 style={{ fontSize:20, fontWeight:800, color:C.text, margin:"0 0 4px", fontFamily:"'Outfit',sans-serif" }}>Leaderboard</h2>
+                    <p style={{ fontSize:13, color:C.muted, margin:0 }}>Your zone · Dharavi, Mumbai</p>
+                </div>
+                <div style={{ display:"flex", gap:6 }}>
+                    {["week","month","all"].map(p => (
+                        <Pill key={p} active={period === p} onClick={() => setPeriod(p)}>
+                            {p === "all" ? "All Time" : p.charAt(0).toUpperCase() + p.slice(1)}
+                        </Pill>
+                    ))}
+                </div>
+            </div>
+
+            <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:18, padding:"24px 20px" }}>
+                <div style={{ display:"flex", alignItems:"flex-end", justifyContent:"center", gap:12, marginBottom:4 }}>
+                    {[LEADERBOARD[1], LEADERBOARD[0], LEADERBOARD[2]].map((v, i) => {
+                        const heights = [110, 130, 95]
+                        const ranks = [2, 1, 3]
+                        const colors = [C.muted, C.amber, "#CD7F32"]
+                        const emojis = ["🥈","🥇","🥉"]
+                        return (
+                            <motion.div key={v.rank} initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }} transition={{ delay:i*.1 }}
+                                        style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8, width:80 }}>
+                                <span style={{ fontSize:20 }}>{emojis[i]}</span>
+                                <div style={{ width:48, height:48, borderRadius:14, background:`${colors[i]}25`, border:`2px solid ${colors[i]}40`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:900, color:colors[i] }}>{v.init}</div>
+                                <p style={{ fontSize:11, fontWeight:800, color:C.text, margin:0, textAlign:"center", fontFamily:"'Outfit',sans-serif" }}>{v.name.split(" ")[0]}</p>
+                                <p style={{ fontSize:11, fontWeight:800, color:colors[i], margin:0 }}>{v.score}%</p>
+                                <div style={{ height:heights[i], width:"100%", borderRadius:"10px 10px 0 0", background:`${colors[i]}18`, border:`1px solid ${colors[i]}30`, borderBottom:"none", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                                    <p style={{ fontSize:20, fontWeight:900, color:colors[i], margin:0, fontFamily:"'Outfit',sans-serif" }}>#{ranks[i]}</p>
+                                </div>
+                            </motion.div>
+                        )
+                    })}
+                </div>
+            </div>
+
+            <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} transition={{ delay:.3 }}
+                        style={{ background:`${C.green}10`, border:`1px solid ${C.green}30`, borderRadius:14, padding:"14px 18px", display:"flex", alignItems:"center", gap:12 }}>
+                <div style={{ width:40, height:40, borderRadius:12, background:C.green, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:900, color:"#fff" }}>AP</div>
+                <div style={{ flex:1 }}>
+                    <p style={{ fontSize:13, fontWeight:800, color:C.green, margin:0, fontFamily:"'Outfit',sans-serif" }}>You're #{me.rank} in your zone!</p>
+                    <p style={{ fontSize:11, color:C.muted, margin:"2px 0 0" }}>{LEADERBOARD[me.rank-2].score - me.score} points behind #{me.rank-1}</p>
+                </div>
+                <Badge color={C.green} bg={C.greenLt}>Top 5</Badge>
+            </motion.div>
+
+            <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                {LEADERBOARD.map((v, i) => (
+                    <motion.div key={v.rank} initial={{ opacity:0, x:10 }} animate={{ opacity:1, x:0 }} transition={{ delay:.35+i*.05 }} whileHover={{ x:2 }}
+                                style={{ background:v.isMe ? `${C.green}08` : C.surface, border:`1px solid ${v.isMe ? C.green+"30" : C.border}`, borderRadius:13, padding:"13px 16px", display:"flex", alignItems:"center", gap:12, transition:"all .15s" }}>
+                        <div style={{ width:28, textAlign:"center" }}>
+                            {i < 3 ? <span style={{ fontSize:18 }}>{["🥇","🥈","🥉"][i]}</span> : <span style={{ fontSize:13, fontWeight:700, color:C.muted }}>#{v.rank}</span>}
+                        </div>
+                        <div style={{ width:38, height:38, borderRadius:11, flexShrink:0, background:v.isMe ? C.green : `${C.muted}20`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:900, color:v.isMe ? "#fff" : C.muted }}>{v.init}</div>
+                        <div style={{ flex:1 }}>
+                            <p style={{ fontSize:13, fontWeight:700, color:C.text, margin:0, fontFamily:"'Outfit',sans-serif" }}>
+                                {v.name} {v.isMe && <span style={{ fontSize:10, color:C.green, fontWeight:700 }}>(you)</span>}
+                            </p>
+                            <p style={{ fontSize:10, color:C.muted, margin:"1px 0 0" }}>{v.zone} · {v.tasks} tasks · {v.hours}h</p>
+                        </div>
+                        <div style={{ padding:"4px 12px", borderRadius:20, fontWeight:800, fontSize:12, background:v.isMe ? C.greenLt : `${C.muted}12`, color:v.isMe ? C.green : C.muted, fontFamily:"'Outfit',sans-serif" }}>{v.score}%</div>
+                    </motion.div>
                 ))}
             </div>
         </div>
+    )
+}
 
-        {/* Stats */}
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
-            {[
-                {label:"Tasks Done",   value:VOLUNTEER.tasksCompleted, color:T.accent},
-                {label:"Hours Logged", value:VOLUNTEER.hoursLogged+"h",color:T.amber},
-                {label:"Impact Score", value:VOLUNTEER.impactScore+"%",color:T.teal},
-                {label:"Rank",         value:`#${VOLUNTEER.rank}`,     color:T.purple},
-            ].map(s=>(
-                <div key={s.label} style={{
-                    padding:"9px",borderRadius:9,
-                    background:T.surface,border:`1px solid ${T.border}`,
-                    textAlign:"center",
-                }}>
-                    <p style={{fontSize:16,fontWeight:900,color:s.color,margin:0}}>{s.value}</p>
-                    <p style={{fontSize:9,color:T.muted,margin:"2px 0 0",fontWeight:600}}>{s.label}</p>
+/* ── PAGE: MESSAGES ── */
+const MessagesPage = () => {
+    const [active, setActive] = useState(null)
+    const [input, setInput] = useState("")
+    const [chats, setChats] = useState(MESSAGES_DATA)
+    const bottomRef = useRef(null)
+
+    useEffect(() => {
+        bottomRef.current?.scrollIntoView({ behavior:"smooth" })
+    }, [active])
+
+    const sendMsg = () => {
+        if (!input.trim()) return
+        setChats(prev => prev.map(c => c.id === active ? { ...c, preview:input, messages:[...c.messages, { from:"me", text:input, time:"Now" }] } : c))
+        setInput("")
+    }
+
+    const conv = chats.find(c => c.id === active)
+
+    return (
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+            <div>
+                <h2 style={{ fontSize:20, fontWeight:800, color:C.text, margin:"0 0 4px", fontFamily:"'Outfit',sans-serif" }}>Messages</h2>
+                <p style={{ fontSize:13, color:C.muted, margin:0 }}>{chats.filter(c => c.unread).length} unread conversations</p>
+            </div>
+
+            <div style={{ display:"grid", gridTemplateColumns:"300px 1fr", gap:14, minHeight:400 }}>
+                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+                    {chats.map((c, i) => (
+                        <motion.div key={c.id} initial={{ opacity:0, x:-8 }} animate={{ opacity:1, x:0 }} transition={{ delay:i*.05 }} whileHover={{ x:2 }}
+                                    onClick={() => setActive(c.id)}
+                                    style={{ background:active === c.id ? `${C.green}0D` : C.surface, border:`1px solid ${active === c.id ? C.green+"30" : C.border}`, borderRadius:12, padding:"12px 14px", cursor:"pointer", display:"flex", alignItems:"center", gap:10, transition:"all .15s" }}>
+                            <div style={{ position:"relative", flexShrink:0 }}>
+                                <div style={{ width:40, height:40, borderRadius:12, background:`${c.color}18`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:900, color:c.color }}>{c.init}</div>
+                                {c.unread > 0 && (
+                                    <div style={{ position:"absolute", top:-4, right:-4, width:18, height:18, borderRadius:"50%", background:C.red, color:"#fff", fontSize:9, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center", border:`2px solid ${C.bg}` }}>{c.unread}</div>
+                                )}
+                            </div>
+                            <div style={{ flex:1, minWidth:0 }}>
+                                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:2 }}>
+                                    <p style={{ fontSize:12, fontWeight:700, color:C.text, margin:0 }}>{c.from}</p>
+                                    <span style={{ fontSize:10, color:C.faint }}>{c.time}</span>
+                                </div>
+                                <p style={{ fontSize:11, color:C.muted, margin:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontWeight:c.unread ? 700 : 400 }}>{c.preview}</p>
+                            </div>
+                        </motion.div>
+                    ))}
                 </div>
-            ))}
+
+                {conv ? (
+                    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, display:"flex", flexDirection:"column" }}>
+                        <div style={{ padding:"14px 18px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:10 }}>
+                            <div style={{ width:38, height:38, borderRadius:11, background:`${conv.color}18`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:900, color:conv.color }}>{conv.init}</div>
+                            <p style={{ fontSize:14, fontWeight:700, color:C.text, margin:0, fontFamily:"'Outfit',sans-serif" }}>{conv.from}</p>
+                        </div>
+                        <div style={{ flex:1, overflowY:"auto", padding:"16px 18px", display:"flex", flexDirection:"column", gap:10, minHeight:280 }}>
+                            {conv.messages.map((m, i) => (
+                                <div key={i} style={{ display:"flex", justifyContent:m.from === "me" ? "flex-end" : "flex-start" }}>
+                                    <div style={{ maxWidth:"70%", padding:"9px 13px", borderRadius:m.from === "me" ? "14px 14px 4px 14px" : "14px 14px 14px 4px", background:m.from === "me" ? C.green : C.card, color:m.from === "me" ? "#fff" : C.text, fontSize:13, lineHeight:1.5, border:m.from === "me" ? "none" : `1px solid ${C.border}` }}>
+                                        <p style={{ margin:"0 0 3px" }}>{m.text}</p>
+                                        <p style={{ fontSize:9, margin:0, opacity:.6, textAlign:m.from === "me" ? "right" : "left" }}>{m.time}</p>
+                                    </div>
+                                </div>
+                            ))}
+                            <div ref={bottomRef}/>
+                        </div>
+                        <div style={{ padding:"12px 16px", borderTop:`1px solid ${C.border}`, display:"flex", gap:8 }}>
+                            <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMsg()} placeholder="Type a message..."
+                                   style={{ flex:1, padding:"10px 14px", borderRadius:11, border:`1px solid ${C.border}`, background:C.card, color:C.text, fontSize:13, fontFamily:"'Outfit',sans-serif", outline:"none" }}/>
+                            <motion.button whileTap={{ scale:.93 }} onClick={sendMsg}
+                                           style={{ width:40, height:40, borderRadius:11, background:C.green, border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                                <Icon name="send" size={16} color="#fff"/>
+                            </motion.button>
+                        </div>
+                    </div>
+                ) : (
+                    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:12, color:C.muted, minHeight:300 }}>
+                        <Icon name="chat" size={36} color={C.faint}/>
+                        <p style={{ fontSize:14, fontWeight:600, color:C.faint }}>Select a conversation</p>
+                    </div>
+                )}
+            </div>
         </div>
-    </Card>
+    )
+}
+
+/* ── PAGE: PROFILE ── */
+const Profile = () => {
+    const [editMode, setEditMode] = useState(false)
+    const [form, setForm] = useState({ name:VOLUNTEER.name, email:VOLUNTEER.email, phone:VOLUNTEER.phone, zone:VOLUNTEER.zone })
+    const [saved, setSaved] = useState(false)
+
+    const save = () => { setSaved(true); setEditMode(false); setTimeout(() => setSaved(false), 2500) }
+
+    const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"]
+    const activityData = useRef(MONTHS.map(m => ({ month:m, tasks:Math.floor(Math.random()*8)+2 }))).current
+
+    return (
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:12 }}>
+                <h2 style={{ fontSize:20, fontWeight:800, color:C.text, margin:0, fontFamily:"'Outfit',sans-serif" }}>My Profile</h2>
+                <div style={{ display:"flex", gap:8 }}>
+                    {saved && (
+                        <motion.div initial={{ opacity:0, scale:.9 }} animate={{ opacity:1, scale:1 }}
+                                    style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 14px", borderRadius:11, background:C.greenLt, color:C.green, fontSize:12, fontWeight:700 }}>
+                            <Icon name="check" size={13} color={C.green}/> Saved!
+                        </motion.div>
+                    )}
+                    <motion.button whileTap={{ scale:.97 }} onClick={() => editMode ? save() : setEditMode(true)}
+                                   style={{ padding:"8px 18px", borderRadius:11, background:editMode ? C.green : "transparent", border:`1px solid ${editMode ? C.green : C.border}`, color:editMode ? "#fff" : C.muted, fontWeight:700, fontSize:12, cursor:"pointer", fontFamily:"'Outfit',sans-serif", display:"flex", alignItems:"center", gap:6 }}>
+                        <Icon name={editMode ? "check" : "edit"} size={13} color={editMode ? "#fff" : C.muted}/>
+                        {editMode ? "Save Changes" : "Edit Profile"}
+                    </motion.button>
+                </div>
+            </div>
+
+            <div style={{ display:"grid", gridTemplateColumns:"300px 1fr", gap:16 }}>
+                <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:18, padding:"24px 20px", textAlign:"center" }}>
+                        <div style={{ width:72, height:72, borderRadius:20, background:`linear-gradient(135deg,${C.green},#2A6B10)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, fontWeight:900, color:"#fff", margin:"0 auto 14px", boxShadow:`0 6px 24px ${C.green}35` }}>{VOLUNTEER.init}</div>
+                        {editMode ? (
+                            <input value={form.name} onChange={e => setForm(p => ({ ...p, name:e.target.value }))}
+                                   style={{ fontSize:16, fontWeight:800, color:C.text, border:`1px solid ${C.border}`, borderRadius:9, padding:"6px 10px", background:C.card, fontFamily:"'Outfit',sans-serif", textAlign:"center", outline:"none", width:"100%", boxSizing:"border-box", marginBottom:4 }}/>
+                        ) : (
+                            <p style={{ fontSize:16, fontWeight:800, color:C.text, margin:"0 0 4px", fontFamily:"'Outfit',sans-serif" }}>{VOLUNTEER.name}</p>
+                        )}
+                        <p style={{ fontSize:12, color:C.muted, margin:"0 0 10px" }}>{VOLUNTEER.zone}</p>
+                        <Badge color={C.amber} bg={C.amberLt}>🏅 {VOLUNTEER.badge}</Badge>
+                        <div style={{ marginTop:16, padding:"12px 14px", borderRadius:12, background:C.greenLt, border:`1px solid ${C.green}25` }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                                <Icon name="fire" size={14} color={C.green}/>
+                                <p style={{ fontSize:13, fontWeight:800, color:C.green, margin:0, fontFamily:"'Outfit',sans-serif" }}>{VOLUNTEER.streak}-day streak 🔥</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:"16px 18px" }}>
+                        <p style={{ fontSize:11, fontWeight:700, color:C.muted, margin:"0 0 10px", textTransform:"uppercase", letterSpacing:".6px" }}>Skills</p>
+                        <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                            {VOLUNTEER.skills.map(s => <Badge key={s} color={C.green} bg={C.greenLt}>{s}</Badge>)}
+                            <Badge color={C.blue} bg={C.blueLt}>+ Add Skill</Badge>
+                        </div>
+                    </div>
+
+                    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:"16px 18px" }}>
+                        <p style={{ fontSize:11, fontWeight:700, color:C.muted, margin:"0 0 10px", textTransform:"uppercase", letterSpacing:".6px" }}>Stats</p>
+                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
+                            {[
+                                { l:"Tasks", v:VOLUNTEER.tasksCompleted, c:C.green },
+                                { l:"Hours", v:`${VOLUNTEER.hoursLogged}h`, c:C.amber },
+                                { l:"Impact", v:`${VOLUNTEER.impactScore}%`, c:C.teal },
+                                { l:"Rank", v:`#${VOLUNTEER.rank}`, c:C.purple },
+                            ].map(s => (
+                                <div key={s.l} style={{ background:C.card, borderRadius:10, padding:"10px", textAlign:"center", border:`1px solid ${C.border}` }}>
+                                    <p style={{ fontSize:18, fontWeight:900, color:s.c, margin:0, fontFamily:"'Outfit',sans-serif" }}>{s.v}</p>
+                                    <p style={{ fontSize:9, color:C.muted, margin:"2px 0 0", fontWeight:600 }}>{s.l}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+
+                <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:"18px 20px" }}>
+                        <p style={{ fontSize:12, fontWeight:700, color:C.muted, margin:"0 0 14px", textTransform:"uppercase", letterSpacing:".6px" }}>Contact Information</p>
+                        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                            {[["Email",form.email,"phone"],["Phone",form.phone,"phone"],["Zone",form.zone,"pin"]].map(([label, val, ic]) => (
+                                <div key={label} style={{ display:"flex", alignItems:"center", gap:10 }}>
+                                    <div style={{ width:34, height:34, borderRadius:10, background:C.card, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", border:`1px solid ${C.border}` }}>
+                                        <Icon name={ic} size={14} color={C.muted}/>
+                                    </div>
+                                    <div style={{ flex:1 }}>
+                                        <p style={{ fontSize:10, color:C.faint, margin:0, fontWeight:600, textTransform:"uppercase", letterSpacing:".4px" }}>{label}</p>
+                                        {editMode ? (
+                                            <input value={val} onChange={e => setForm(p => ({ ...p, [label.toLowerCase()]:e.target.value }))}
+                                                   style={{ fontSize:13, fontWeight:600, color:C.text, border:`1px solid ${C.border}`, borderRadius:7, padding:"4px 8px", background:C.card, fontFamily:"'Outfit',sans-serif", outline:"none", width:"100%", boxSizing:"border-box", marginTop:2 }}/>
+                                        ) : (
+                                            <p style={{ fontSize:13, fontWeight:600, color:C.text, margin:0 }}>{val}</p>
+                                        )}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:"18px 20px" }}>
+                        <p style={{ fontSize:12, fontWeight:700, color:C.muted, margin:"0 0 16px", textTransform:"uppercase", letterSpacing:".6px" }}>Activity — 2024</p>
+                        <div style={{ display:"flex", alignItems:"flex-end", gap:4, height:80 }}>
+                            {activityData.map((d, i) => (
+                                <motion.div key={d.month} initial={{ height:0 }} animate={{ height:`${(d.tasks/10)*100}%` }}
+                                            transition={{ delay:.3+i*.04, type:"spring", stiffness:200, damping:20 }}
+                                            style={{ flex:1, borderRadius:4, background:i === 6 ? C.green : `${C.green}30`, minHeight:4, cursor:"pointer" }}
+                                            title={`${d.month}: ${d.tasks} tasks`}/>
+                            ))}
+                        </div>
+                        <div style={{ display:"flex", gap:4, marginTop:6 }}>
+                            {activityData.map(d => <span key={d.month} style={{ flex:1, textAlign:"center", fontSize:8, color:C.faint }}>{d.month}</span>)}
+                        </div>
+                    </div>
+
+                    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:"18px 20px" }}>
+                        <p style={{ fontSize:12, fontWeight:700, color:C.muted, margin:"0 0 14px", textTransform:"uppercase", letterSpacing:".6px" }}>Achievements</p>
+                        <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:10 }}>
+                            {[
+                                { emoji:"🏅", label:"Field Hero",     unlocked:true  },
+                                { emoji:"🔥", label:"Hot Streak",     unlocked:true  },
+                                { emoji:"💧", label:"Water Hero",     unlocked:true  },
+                                { emoji:"🏆", label:"Top Ranker",     unlocked:false },
+                                { emoji:"⚡", label:"Speed Demon",    unlocked:false },
+                                { emoji:"🌟", label:"Star Volunteer", unlocked:true  },
+                                { emoji:"🤝", label:"Team Player",    unlocked:true  },
+                                { emoji:"📦", label:"Supply Chain",   unlocked:false },
+                            ].map(b => (
+                                <div key={b.label} style={{ textAlign:"center", padding:"12px 8px", borderRadius:12, background:b.unlocked ? C.amberLt : C.card, border:`1px solid ${b.unlocked ? C.amber+"30" : C.border}`, opacity:b.unlocked ? 1 : .45 }}>
+                                    <p style={{ fontSize:22, margin:"0 0 4px" }}>{b.emoji}</p>
+                                    <p style={{ fontSize:9, fontWeight:700, color:b.unlocked ? C.amber : C.muted, margin:0, textAlign:"center", lineHeight:1.3 }}>{b.label}</p>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
+/* ── SIDEBAR ── */
+const NAV = [
+    { key:"dashboard",   icon:"home",   label:"Dashboard"   },
+    { key:"tasks",       icon:"tasks",  label:"Tasks"       },
+    { key:"map",         icon:"map",    label:"Heatmap"     },
+    { key:"leaderboard", icon:"trophy", label:"Leaderboard" },
+    { key:"messages",    icon:"chat",   label:"Messages"    },
+    { key:"profile",     icon:"user",   label:"Profile"     },
+]
+
+const Sidebar = ({ active, onNav, collapsed }) => (
+    <motion.div animate={{ width:collapsed ? 64 : 220 }} transition={{ type:"spring", stiffness:300, damping:30 }}
+                style={{ background:C.surface, borderRight:`1px solid ${C.border}`, display:"flex", flexDirection:"column", height:"100vh", position:"sticky", top:0, flexShrink:0, overflow:"hidden" }}>
+        <div style={{ padding:"20px 16px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:10 }}>
+            <div style={{ width:36, height:36, borderRadius:10, flexShrink:0, background:`linear-gradient(135deg,${C.green},#2A6B10)`, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                <Icon name="zap" size={16} color="#fff"/>
+            </div>
+            <AnimatePresence>
+                {!collapsed && (
+                    <motion.div initial={{ opacity:0, x:-10 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0 }}>
+                        <p style={{ fontSize:14, fontWeight:900, color:C.text, margin:0, fontFamily:"'Outfit',sans-serif", letterSpacing:"-.3px" }}>CivicPulse</p>
+                        <p style={{ fontSize:9, color:C.faint, margin:0, fontWeight:600, letterSpacing:".5px" }}>VOLUNTEER</p>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+
+        <div style={{ flex:1, padding:"12px 10px", display:"flex", flexDirection:"column", gap:3 }}>
+            {NAV.map(item => {
+                const isActive = active === item.key
+                return (
+                    <motion.button key={item.key} whileTap={{ scale:.96 }} onClick={() => onNav(item.key)}
+                                   style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", borderRadius:11, border:"none", background:isActive ? `${C.green}15` : "transparent", cursor:"pointer", fontFamily:"'Outfit',sans-serif", transition:"background .15s", width:"100%", borderLeft:`3px solid ${isActive ? C.green : "transparent"}` }}>
+                        <Icon name={item.icon} size={17} color={isActive ? C.green : C.faint} style={{ flexShrink:0 }}/>
+                        <AnimatePresence>
+                            {!collapsed && (
+                                <motion.span initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+                                             style={{ fontSize:13, fontWeight:isActive ? 700 : 500, color:isActive ? C.text : C.muted, whiteSpace:"nowrap" }}>
+                                    {item.label}
+                                </motion.span>
+                            )}
+                        </AnimatePresence>
+                    </motion.button>
+                )
+            })}
+        </div>
+
+        <div style={{ padding:"12px 10px", borderTop:`1px solid ${C.border}` }}>
+            <div style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", borderRadius:11, background:C.greenLt, marginBottom:6 }}>
+                <div style={{ width:30, height:30, borderRadius:9, background:C.green, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:900, color:"#fff" }}>{VOLUNTEER.init}</div>
+                <AnimatePresence>
+                    {!collapsed && (
+                        <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}>
+                            <p style={{ fontSize:11, fontWeight:700, color:C.text, margin:0 }}>{VOLUNTEER.name}</p>
+                            <p style={{ fontSize:9, color:C.muted, margin:0 }}>Field Hero</p>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+            <motion.button whileTap={{ scale:.96 }} style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 12px", borderRadius:10, border:"none", background:"transparent", color:C.red, cursor:"pointer", fontFamily:"'Outfit',sans-serif", width:"100%" }}>
+                <Icon name="logout" size={15} color={C.red} style={{ flexShrink:0 }}/>
+                <AnimatePresence>
+                    {!collapsed && (
+                        <motion.span initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+                                     style={{ fontSize:12, fontWeight:600 }}>Log out</motion.span>
+                    )}
+                </AnimatePresence>
+            </motion.button>
+        </div>
+    </motion.div>
 )
 
+/* ── TOPBAR ── */
+const Topbar = ({ page, onToggle, notifOpen, setNotifOpen }) => {
+    const unread = NOTIFS.filter(n => n.unread).length
+    const titles = { dashboard:"Dashboard", tasks:"My Tasks", map:"Heatmap", leaderboard:"Leaderboard", messages:"Messages", profile:"Profile" }
+
+    return (
+        <div style={{ height:60, borderBottom:`1px solid ${C.border}`, background:C.surface, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 24px", flexShrink:0, position:"sticky", top:0, zIndex:50 }}>
+            <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                <motion.button whileTap={{ scale:.9 }} onClick={onToggle}
+                               style={{ width:34, height:34, borderRadius:9, border:`1px solid ${C.border}`, background:"transparent", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", color:C.muted }}>
+                    <Icon name="menu" size={15} color={C.muted}/>
+                </motion.button>
+                <h2 style={{ fontSize:16, fontWeight:800, color:C.text, margin:0, fontFamily:"'Outfit',sans-serif" }}>{titles[page] || page}</h2>
+            </div>
+
+            <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <motion.div animate={{ opacity:[1,.5,1] }} transition={{ duration:2, repeat:Infinity }}
+                            style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:20, background:C.greenLt, border:`1px solid ${C.green}25` }}>
+                    <div style={{ width:6, height:6, borderRadius:"50%", background:C.green, boxShadow:`0 0 7px ${C.green}` }}/>
+                    <span style={{ fontSize:11, fontWeight:700, color:C.green }}>2 Active</span>
+                </motion.div>
+
+                <div style={{ position:"relative" }}>
+                    <motion.button whileTap={{ scale:.9 }} onClick={() => setNotifOpen(p => !p)}
+                                   style={{ width:36, height:36, borderRadius:10, border:`1px solid ${C.border}`, background:"transparent", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", position:"relative" }}>
+                        <Icon name="bell" size={16} color={C.muted}/>
+                        {unread > 0 && (
+                            <div style={{ position:"absolute", top:-4, right:-4, width:17, height:17, borderRadius:"50%", background:C.red, color:"#fff", fontSize:9, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center", border:`2px solid ${C.bg}` }}>{unread}</div>
+                        )}
+                    </motion.button>
+
+                    <AnimatePresence>
+                        {notifOpen && (
+                            <motion.div initial={{ opacity:0, y:8, scale:.95 }} animate={{ opacity:1, y:0, scale:1 }} exit={{ opacity:0, y:8, scale:.95 }}
+                                        style={{ position:"absolute", right:0, top:44, width:320, background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, padding:"14px 16px", zIndex:200, boxShadow:"0 20px 60px rgba(0,0,0,.18)" }}>
+                                <p style={{ fontSize:12, fontWeight:800, color:C.text, margin:"0 0 12px", fontFamily:"'Outfit',sans-serif" }}>Notifications</p>
+                                {NOTIFS.map((n, i) => (
+                                    <div key={n.id} style={{ display:"flex", gap:10, padding:"9px 0", borderBottom:i < NOTIFS.length-1 ? `1px solid ${C.border}` : "none", opacity:n.unread ? 1 : .55 }}>
+                                        <div style={{ width:30, height:30, borderRadius:9, flexShrink:0, background:n.unread ? C.redLt : C.card, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14 }}>
+                                            {n.type==="urgent"?"🚨":n.type==="match"?"🤖":n.type==="badge"?"🏅":n.type==="streak"?"🔥":"✅"}
+                                        </div>
+                                        <div>
+                                            <p style={{ fontSize:11, color:C.text, margin:0, lineHeight:1.45, fontWeight:n.unread ? 700 : 400 }}>{n.text}</p>
+                                            <p style={{ fontSize:9, color:C.muted, margin:"2px 0 0" }}>{n.time}</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 /* ── MOBILE DRAWER ── */
-const MobileDrawer = ({ open, onClose }) => (
+const MobileDrawer = ({ open, onClose, onNav, currentPage }) => (
     <AnimatePresence>
         {open && (
             <>
-                <motion.div initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+                <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
                             onClick={onClose}
-                            style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.6)",
-                                backdropFilter:"blur(6px)",zIndex:300}}
-                />
-                <motion.div initial={{x:"-100%"}} animate={{x:0}} exit={{x:"-100%"}}
-                            transition={{type:"spring",stiffness:300,damping:30}}
-                            style={{
-                                position:"fixed",left:0,top:0,bottom:0,width:280,
-                                background:T.surface,borderRight:`1px solid ${T.border}`,
-                                zIndex:400,padding:20,display:"flex",flexDirection:"column",gap:6,
-                            }}>
-                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:20,paddingTop:10}}>
-                        <div style={{
-                            width:40,height:40,borderRadius:12,
-                            background:`linear-gradient(135deg,${T.accent},#5A9A30)`,
-                            display:"flex",alignItems:"center",justifyContent:"center",
-                            fontSize:13,fontWeight:900,color:"#fff",
-                        }}>{VOLUNTEER.init}</div>
+                            style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.5)", backdropFilter:"blur(6px)", zIndex:300 }}/>
+                <motion.div initial={{ x:"-100%" }} animate={{ x:0 }} exit={{ x:"-100%" }}
+                            transition={{ type:"spring", stiffness:300, damping:30 }}
+                            style={{ position:"fixed", left:0, top:0, bottom:0, width:280, background:C.surface, borderRight:`1px solid ${C.border}`, zIndex:400, padding:20, display:"flex", flexDirection:"column", gap:6 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:20, paddingTop:10 }}>
+                        <div style={{ width:40, height:40, borderRadius:12, background:`linear-gradient(135deg,${C.green},#2A6B10)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:900, color:"#fff" }}>{VOLUNTEER.init}</div>
                         <div>
-                            <p style={{fontSize:13,fontWeight:800,color:T.text,margin:0}}>{VOLUNTEER.name}</p>
-                            <p style={{fontSize:9,color:T.muted,margin:0}}>Volunteer · {VOLUNTEER.zone}</p>
+                            <p style={{ fontSize:13, fontWeight:800, color:C.text, margin:0 }}>{VOLUNTEER.name}</p>
+                            <p style={{ fontSize:9, color:C.muted, margin:0 }}>Volunteer · {VOLUNTEER.zone}</p>
                         </div>
                     </div>
-                    {[
-                        {icon:Activity,  label:"My Tasks",    active:true },
-                        {icon:BarChart3, label:"Heatmap",     active:false},
-                        {icon:Award,     label:"Leaderboard", active:false},
-                        {icon:User,      label:"Profile",     active:false},
-                        {icon:MessageSquare,label:"Messages", active:false},
-                    ].map(item=>(
-                        <motion.button key={item.label}
-                                       whileHover={{background:`${T.accent}12`}} whileTap={{scale:.97}}
-                                       onClick={onClose}
-                                       style={{
-                                           display:"flex",alignItems:"center",gap:10,
-                                           padding:"10px 12px",borderRadius:10,
-                                           border:"none",background: item.active ? `${T.accent}15` : "transparent",
-                                           borderLeft: item.active ? `2px solid ${T.accent}` : "2px solid transparent",
-                                           color: item.active ? T.text : T.muted,cursor:"pointer",
-                                           fontFamily:"'DM Sans',sans-serif",transition:"all .15s",
-                                       }}>
-                            <item.icon size={15} style={{color: item.active ? T.accent : T.muted}}/>
-                            <span style={{fontSize:13,fontWeight: item.active ? 700 : 500}}>{item.label}</span>
+                    {NAV.map(item => (
+                        <motion.button key={item.key} whileHover={{ background:`${C.green}12` }} whileTap={{ scale:.97 }}
+                                       onClick={() => { onNav(item.key); onClose() }}
+                                       style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 12px", borderRadius:10, border:"none", background:currentPage === item.key ? `${C.green}15` : "transparent", borderLeft:currentPage === item.key ? `2px solid ${C.green}` : "2px solid transparent", color:currentPage === item.key ? C.text : C.muted, cursor:"pointer", fontFamily:"'Outfit',sans-serif", transition:"all .15s" }}>
+                            <Icon name={item.icon} size={15} color={currentPage === item.key ? C.green : C.muted}/>
+                            <span style={{ fontSize:13, fontWeight:currentPage === item.key ? 700 : 500 }}>{item.label}</span>
                         </motion.button>
                     ))}
-                    <div style={{marginTop:"auto"}}>
-                        <motion.button whileTap={{scale:.97}}
-                                       style={{
-                                           display:"flex",alignItems:"center",gap:8,
-                                           padding:"10px 12px",borderRadius:10,border:"none",
-                                           background:"transparent",color:T.red,cursor:"pointer",
-                                           fontFamily:"'DM Sans',sans-serif",width:"100%",
-                                       }}>
-                            <LogOut size={14}/> <span style={{fontSize:13,fontWeight:600}}>Log out</span>
+                    <div style={{ marginTop:"auto" }}>
+                        <motion.button whileTap={{ scale:.97 }}
+                                       style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 12px", borderRadius:10, border:"none", background:"transparent", color:C.red, cursor:"pointer", fontFamily:"'Outfit',sans-serif", width:"100%" }}>
+                            <Icon name="logout" size={14} color={C.red}/>
+                            <span style={{ fontSize:13, fontWeight:600 }}>Log out</span>
                         </motion.button>
                     </div>
                 </motion.div>
@@ -935,232 +1252,69 @@ const MobileDrawer = ({ open, onClose }) => (
     </AnimatePresence>
 )
 
-/* ── MAIN ── */
+/* ── ROOT EXPORT ── */
 export default function VolunteerHome() {
+    const [page, setPage] = useState("dashboard")
+    const [collapsed, setCollapsed] = useState(false)
     const [activeTask, setActiveTask] = useState(null)
+    const [notifOpen, setNotifOpen] = useState(false)
     const [menuOpen, setMenuOpen] = useState(false)
-    const [tab, setTab] = useState("tasks") // tasks | history | heatmap
 
-    const activeTasks = MY_TASKS.filter(t=>t.status==="active")
-    const upcomingTasks = MY_TASKS.filter(t=>t.status==="upcoming")
+    const PAGES = {
+        dashboard:   <Dashboard onTaskOpen={setActiveTask}/>,
+        tasks:       <Tasks onTaskOpen={setActiveTask}/>,
+        map:         <MapPage/>,
+        leaderboard: <LeaderboardPage/>,
+        messages:    <MessagesPage/>,
+        profile:     <Profile/>,
+    }
+
+    const navigate = (p) => { setPage(p); setNotifOpen(false); setMenuOpen(false) }
 
     return (
-        <div style={{
-            minHeight:"100vh",background:T.bg,color:T.text,
-            fontFamily:"'DM Sans',sans-serif",
-        }}>
+        <div style={{ minHeight:"100vh", background:C.bg, color:C.text, fontFamily:"'Outfit',sans-serif", display:"flex" }}>
             <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&display=swap');
-        @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-        *{box-sizing:border-box;margin:0;padding:0}
-        ::-webkit-scrollbar{width:4px;height:4px}
-        ::-webkit-scrollbar-thumb{background:#1A2E10;border-radius:2px}
-        input::placeholder{color:#7A9B6A}
-        option{background:#161F12}
-      `}</style>
+                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap');
+                *{box-sizing:border-box;margin:0;padding:0}
+                ::-webkit-scrollbar{width:4px;height:4px}
+                ::-webkit-scrollbar-thumb{background:rgba(61,138,37,.25);border-radius:2px}
+                input{outline:none;}
+                input::placeholder{color:#9BAD90}
+                button{outline:none;}
+            `}</style>
 
             <Particles/>
 
-            <div style={{position:"relative",zIndex:1}}>
-                <Topbar onMenuToggle={()=>setMenuOpen(p=>!p)} menuOpen={menuOpen}/>
-                <MobileDrawer open={menuOpen} onClose={()=>setMenuOpen(false)}/>
+            {/* Desktop sidebar */}
+            <div style={{ position:"relative", zIndex:10 }}>
+                <Sidebar active={page} onNav={navigate} collapsed={collapsed}/>
+            </div>
 
-                <main style={{padding:"24px",maxWidth:1300,margin:"0 auto"}}>
+            <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0, position:"relative", zIndex:1 }}>
+                <Topbar page={page} onToggle={() => setCollapsed(p => !p)} notifOpen={notifOpen} setNotifOpen={setNotifOpen}/>
 
-                    {/* Welcome header */}
-                    <motion.div initial={{opacity:0,y:-12}} animate={{opacity:1,y:0}}
-                                style={{marginBottom:22}}>
-                        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
-                            flexWrap:"wrap",gap:10}}>
-                            <div>
-                                <h1 style={{fontSize:22,fontWeight:900,color:T.text,margin:"0 0 3px",letterSpacing:"-.4px"}}>
-                                    Good afternoon, {VOLUNTEER.name.split(" ")[0]} 👋
-                                </h1>
-                                <p style={{fontSize:12,color:T.muted}}>
-                                    You have <span style={{color:T.red,fontWeight:700}}>{activeTasks.length} active</span> and{" "}
-                                    <span style={{color:T.amber,fontWeight:700}}>{upcomingTasks.length} upcoming</span> tasks today
-                                </p>
-                            </div>
-                            <div style={{display:"flex",gap:6}}>
-                                <motion.button whileHover={{scale:1.03}} whileTap={{scale:.97}}
-                                               style={{
-                                                   display:"flex",alignItems:"center",gap:5,padding:"8px 14px",
-                                                   borderRadius:10,border:`1px solid ${T.border}`,
-                                                   background:"transparent",color:T.muted,
-                                                   fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",
-                                               }}>
-                                    <Filter size={12}/> Filter
-                                </motion.button>
-                                <motion.button whileHover={{scale:1.03}} whileTap={{scale:.97}}
-                                               style={{
-                                                   display:"flex",alignItems:"center",gap:5,padding:"8px 14px",
-                                                   borderRadius:10,border:`1px solid ${T.accent}40`,
-                                                   background:`${T.accent}20`,color:T.accent,
-                                                   fontSize:11,fontWeight:700,cursor:"pointer",fontFamily:"'DM Sans',sans-serif",
-                                               }}>
-                                    <Navigation size={12}/> My Zone
-                                </motion.button>
-                            </div>
-                        </div>
-                    </motion.div>
+                <MobileDrawer open={menuOpen} onClose={() => setMenuOpen(false)} onNav={navigate} currentPage={page}/>
 
-                    {/* STAT STRIP */}
-                    <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:20}}>
-                        <StatCard label="Tasks Completed" value={VOLUNTEER.tasksCompleted} icon={CheckCircle} color={T.accent} delay={0}/>
-                        <StatCard label="Hours Logged"    value={`${VOLUNTEER.hoursLogged}h`} icon={Clock}    color={T.amber}  delay={.06}/>
-                        <StatCard label="Impact Score"    value={`${VOLUNTEER.impactScore}%`} icon={Target}   color={T.teal}   delay={.12}/>
-                        <StatCard label="Day Streak"      value={`${VOLUNTEER.streak}🔥`}    icon={Flame}    color={T.red}    delay={.18}/>
-                    </div>
-
-                    {/* MAIN GRID */}
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 340px",gap:16}}>
-
-                        {/* LEFT: Tasks + history + heatmap */}
-                        <div style={{display:"flex",flexDirection:"column",gap:14}}>
-
-                            {/* Tab switcher */}
-                            <div style={{
-                                display:"flex",gap:6,padding:5,borderRadius:14,
-                                background:T.surface,border:`1px solid ${T.border}`,width:"fit-content",
-                            }}>
-                                {[
-                                    {key:"tasks",   label:"My Tasks",   count:MY_TASKS.length},
-                                    {key:"heatmap", label:"Heatmap",    count:null},
-                                    {key:"history", label:"Completed",  count:COMPLETED_TASKS.length},
-                                ].map(t=>(
-                                    <motion.button key={t.key}
-                                                   whileTap={{scale:.97}}
-                                                   onClick={()=>setTab(t.key)}
-                                                   style={{
-                                                       padding:"7px 16px",borderRadius:10,border:"none",
-                                                       cursor:"pointer",fontFamily:"'DM Sans',sans-serif",
-                                                       background: tab===t.key
-                                                           ? `linear-gradient(135deg,${T.accent}25,${T.accent}10)`
-                                                           : "transparent",
-                                                       boxShadow: tab===t.key ? `inset 0 0 0 1px ${T.accent}40` : "none",
-                                                       color: tab===t.key ? T.accent : T.muted,
-                                                       fontSize:12,fontWeight:700,
-                                                       display:"flex",alignItems:"center",gap:5,
-                                                       transition:"all .2s",
-                                                   }}>
-                                        {t.label}
-                                        {t.count!==null && (
-                                            <span style={{
-                                                fontSize:9,padding:"1px 5px",borderRadius:20,
-                                                background: tab===t.key ? T.accent : "rgba(255,255,255,0.08)",
-                                                color: tab===t.key ? "#fff" : T.muted,
-                                                fontWeight:800,
-                                            }}>{t.count}</span>
-                                        )}
-                                    </motion.button>
-                                ))}
-                            </div>
-
-                            <AnimatePresence mode="wait">
-                                {tab === "tasks" && (
-                                    <motion.div key="tasks"
-                                                initial={{opacity:0,x:10}} animate={{opacity:1,x:0}}
-                                                exit={{opacity:0,x:-10}} transition={{duration:.2}}
-                                                style={{display:"flex",flexDirection:"column",gap:10}}>
-
-                                        {/* Active section */}
-                                        {activeTasks.length > 0 && (
-                                            <div>
-                                                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
-                                                    <motion.div animate={{opacity:[1,.3,1]}} transition={{duration:1.5,repeat:Infinity}}
-                                                                style={{width:6,height:6,borderRadius:"50%",background:T.red,
-                                                                    boxShadow:`0 0 8px ${T.red}`}}/>
-                                                    <span style={{fontSize:10,fontWeight:700,color:T.red,
-                                                        textTransform:"uppercase",letterSpacing:".6px"}}>Active Now</span>
-                                                </div>
-                                                {activeTasks.map((t,i)=>(
-                                                    <TaskCard key={t.id} task={t} onOpen={setActiveTask} delay={i*.06}/>
-                                                ))}
-                                            </div>
-                                        )}
-
-                                        {/* Upcoming section */}
-                                        {upcomingTasks.length > 0 && (
-                                            <div style={{marginTop:6}}>
-                                                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:8}}>
-                                                    <div style={{width:6,height:6,borderRadius:"50%",background:T.amber}}/>
-                                                    <span style={{fontSize:10,fontWeight:700,color:T.amber,
-                                                        textTransform:"uppercase",letterSpacing:".6px"}}>Upcoming</span>
-                                                </div>
-                                                {upcomingTasks.map((t,i)=>(
-                                                    <TaskCard key={t.id} task={t} onOpen={setActiveTask} delay={i*.06+.1}/>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </motion.div>
-                                )}
-
-                                {tab === "heatmap" && (
-                                    <motion.div key="heatmap"
-                                                initial={{opacity:0,x:10}} animate={{opacity:1,x:0}}
-                                                exit={{opacity:0,x:-10}}>
-                                        <LiveHeatmap/>
-                                        {/* Zone legend below */}
-                                        <Card style={{padding:16,marginTop:10}} hover={false}>
-                                            <p style={{fontSize:11,fontWeight:700,color:T.muted,margin:"0 0 10px",
-                                                textTransform:"uppercase",letterSpacing:".5px"}}>Needs by Zone</p>
-                                            {HEATMAP_ZONES.map((z,i)=>(
-                                                <div key={z.zone} style={{
-                                                    display:"flex",alignItems:"center",gap:10,
-                                                    padding:"7px 0",
-                                                    borderBottom: i<HEATMAP_ZONES.length-1?`1px solid ${T.border}`:"none",
-                                                }}>
-                                                    <div style={{
-                                                        width:7,height:7,borderRadius:"50%",flexShrink:0,
-                                                        background: z.intensity>.8?"#E05A3A":z.intensity>.65?"#E8A020":T.accent,
-                                                    }}/>
-                                                    <span style={{flex:1,fontSize:12,color:T.text,fontWeight:600}}>{z.zone}</span>
-                                                    <span style={{fontSize:11,color:T.muted}}>{z.needs} needs</span>
-                                                    <div style={{width:60,height:4,borderRadius:2,
-                                                        background:"rgba(255,255,255,0.06)",overflow:"hidden"}}>
-                                                        <motion.div initial={{width:0}}
-                                                                    animate={{width:`${z.intensity*100}%`}}
-                                                                    transition={{delay:i*.06,duration:.6}}
-                                                                    style={{
-                                                                        height:"100%",borderRadius:2,
-                                                                        background: z.intensity>.8?"#E05A3A":z.intensity>.65?"#E8A020":T.accent,
-                                                                    }}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </Card>
-                                    </motion.div>
-                                )}
-
-                                {tab === "history" && (
-                                    <motion.div key="history"
-                                                initial={{opacity:0,x:10}} animate={{opacity:1,x:0}}
-                                                exit={{opacity:0,x:-10}}>
-                                        <CompletedTasks/>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-
-                        {/* RIGHT: Profile + leaderboard + mini heatmap */}
-                        <motion.div initial={{opacity:0,x:16}} animate={{opacity:1,x:0}}
-                                    transition={{delay:.15}}
-                                    style={{display:"flex",flexDirection:"column",gap:14}}>
-                            <ProfileCard/>
-                            <Leaderboard/>
-                            {tab !== "heatmap" && <LiveHeatmap/>}
-                        </motion.div>
+                <main style={{ flex:1, overflowY:"auto" }}>
+                    <div style={{ padding:"24px 28px", maxWidth:1100, margin:"0 auto" }}>
+                        <AnimatePresence mode="wait">
+                            <motion.div key={page}
+                                        initial={{ opacity:0, y:8 }} animate={{ opacity:1, y:0 }}
+                                        exit={{ opacity:0, y:-8 }} transition={{ duration:.2 }}>
+                                {PAGES[page]}
+                            </motion.div>
+                        </AnimatePresence>
                     </div>
                 </main>
             </div>
 
-            {/* Task Detail Modal */}
             <AnimatePresence>
-                {activeTask && (
-                    <TaskModal task={activeTask} onClose={()=>setActiveTask(null)}/>
-                )}
+                {activeTask && <TaskModal task={activeTask} onClose={() => setActiveTask(null)}/>}
             </AnimatePresence>
+
+            {notifOpen && (
+                <div style={{ position:"fixed", inset:0, zIndex:100 }} onClick={() => setNotifOpen(false)}/>
+            )}
         </div>
     )
 }
