@@ -4,13 +4,8 @@ const { db } = require('../services/firebase');
 const { verifyToken, requireRole } = require('../middleware/auth');
 const { generateSitrep } = require('../services/aiService');
 const { COLLECTIONS } = require('../config/schema');
+const cache = require('../services/cacheService');
 
-let redis = null;
-try {
-    const Redis = require('ioredis');
-    redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', { lazyConnect: true });
-    redis.connect().catch(() => { redis = null; });
-} catch { redis = null; }
 
 // ── Shared aggregation helper ─────────────────────────────────────────────────
 async function buildImpactStats({ orgId, startDate, endDate }) {
@@ -114,22 +109,20 @@ async function buildImpactStats({ orgId, startDate, endDate }) {
     };
 }
 
-// ── GET /api/impact ───────────────────────────────────────────────────────────
+// ── GET /api/impact — cached with cacheService ────────────────────────────────
 router.get('/', async (req, res) => {
     try {
         const { orgId, startDate, endDate } = req.query;
-        const cacheKey = `civic_impact_${orgId || 'all'}_${startDate || ''}_${endDate || ''}`;
 
-        if (redis) {
-            const cached = await redis.get(cacheKey).catch(() => null);
-            if (cached) return res.json({ source: 'cache', ...JSON.parse(cached) });
-        }
+        const CACHE_KEY = `impact:${orgId || 'all'}:${startDate || ''}:${endDate || ''}`;
 
-        const stats = await buildImpactStats({ orgId, startDate, endDate });
+        const { data: stats, source } = await cache.getOrSet(
+            CACHE_KEY,
+            300, // 5 min cache
+            () => buildImpactStats({ orgId, startDate, endDate })
+        );
 
-        if (redis) await redis.setex(cacheKey, 300, JSON.stringify(stats)).catch(() => {});
-
-        res.json({ source: 'firestore', ...stats });
+        res.json({ source, ...stats });
     } catch (err) {
         console.error('Impact stats error:', err);
         res.status(500).json({ error: err.message, status: 500 });

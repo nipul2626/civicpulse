@@ -6,30 +6,49 @@ const { verifySkillDocument } = require('../services/aiService');
 const { calculateBurnoutRisk } = require('../services/burnoutDetection');
 const { COLLECTIONS } = require('../config/schema');
 const { FieldValue } = require('firebase-admin').firestore;
+const cache = require('../services/cacheService');
 
-// GET /api/volunteers — coordinator auth
+// GET /api/volunteers — coordinator auth (with caching)
 router.get('/', verifyToken, requireRole('coordinator'), async (req, res) => {
     try {
         const { orgId, skill, available, verified } = req.query;
-        let snap = await db.collection(COLLECTIONS.VOLUNTEERS).get();
-        let volunteers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        const CACHE_KEY = `volunteers:${orgId || 'all'}`;
+
+        // Only cache unfiltered list
+        const useCache = !skill && !available && !verified;
+
+        let volunteers;
+
+        if (useCache) {
+            const { data } = await cache.getOrSet(CACHE_KEY, 120, async () => {
+                const snap = await db.collection(COLLECTIONS.VOLUNTEERS).get();
+                return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            });
+            volunteers = data;
+        } else {
+            const snap = await db.collection(COLLECTIONS.VOLUNTEERS).get();
+            volunteers = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        }
+
+        // Apply filters
+        if (orgId) volunteers = volunteers.filter(v => v.orgId === orgId);
 
         if (skill) {
             const s = skill.toLowerCase();
-            if (verified === 'true') {
-                volunteers = volunteers.filter(v => (v.verifiedSkills || []).some(vs => vs.toLowerCase().includes(s)));
-            } else {
-                volunteers = volunteers.filter(v =>
-                    [...(v.skills || []), ...(v.verifiedSkills || [])].some(vs => vs.toLowerCase().includes(s))
+            volunteers = verified === 'true'
+                ? volunteers.filter(v => (v.verifiedSkills || []).some(vs => vs.toLowerCase().includes(s)))
+                : volunteers.filter(v =>
+                    [...(v.skills || []), ...(v.verifiedSkills || [])]
+                        .some(vs => vs.toLowerCase().includes(s))
                 );
-            }
         }
 
         if (available === 'true') {
             volunteers = volunteers.filter(v => (v.currentTasks || 0) < 3 && !v.burnoutFlag);
         }
 
-        // Join user displayName
+        // Join displayNames
         const enriched = await Promise.all(volunteers.map(async (v) => {
             try {
                 const userDoc = await db.collection(COLLECTIONS.USERS).doc(v.userId || v.id).get();
@@ -44,7 +63,6 @@ router.get('/', verifyToken, requireRole('coordinator'), async (req, res) => {
         res.status(500).json({ error: err.message, status: 500 });
     }
 });
-
 // GET /api/volunteers/burnout-risk — coordinator auth
 router.get('/burnout-risk', verifyToken, requireRole('coordinator'), async (req, res) => {
     try {
@@ -89,6 +107,7 @@ router.put('/:id/availability', verifyToken, async (req, res) => {
             return res.status(400).json({ error: 'availabilityGrid object is required' });
         }
         await db.collection(COLLECTIONS.VOLUNTEERS).doc(req.params.id).update({ availabilityGrid });
+        await cache.delPattern('volunteers:*');
         res.json({ message: 'Availability updated' });
     } catch (err) {
         res.status(500).json({ error: err.message, status: 500 });
@@ -104,6 +123,7 @@ router.put('/:id/location', verifyToken, async (req, res) => {
         const { lat, lng } = req.body;
         if (!lat || !lng) return res.status(400).json({ error: 'lat and lng required' });
         await db.collection(COLLECTIONS.VOLUNTEERS).doc(req.params.id).update({ location: { lat, lng } });
+        await cache.delPattern('volunteers:*');
         res.json({ message: 'Location updated' });
     } catch (err) {
         res.status(500).json({ error: err.message, status: 500 });
