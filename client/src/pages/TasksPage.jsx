@@ -1,119 +1,42 @@
 import { useState } from "react"
-import { motion, AnimatePresence, Reorder } from "framer-motion"
-import styled from "styled-components"
+import { motion, AnimatePresence } from "framer-motion"
 import {
-    Plus, Search, Filter, Zap, Clock, AlertTriangle,
-    CheckCircle, User, Flag, MoreHorizontal, X,
-    MapPin, Calendar, ChevronRight, Flame, Star,
-    TrendingUp, ArrowUpRight, Tag, Paperclip
+    Plus, Search, Zap, Clock, CheckCircle, User,
+    X, MapPin, Calendar, Flame, Paperclip, Filter, ChevronDown
 } from "lucide-react"
-/* ─── PALETTE ─── */
+
 const C = {
-    bg:        "#eef2eb",
-    surface:   "#e2e8de",
-    card:      "#ffffff",
-    card2:     "#f5f8f3",
-    border:    "rgba(45,90,45,0.12)",
-    borderHov: "rgba(45,90,45,0.30)",
-    text:      "#1a2e1a",
-    muted:     "#5a7a5a",
-    faint:     "#c8d8c4",
-    f300:      "#4a7a44",
-    f400:      "#3a6a34",
-    f500:      "#2d5a2d",
-    f600:      "#245024",
-    f700:      "#1e441e",
-    s300:      "#7ab870",
-    amber:     "#c07a0a",
-    red:       "#b84c2e",
-    cyan:      "#1a6b7a",
-    purple:    "#5a3a8a",
-    pink:      "#8a3a5a",
+    bg:      "#eef2eb",
+    surface: "#e2e8de",
+    card:    "#ffffff",
+    border:  "rgba(45,90,45,0.12)",
+    text:    "#1a2e1a",
+    muted:   "#5a7a5a",
+    faint:   "#c8d8c4",
+    f300:    "#4a7a44",
+    f400:    "#3a6a34",
+    f500:    "#2d5a2d",
+    s300:    "#7ab870",
+    amber:   "#c07a0a",
+    red:     "#b84c2e",
+    cyan:    "#1a6b7a",
+    purple:  "#5a3a8a",
 }
 
-/* ─── VOID TOOLTIP (adapted from user's provided component) ─── */
-const VoidWrapper = styled.div`
-  .void-wrap {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    filter: url("#goo");
-  }
-  .singularity {
-    position: absolute;
-    bottom: 44px;
-    width: 50px; height: 50px;
-    background: ${C.f700};
-    border-radius: 50%;
-    opacity: 0;
-    display: flex; align-items: center; justify-content: center;
-    transition: all 0.5s cubic-bezier(0.34,1.56,0.64,1);
-    transform: translateY(30px) scale(0.1);
-    pointer-events: none;
-  }
-  .s-content {
-    opacity: 0; transition: 0.25s; color: ${C.f300};
-    font-size: 0.55rem; font-weight: 800; letter-spacing: 2px;
-    white-space: nowrap;
-  }
-  .event-horizon {
-    position: relative; z-index: 2;
-    padding: 9px 16px;
-    background: ${C.f600};
-    color: ${C.f300};
-    border: none; border-radius: 10px; cursor: pointer;
-    font-weight: 800; letter-spacing: 1px; font-size: 12px;
-    transition: 0.25s; font-family: 'DM Sans', sans-serif;
-    display: flex; align-items: center; gap: 7px;
-  }
-  .void-wrap:hover .singularity {
-    opacity: 1;
-    width: 140px; height: 60px;
-    border-radius: 14px;
-    transform: translateY(-52px) scale(1);
-  }
-  .void-wrap:hover .s-content { opacity: 1; transition-delay: 0.3s; }
-  .void-wrap:hover .event-horizon {
-    transform: scale(0.96); letter-spacing: 3px;
-    background: ${C.f500};
-  }
-  .singularity::before {
-    content: "";
-    position: absolute; inset: -4px;
-    border-radius: inherit;
-    background: linear-gradient(45deg, ${C.s300}, ${C.f300}, ${C.s300});
-    z-index: -1; filter: blur(8px);
-    animation: rotGlow 2s linear infinite;
-    opacity: 0; transition: 0.4s;
-  }
-  .void-wrap:hover .singularity::before { opacity: 0.5; }
-  @keyframes rotGlow { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-`
+const COLUMNS = [
+    { id: "todo",       label: "To Do",       color: C.muted,  dot: C.faint   },
+    { id: "inprogress", label: "In Progress",  color: C.cyan,   dot: C.cyan    },
+    { id: "review",     label: "In Review",   color: C.amber,  dot: C.amber   },
+    { id: "done",       label: "Done",        color: C.s300,   dot: C.s300    },
+]
 
-const VoidButton = ({ label, icon: Icon, onClick }) => (
-    <VoidWrapper>
-        <div className="void-wrap" onClick={onClick}>
-            <div className="singularity">
-                <span className="s-content">+ TASK</span>
-            </div>
-            <button className="event-horizon">
-                <Icon size={13} /> {label}
-            </button>
-        </div>
-        <svg xmlns="http://www.w3.org/2000/svg" style={{ display: "block", width: 0, height: 0 }}>
-            <defs>
-                <filter id="goo">
-                    <feGaussianBlur in="SourceGraphic" stdDeviation={8} result="blur" />
-                    <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 16 -6" result="goo" />
-                    <feComposite in="SourceGraphic" in2="goo" operator="atop" />
-                </filter>
-            </defs>
-        </svg>
-    </VoidWrapper>
-)
+const PRIORITY = {
+    urgent: { bg: "rgba(184,85,71,0.12)", text: C.red,    label: "Urgent"  },
+    high:   { bg: "rgba(192,122,10,0.12)", text: C.amber, label: "High"    },
+    medium: { bg: "rgba(26,107,122,0.12)", text: C.cyan,  label: "Medium"  },
+    low:    { bg: "rgba(45,90,45,0.12)",   text: C.f400,  label: "Low"     },
+}
 
-/* ─── DATA ─── */
 const INIT_TASKS = {
     todo: [
         {
@@ -188,101 +111,86 @@ const INIT_TASKS = {
     ],
 }
 
-const COLUMNS = [
-    { id: "todo",       label: "To Do",      color: C.faint,    textColor: C.muted },
-    { id: "inprogress", label: "In Progress", color: C.cyan,     textColor: C.cyan  },
-    { id: "review",     label: "In Review",  color: C.amber,    textColor: C.amber },
-    { id: "done",       label: "Done",       color: C.s300,     textColor: C.s300  },
-]
-
-const PRIORITY_COLORS = {
-    urgent: { bg: "rgba(184,85,71,0.15)", text: C.red,    border: "rgba(184,85,71,0.3)", label: "🔴 Urgent" },
-    high:   { bg: "rgba(201,146,58,0.15)", text: C.amber, border: "rgba(201,146,58,0.3)", label: "🟠 High"   },
-    medium: { bg: "rgba(79,145,145,0.15)", text: C.cyan,  border: "rgba(79,145,145,0.3)", label: "🔵 Medium" },
-    low:    { bg: "rgba(90,120,99,0.15)", text: C.f400,   border: "rgba(90,120,99,0.3)",  label: "🟢 Low"    },
+const urgencyColor = (u) => {
+    if (u >= 5) return C.red
+    if (u >= 4) return C.amber
+    if (u >= 3) return C.cyan
+    return C.f500
 }
 
-/* ─── TASK CARD ─── */
-const TaskCard = ({ task, colId, onMove, onClick, delay = 0 }) => {
-    const p = PRIORITY_COLORS[task.priority]
-    const cols = COLUMNS.map(c => c.id)
-    const colIdx = cols.indexOf(colId)
-
+// Clean task card — no inline move buttons, open modal on click
+const TaskCard = ({ task, colId, onClick, delay = 0 }) => {
+    const p = PRIORITY[task.priority]
     return (
         <motion.div
             layout
-            initial={{ opacity: 0, y: 12, scale: .97 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, scale: .95, y: -8 }}
-            transition={{ delay, duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
-            whileHover={{ y: -2, transition: { duration: 0.15 } }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: .96 }}
+            transition={{ delay, duration: 0.25 }}
+            whileHover={{ y: -2, boxShadow: "0 6px 18px rgba(45,90,45,0.08)", transition: { duration: 0.15 } }}
             onClick={onClick}
             style={{
                 background: C.card,
                 border: `1px solid ${C.border}`,
-                borderRadius: 14,
-                padding: "14px 14px 12px",
+                borderRadius: 12,
+                padding: "14px",
                 cursor: "pointer",
                 position: "relative",
                 overflow: "hidden",
-                transition: "border-color .2s",
-            }}
-            className="task-card"
-        >
-            {/* urgency accent */}
+            }}>
+
+            {/* Urgency left strip */}
             <div style={{
-                position: "absolute", left: 0, top: 0, bottom: 0,
-                width: 3,
-                background: task.urgency >= 5 ? C.red : task.urgency >= 4 ? C.amber : task.urgency >= 3 ? C.cyan : C.f500,
-                borderRadius: "14px 0 0 14px",
+                position: "absolute", left: 0, top: 0, bottom: 0, width: 3,
+                background: urgencyColor(task.urgency),
+                borderRadius: "12px 0 0 12px",
             }} />
 
-            {/* Category + priority */}
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10, paddingLeft: 6 }}>
-        <span style={{
-            fontSize: 9.5, fontWeight: 700, color: C.muted,
-            textTransform: "uppercase", letterSpacing: ".7px",
-        }}>{task.category}</span>
+            {/* Category + priority pill */}
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8, paddingLeft: 8 }}>
+                <span style={{ fontSize: 9.5, fontWeight: 700, color: C.muted, textTransform: "uppercase", letterSpacing: ".6px" }}>
+                    {task.category}
+                </span>
                 <span style={{
-                    fontSize: 9, fontWeight: 800, padding: "2px 8px", borderRadius: 20,
-                    background: p.bg, color: p.text, border: `1px solid ${p.border}`,
-                }}>{task.priority}</span>
+                    fontSize: 9.5, fontWeight: 700, padding: "2px 7px", borderRadius: 20,
+                    background: p.bg, color: p.text,
+                }}>{p.label}</span>
             </div>
 
             {/* Title */}
-            <p style={{ fontSize: 13, fontWeight: 800, color: C.text, margin: "0 0 6px", paddingLeft: 6, lineHeight: 1.4 }}>
+            <p style={{ fontSize: 13, fontWeight: 800, color: C.text, margin: "0 0 5px", paddingLeft: 8, lineHeight: 1.4 }}>
                 {task.title}
             </p>
 
             {/* Desc */}
             <p style={{
-                fontSize: 11, color: C.muted, margin: "0 0 10px", paddingLeft: 6, lineHeight: 1.55,
+                fontSize: 11.5, color: C.muted, margin: "0 0 10px", paddingLeft: 8, lineHeight: 1.5,
                 display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden",
             }}>{task.desc}</p>
 
             {/* Tags */}
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginBottom: 10, paddingLeft: 6 }}>
+            <div style={{ display: "flex", gap: 4, marginBottom: 10, paddingLeft: 8, flexWrap: "wrap" }}>
                 {task.tags.map(t => (
                     <span key={t} style={{
-                        fontSize: 9, fontWeight: 700, padding: "2px 7px", borderRadius: 20,
-                        background: `${C.f700}60`, color: C.f300, letterSpacing: ".3px",
-                    }}># {t}</span>
+                        fontSize: 9.5, fontWeight: 700, padding: "2px 7px", borderRadius: 20,
+                        background: `${C.f500}12`, color: C.f400,
+                    }}>#{t}</span>
                 ))}
             </div>
 
-            {/* Progress bar (in-progress tasks) */}
+            {/* Progress bar — only for in-progress */}
             {task.progress !== undefined && (
-                <div style={{ marginBottom: 10, paddingLeft: 6 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                <div style={{ marginBottom: 10, paddingLeft: 8 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
                         <span style={{ fontSize: 10, color: C.muted }}>Progress</span>
                         <span style={{ fontSize: 10, fontWeight: 700, color: C.cyan }}>{task.progress}%</span>
                     </div>
-                    <div style={{ height: 4, background: C.faint, borderRadius: 4, overflow: "hidden" }}>
+                    <div style={{ height: 3, background: C.faint, borderRadius: 3, overflow: "hidden" }}>
                         <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: `${task.progress}%` }}
-                            transition={{ delay: delay + 0.3, duration: 0.6, ease: "easeOut" }}
-                            style={{ height: "100%", background: C.cyan, borderRadius: 4 }}
+                            initial={{ width: 0 }} animate={{ width: `${task.progress}%` }}
+                            transition={{ delay: delay + 0.2, duration: 0.5, ease: "easeOut" }}
+                            style={{ height: "100%", background: C.cyan, borderRadius: 3 }}
                         />
                     </div>
                 </div>
@@ -291,20 +199,19 @@ const TaskCard = ({ task, colId, onMove, onClick, delay = 0 }) => {
             {/* Footer */}
             <div style={{
                 display: "flex", alignItems: "center", justifyContent: "space-between",
-                paddingTop: 10, paddingLeft: 6, borderTop: `1px solid ${C.border}`,
+                paddingTop: 10, paddingLeft: 8, borderTop: `1px solid ${C.border}`,
             }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                     <div style={{
-                        width: 22, height: 22, borderRadius: "50%",
-                        background: `${C.f500}30`, border: `1px solid ${C.f500}40`,
+                        width: 20, height: 20, borderRadius: "50%",
+                        background: `${C.f500}25`, border: `1px solid ${C.f500}35`,
                         display: "flex", alignItems: "center", justifyContent: "center",
-                        fontSize: 8.5, fontWeight: 900, color: C.f300, flexShrink: 0,
+                        fontSize: 8, fontWeight: 800, color: C.f300,
                     }}>
                         {task.volunteer.split(" ").map(n => n[0]).join("").slice(0, 2)}
                     </div>
                     <span style={{ fontSize: 10.5, color: C.muted }}>{task.volunteer}</span>
                 </div>
-
                 <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                     {task.attachments > 0 && (
                         <div style={{ display: "flex", alignItems: "center", gap: 3 }}>
@@ -318,173 +225,149 @@ const TaskCard = ({ task, colId, onMove, onClick, delay = 0 }) => {
                     </div>
                 </div>
             </div>
-
-            {/* Move buttons */}
-            <div style={{ display: "flex", gap: 4, marginTop: 8, paddingLeft: 6 }}>
-                {colIdx > 0 && (
-                    <motion.button whileTap={{ scale: .93 }}
-                                   onClick={e => { e.stopPropagation(); onMove(task.id, colId, COLUMNS[colIdx - 1].id) }}
-                                   style={{
-                                       fontSize: 9, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
-                                       border: `1px solid ${C.border}`, background: "transparent",
-                                       color: C.muted, cursor: "pointer", fontFamily: "'DM Sans',sans-serif",
-                                       transition: "all .15s",
-                                   }}>← Back</motion.button>
-                )}
-                {colIdx < COLUMNS.length - 1 && (
-                    <motion.button whileTap={{ scale: .93 }}
-                                   onClick={e => { e.stopPropagation(); onMove(task.id, colId, COLUMNS[colIdx + 1].id) }}
-                                   style={{
-                                       fontSize: 9, fontWeight: 700, padding: "3px 8px", borderRadius: 6,
-                                       border: `1px solid ${C.f500}50`, background: `${C.f500}15`,
-                                       color: C.f300, cursor: "pointer", fontFamily: "'DM Sans',sans-serif",
-                                       transition: "all .15s",
-                                   }}>Move → {COLUMNS[colIdx + 1].label}</motion.button>
-                )}
-            </div>
         </motion.div>
     )
 }
 
-/* ─── TASK DETAIL MODAL ─── */
-const TaskModal = ({ task, onClose, onMove, colId }) => {
+// Task detail modal — move actions live here only
+const TaskModal = ({ task, colId, onClose, onMove }) => {
     if (!task) return null
-    const p = PRIORITY_COLORS[task.priority]
+    const p = PRIORITY[task.priority]
     const cols = COLUMNS.map(c => c.id)
     const colIdx = cols.indexOf(colId)
 
     return (
-        <AnimatePresence>
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        onClick={onClose}
-                        style={{
-                            position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)",
-                            zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
-                        }}>
-                <motion.div
-                    initial={{ scale: .9, y: 20, opacity: 0 }}
-                    animate={{ scale: 1, y: 0, opacity: 1 }}
-                    exit={{ scale: .92, y: 14, opacity: 0 }}
-                    transition={{ type: "spring", stiffness: 380, damping: 30 }}
-                    onClick={e => e.stopPropagation()}
-                    style={{
-                        background: C.surface, border: `1px solid ${C.border}`,
-                        borderRadius: 20, padding: "28px 28px 24px",
-                        maxWidth: 500, width: "100%",
-                        boxShadow: "0 40px 80px rgba(0,0,0,0.5)",
-                        fontFamily: "'DM Sans', sans-serif",
-                        position: "relative",
-                    }}>
-                    {/* top accent */}
-                    <div style={{
-                        position: "absolute", top: 0, left: 0, right: 0, height: 3,
-                        background: task.urgency >= 5 ? C.red : task.urgency >= 4 ? C.amber : C.cyan,
-                        borderRadius: "20px 20px 0 0",
-                    }} />
+        <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            onClick={onClose}
+            style={{
+                position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
+                zIndex: 600, display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
+            }}>
+            <motion.div
+                initial={{ scale: .94, y: 16 }} animate={{ scale: 1, y: 0 }}
+                exit={{ scale: .94, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 400, damping: 32 }}
+                onClick={e => e.stopPropagation()}
+                style={{
+                    background: C.surface, border: `1px solid ${C.border}`,
+                    borderRadius: 18, padding: "26px 24px 22px",
+                    maxWidth: 480, width: "100%",
+                    fontFamily: "'DM Sans', sans-serif",
+                    position: "relative",
+                    maxHeight: "90vh", overflowY: "auto",
+                }}>
 
-                    <motion.button whileTap={{ scale: .9 }} onClick={onClose}
-                                   style={{
-                                       position: "absolute", top: 18, right: 18,
-                                       width: 30, height: 30, borderRadius: "50%",
-                                       background: C.faint, border: "none", cursor: "pointer",
-                                       display: "flex", alignItems: "center", justifyContent: "center",
-                                   }}>
-                        <X size={13} color={C.muted} />
-                    </motion.button>
+                {/* Accent bar */}
+                <div style={{
+                    position: "absolute", top: 0, left: 0, right: 0, height: 3,
+                    background: urgencyColor(task.urgency), borderRadius: "18px 18px 0 0",
+                }} />
 
-                    <div style={{ display: "flex", gap: 8, marginBottom: 14, flexWrap: "wrap" }}>
-            <span style={{
-                fontSize: 9.5, fontWeight: 800, padding: "3px 10px", borderRadius: 20,
-                background: C.faint, color: C.muted, textTransform: "uppercase", letterSpacing: ".7px",
-            }}>{task.category}</span>
-                        <span style={{
-                            fontSize: 9.5, fontWeight: 800, padding: "3px 10px", borderRadius: 20,
-                            background: p.bg, color: p.text, border: `1px solid ${p.border}`,
-                        }}>{p.label}</span>
+                {/* Close */}
+                <button onClick={onClose} style={{
+                    position: "absolute", top: 16, right: 16,
+                    width: 28, height: 28, borderRadius: "50%",
+                    background: C.faint, border: "none", cursor: "pointer",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                }}>
+                    <X size={12} color={C.muted} />
+                </button>
+
+                {/* Badges */}
+                <div style={{ display: "flex", gap: 7, marginBottom: 12, flexWrap: "wrap" }}>
+                    <span style={{
+                        fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
+                        background: C.faint, color: C.muted, textTransform: "uppercase", letterSpacing: ".6px",
+                    }}>{task.category}</span>
+                    <span style={{
+                        fontSize: 10, fontWeight: 700, padding: "3px 10px", borderRadius: 20,
+                        background: p.bg, color: p.text,
+                    }}>{p.label}</span>
+                </div>
+
+                <h2 style={{ fontSize: 17, fontWeight: 900, color: C.text, margin: "0 0 9px", lineHeight: 1.35 }}>
+                    {task.title}
+                </h2>
+                <p style={{ fontSize: 12.5, color: C.muted, margin: "0 0 18px", lineHeight: 1.65 }}>{task.desc}</p>
+
+                {/* Progress */}
+                {task.progress !== undefined && (
+                    <div style={{ marginBottom: 16 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 5 }}>
+                            <span style={{ fontSize: 11, fontWeight: 700, color: C.text }}>Progress</span>
+                            <span style={{ fontSize: 11, fontWeight: 800, color: C.cyan }}>{task.progress}%</span>
+                        </div>
+                        <div style={{ height: 5, background: C.faint, borderRadius: 5, overflow: "hidden" }}>
+                            <div style={{ height: "100%", width: `${task.progress}%`, background: C.cyan, borderRadius: 5 }} />
+                        </div>
                     </div>
+                )}
 
-                    <h2 style={{ fontSize: 18, fontWeight: 900, color: C.text, margin: "0 0 10px", lineHeight: 1.3 }}>
-                        {task.title}
-                    </h2>
-                    <p style={{ fontSize: 12.5, color: C.muted, margin: "0 0 20px", lineHeight: 1.65 }}>{task.desc}</p>
-
-                    {task.progress !== undefined && (
-                        <div style={{ marginBottom: 18 }}>
-                            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 6 }}>
-                                <span style={{ fontSize: 11, fontWeight: 700, color: C.text }}>Progress</span>
-                                <span style={{ fontSize: 12, fontWeight: 800, color: C.cyan }}>{task.progress}%</span>
-                            </div>
-                            <div style={{ height: 6, background: C.faint, borderRadius: 6, overflow: "hidden" }}>
-                                <div style={{ height: "100%", width: `${task.progress}%`, background: C.cyan, borderRadius: 6 }} />
+                {/* Details grid */}
+                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 16 }}>
+                    {[
+                        { icon: User,     label: "Volunteer", value: task.volunteer },
+                        { icon: MapPin,   label: "Zone",      value: task.zone },
+                        { icon: Calendar, label: "Due",       value: task.due },
+                        { icon: Flame,    label: "Urgency",   value: `Level ${task.urgency}/5` },
+                    ].map(item => (
+                        <div key={item.label} style={{
+                            background: C.card, border: `1px solid ${C.border}`,
+                            borderRadius: 9, padding: "9px 11px",
+                            display: "flex", alignItems: "center", gap: 7,
+                        }}>
+                            <item.icon size={12} style={{ color: C.f500, flexShrink: 0 }} />
+                            <div>
+                                <p style={{ fontSize: 9, color: C.muted, margin: 0, textTransform: "uppercase", letterSpacing: ".5px" }}>{item.label}</p>
+                                <p style={{ fontSize: 12, fontWeight: 700, color: C.text, margin: "2px 0 0" }}>{item.value}</p>
                             </div>
                         </div>
+                    ))}
+                </div>
+
+                {/* Tags */}
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 18 }}>
+                    {task.tags.map(t => (
+                        <span key={t} style={{
+                            fontSize: 10.5, fontWeight: 700, padding: "4px 10px", borderRadius: 20,
+                            background: `${C.f500}14`, color: C.f300, border: `1px solid ${C.f500}22`,
+                        }}>#{t}</span>
+                    ))}
+                </div>
+
+                {/* Move actions — only in modal */}
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    {colIdx > 0 && (
+                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: .97 }}
+                                       onClick={() => { onMove(task.id, colId, COLUMNS[colIdx - 1].id); onClose() }}
+                                       style={{
+                                           flex: 1, padding: "9px", borderRadius: 9,
+                                           border: `1px solid ${C.border}`, background: "transparent",
+                                           color: C.muted, fontSize: 12, fontWeight: 700, cursor: "pointer",
+                                           fontFamily: "'DM Sans',sans-serif",
+                                       }}>← Move Back</motion.button>
                     )}
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 18 }}>
-                        {[
-                            { icon: User,     label: "Volunteer", value: task.volunteer },
-                            { icon: MapPin,   label: "Zone",      value: task.zone },
-                            { icon: Calendar, label: "Due",       value: task.due },
-                            { icon: Flame,    label: "Urgency",   value: `Level ${task.urgency}/5` },
-                        ].map(item => (
-                            <div key={item.label} style={{
-                                background: C.card, border: `1px solid ${C.border}`,
-                                borderRadius: 10, padding: "10px 12px",
-                                display: "flex", alignItems: "center", gap: 8,
-                            }}>
-                                <item.icon size={13} style={{ color: C.f500, flexShrink: 0 }} />
-                                <div>
-                                    <p style={{ fontSize: 9.5, color: C.muted, margin: 0, textTransform: "uppercase", letterSpacing: ".5px" }}>{item.label}</p>
-                                    <p style={{ fontSize: 12, fontWeight: 700, color: C.text, margin: "2px 0 0" }}>{item.value}</p>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    <div style={{ display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 20 }}>
-                        {task.tags.map(t => (
-                            <span key={t} style={{
-                                fontSize: 10, fontWeight: 700, padding: "4px 10px", borderRadius: 20,
-                                background: `${C.f500}18`, color: C.f300, border: `1px solid ${C.f500}25`,
-                            }}># {t}</span>
-                        ))}
-                    </div>
-
-                    <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-                        {colIdx > 0 && (
-                            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: .97 }}
-                                           onClick={() => { onMove(task.id, colId, COLUMNS[colIdx - 1].id); onClose() }}
-                                           style={{
-                                               flex: 1, padding: "9px 12px", borderRadius: 10,
-                                               border: `1px solid ${C.border}`, background: "transparent",
-                                               color: C.muted, fontSize: 12, fontWeight: 700, cursor: "pointer",
-                                               fontFamily: "'DM Sans',sans-serif",
-                                           }}>← Move Back</motion.button>
-                        )}
-                        {colIdx < COLUMNS.length - 1 && (
-                            <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: .97 }}
-                                           onClick={() => { onMove(task.id, colId, COLUMNS[colIdx + 1].id); onClose() }}
-                                           style={{
-                                               flex: 2, padding: "9px 12px", borderRadius: 10,
-                                               border: "none", background: C.f500,
-                                               color: "#dcebd6", fontSize: 12, fontWeight: 700, cursor: "pointer",
-                                               fontFamily: "'DM Sans',sans-serif",
-                                               display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                                           }}>
-                                Move to {COLUMNS[colIdx + 1].label} →
-                            </motion.button>
-                        )}
-                    </div>
-                </motion.div>
+                    {colIdx < COLUMNS.length - 1 && (
+                        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: .97 }}
+                                       onClick={() => { onMove(task.id, colId, COLUMNS[colIdx + 1].id); onClose() }}
+                                       style={{
+                                           flex: 2, padding: "9px", borderRadius: 9,
+                                           border: "none", background: C.f500,
+                                           color: "#dcebd6", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                                           fontFamily: "'DM Sans',sans-serif",
+                                           display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+                                       }}>
+                            Move to {COLUMNS[colIdx + 1].label} →
+                        </motion.button>
+                    )}
+                </div>
             </motion.div>
-        </AnimatePresence>
+        </motion.div>
     )
 }
 
-/* ══════════════════════════════════════════
-   MAIN PAGE
-══════════════════════════════════════════ */
-export default function TaskPage() {
+export default function TasksPage() {
     const [tasks, setTasks] = useState(INIT_TASKS)
     const [search, setSearch] = useState("")
     const [filterPriority, setFilterPriority] = useState("all")
@@ -502,11 +385,7 @@ export default function TaskPage() {
         })
     }
 
-    const openTask = (task, colId) => {
-        setSelected(task); setSelectedCol(colId)
-    }
-
-    const filteredTasks = colId => tasks[colId].filter(t =>
+    const filteredTasks = (colId) => tasks[colId].filter(t =>
         (search === "" ||
             t.title.toLowerCase().includes(search.toLowerCase()) ||
             t.volunteer.toLowerCase().includes(search.toLowerCase()) ||
@@ -514,10 +393,10 @@ export default function TaskPage() {
         (filterPriority === "all" || t.priority === filterPriority)
     )
 
-    const totalTasks = Object.values(tasks).flat().length
-    const urgentCount = Object.values(tasks).flat().filter(t => t.priority === "urgent").length
-    const doneCount = tasks.done.length
-    const inProgressCount = tasks.inprogress.length
+    const totalTasks    = Object.values(tasks).flat().length
+    const urgentCount   = Object.values(tasks).flat().filter(t => t.priority === "urgent").length
+    const doneCount     = tasks.done.length
+    const inProgCount   = tasks.inprogress.length
 
     return (
         <div style={{
@@ -526,169 +405,165 @@ export default function TaskPage() {
             display: "flex", flexDirection: "column",
         }}>
             <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;0,9..40,800;1,9..40,400&display=swap');
-        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-thumb { background: rgba(90,120,99,0.3); border-radius: 2px; }
-        input, select { font-family: 'DM Sans', sans-serif; }
-        .task-card:hover { border-color: ${C.f500} !important; }
-        .col-scroll { overflow-y: auto; max-height: calc(100vh - 240px); padding-right: 4px; }
-      `}</style>
+                @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&display=swap');
+                *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+                ::-webkit-scrollbar { width: 4px; height: 4px; }
+                ::-webkit-scrollbar-thumb { background: rgba(90,120,99,0.3); border-radius: 2px; }
+                input, select { font-family: 'DM Sans', sans-serif; }
+            `}</style>
 
-            {/* ── TOP BAR ── */}
+            {/* Top bar */}
             <div style={{
-                padding: "24px 32px 20px",
+                padding: "20px 28px",
                 background: C.surface,
                 borderBottom: `1px solid ${C.border}`,
                 flexShrink: 0,
             }}>
-                {/* Title row */}
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div style={{
-                            width: 36, height: 36, borderRadius: 10,
-                            background: `${C.f500}20`,
+                            width: 32, height: 32, borderRadius: 9,
+                            background: `${C.f500}18`,
                             display: "flex", alignItems: "center", justifyContent: "center",
                         }}>
-                            <Zap size={17} style={{ color: C.f400 }} />
+                            <Zap size={15} style={{ color: C.f400 }} />
                         </div>
                         <div>
-                            <h1 style={{ fontSize: 22, fontWeight: 900, color: C.text, letterSpacing: "-.4px", margin: 0 }}>
+                            <h1 style={{ fontSize: 20, fontWeight: 900, color: C.text, margin: 0, letterSpacing: "-.3px" }}>
                                 Task Board
                             </h1>
-                            <p style={{ fontSize: 11, color: C.muted, margin: "2px 0 0" }}>
-                                CivicPulse · Active operations
-                            </p>
+                            <p style={{ fontSize: 10.5, color: C.muted, margin: "1px 0 0" }}>CivicPulse · Active operations</p>
                         </div>
                     </div>
 
-                    <VoidButton label="New Task" icon={Plus} onClick={() => {}} />
+                    <motion.button whileHover={{ scale: 1.03 }} whileTap={{ scale: .97 }}
+                                   style={{
+                                       display: "flex", alignItems: "center", gap: 6, padding: "9px 16px",
+                                       borderRadius: 10, border: "none", background: C.f500,
+                                       color: "#dcebd6", fontSize: 12, fontWeight: 700, cursor: "pointer",
+                                       fontFamily: "'DM Sans',sans-serif",
+                                   }}>
+                        <Plus size={13} /> New Task
+                    </motion.button>
                 </div>
 
-                {/* Stats + Search */}
-                <div style={{ display: "flex", alignItems: "center", gap: 16, flexWrap: "wrap" }}>
-                    {/* Mini stats */}
-                    <div style={{ display: "flex", gap: 10 }}>
+                {/* Stats + search row */}
+                <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+                    {/* Stats pills */}
+                    <div style={{ display: "flex", gap: 8 }}>
                         {[
-                            { label: "Total",      value: totalTasks,     color: C.muted },
-                            { label: "Urgent",     value: urgentCount,    color: C.red   },
-                            { label: "Active",     value: inProgressCount, color: C.cyan },
-                            { label: "Done",       value: doneCount,      color: C.s300  },
+                            { label: "Total",  value: totalTasks,  color: C.muted },
+                            { label: "Urgent", value: urgentCount, color: C.red   },
+                            { label: "Active", value: inProgCount, color: C.cyan  },
+                            { label: "Done",   value: doneCount,   color: C.s300  },
                         ].map(s => (
                             <div key={s.label} style={{
-                                padding: "6px 14px", borderRadius: 9,
+                                padding: "5px 12px", borderRadius: 8,
                                 background: C.card, border: `1px solid ${C.border}`,
                                 textAlign: "center",
                             }}>
-                                <p style={{ fontSize: 16, fontWeight: 900, color: s.color, margin: 0 }}>{s.value}</p>
-                                <p style={{ fontSize: 9.5, color: C.muted, margin: "1px 0 0", textTransform: "uppercase", letterSpacing: ".5px" }}>{s.label}</p>
+                                <p style={{ fontSize: 15, fontWeight: 900, color: s.color, margin: 0 }}>{s.value}</p>
+                                <p style={{ fontSize: 9, color: C.muted, margin: "1px 0 0", textTransform: "uppercase", letterSpacing: ".5px" }}>{s.label}</p>
                             </div>
                         ))}
                     </div>
 
                     {/* Search */}
                     <div style={{
-                        flex: 1, minWidth: 180, display: "flex", alignItems: "center", gap: 9,
+                        flex: 1, minWidth: 160, display: "flex", alignItems: "center", gap: 8,
                         background: C.card, border: `1px solid ${C.border}`,
-                        borderRadius: 9, padding: "0 12px",
+                        borderRadius: 8, padding: "0 11px",
                     }}>
-                        <Search size={13} style={{ color: C.muted }} />
+                        <Search size={12} style={{ color: C.muted }} />
                         <input value={search} onChange={e => setSearch(e.target.value)}
                                placeholder="Search tasks..."
                                style={{
                                    flex: 1, background: "transparent", border: "none", outline: "none",
-                                   color: C.text, fontSize: 12.5, padding: "9px 0",
+                                   color: C.text, fontSize: 12.5, padding: "8px 0",
                                }} />
                     </div>
 
                     {/* Priority filter */}
-                    <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)}
-                            style={{
-                                padding: "7px 28px 7px 10px", borderRadius: 9, outline: "none",
-                                border: `1px solid ${C.border}`, background: C.card,
-                                color: C.text, fontSize: 11, fontWeight: 700, cursor: "pointer",
-                                appearance: "none",
-                                backgroundImage: `url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%237a9b83'/%3E%3C/svg%3E")`,
-                                backgroundRepeat: "no-repeat", backgroundPosition: "right 8px center",
-                            }}>
-                        <option value="all">All Priority</option>
-                        <option value="urgent">Urgent</option>
-                        <option value="high">High</option>
-                        <option value="medium">Medium</option>
-                        <option value="low">Low</option>
-                    </select>
+                    <div style={{ position: "relative" }}>
+                        <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)}
+                                style={{
+                                    padding: "7px 26px 7px 9px", borderRadius: 8, outline: "none",
+                                    border: `1px solid ${C.border}`, background: C.card,
+                                    color: C.text, fontSize: 11, fontWeight: 600, cursor: "pointer",
+                                    appearance: "none",
+                                }}>
+                            <option value="all">All Priority</option>
+                            <option value="urgent">Urgent</option>
+                            <option value="high">High</option>
+                            <option value="medium">Medium</option>
+                            <option value="low">Low</option>
+                        </select>
+                        <ChevronDown size={10} style={{ position: "absolute", right: 7, top: "50%", transform: "translateY(-50%)", color: C.muted, pointerEvents: "none" }} />
+                    </div>
                 </div>
             </div>
 
-            {/* ── KANBAN BOARD ── */}
+            {/* Kanban board */}
             <div style={{
-                flex: 1,
-                display: "grid",
-                gridTemplateColumns: "repeat(4, 1fr)",
-                gap: 0,
-                overflow: "hidden",
-                minHeight: 0,
+                flex: 1, display: "grid", gridTemplateColumns: "repeat(4, 1fr)",
+                overflow: "hidden", minHeight: 0,
             }}>
                 {COLUMNS.map((col, ci) => {
                     const colTasks = filteredTasks(col.id)
                     return (
                         <div key={col.id} style={{
                             borderRight: ci < COLUMNS.length - 1 ? `1px solid ${C.border}` : "none",
-                            display: "flex", flexDirection: "column",
-                            minHeight: 0,
+                            display: "flex", flexDirection: "column", minHeight: 0,
                         }}>
                             {/* Column header */}
-                            <motion.div
-                                initial={{ opacity: 0, y: -8 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: ci * 0.05 }}
-                                style={{
-                                    padding: "16px 16px 12px",
-                                    borderBottom: `1px solid ${C.border}`,
-                                    flexShrink: 0,
-                                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                                }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <div style={{
+                                padding: "14px 14px 10px",
+                                borderBottom: `1px solid ${C.border}`,
+                                flexShrink: 0,
+                                display: "flex", alignItems: "center", justifyContent: "space-between",
+                            }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
                                     <div style={{
-                                        width: 8, height: 8, borderRadius: "50%",
-                                        background: col.color,
-                                        boxShadow: col.id === "inprogress" ? `0 0 6px ${col.color}` : "none",
+                                        width: 7, height: 7, borderRadius: "50%",
+                                        background: col.dot,
+                                        boxShadow: col.id === "inprogress" ? `0 0 5px ${col.dot}` : "none",
                                     }} />
-                                    <span style={{ fontSize: 12, fontWeight: 800, color: col.textColor, letterSpacing: ".3px" }}>
-                    {col.label}
-                  </span>
+                                    <span style={{ fontSize: 12, fontWeight: 800, color: col.color, letterSpacing: ".3px" }}>
+                                        {col.label}
+                                    </span>
                                 </div>
                                 <span style={{
-                                    fontSize: 10.5, fontWeight: 800, padding: "2px 8px", borderRadius: 20,
-                                    background: `${col.color}18`, color: col.textColor,
-                                    border: `1px solid ${col.color}30`,
+                                    fontSize: 10, fontWeight: 800, padding: "2px 7px", borderRadius: 20,
+                                    background: `${col.dot}18`, color: col.color,
+                                    border: `1px solid ${col.dot}28`,
                                 }}>{colTasks.length}</span>
-                            </motion.div>
+                            </div>
 
-                            {/* Cards */}
-                            <div className="col-scroll" style={{ flex: 1, padding: "12px 12px", display: "flex", flexDirection: "column", gap: 10 }}>
+                            {/* Cards — scrollable */}
+                            <div style={{
+                                flex: 1, overflowY: "auto", padding: "10px 10px",
+                                display: "flex", flexDirection: "column", gap: 8,
+                            }}>
                                 <AnimatePresence>
                                     {colTasks.map((task, i) => (
                                         <TaskCard
                                             key={task.id}
                                             task={task}
                                             colId={col.id}
-                                            onMove={moveTask}
-                                            onClick={() => openTask(task, col.id)}
+                                            onClick={() => { setSelected(task); setSelectedCol(col.id) }}
                                             delay={i * 0.04}
                                         />
                                     ))}
                                 </AnimatePresence>
 
                                 {colTasks.length === 0 && (
-                                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                                                style={{
-                                                    padding: "28px 0", textAlign: "center",
-                                                    border: `1.5px dashed ${C.faint}`,
-                                                    borderRadius: 12, color: C.faint,
-                                                }}>
-                                        <p style={{ fontSize: 11, fontWeight: 700 }}>No tasks</p>
-                                    </motion.div>
+                                    <div style={{
+                                        padding: "24px 0", textAlign: "center",
+                                        border: `1.5px dashed ${C.faint}`,
+                                        borderRadius: 10, color: C.faint,
+                                    }}>
+                                        <p style={{ fontSize: 11, fontWeight: 600 }}>No tasks here</p>
+                                    </div>
                                 )}
                             </div>
                         </div>
@@ -696,7 +571,7 @@ export default function TaskPage() {
                 })}
             </div>
 
-            {/* ── TASK MODAL ── */}
+            {/* Task modal */}
             <AnimatePresence>
                 {selected && (
                     <TaskModal
