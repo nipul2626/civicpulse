@@ -5,14 +5,10 @@ const { verifyToken, requireRole } = require('../middleware/auth');
 const { enqueueAIJob } = require('../services/aiQueue');
 const { COLLECTIONS, VALID_CATEGORIES, CATEGORY_PRIORITY } = require('../config/schema');
 const { v4: uuidv4 } = require('uuid');
+const cache = require('../services/cacheService');
 
 // Redis for heatmap cache
-let redis = null;
-try {
-    const Redis = require('ioredis');
-    redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379', { lazyConnect: true });
-    redis.connect().catch(() => { redis = null; });
-} catch { redis = null; }
+
 
 // ── POST /api/needs/submit — no auth required ─────────────────────────────────
 router.post('/submit', async (req, res) => {
@@ -86,7 +82,8 @@ router.post('/submit', async (req, res) => {
         }
 
         // Invalidate heatmap cache
-        if (redis) await redis.del('civic_heatmap').catch(() => {});
+        await cache.del('heatmap:all');
+        await cache.delPattern(`impact:*`);
 
         // Estimate queue position
         const queuePosition = cached ? 0 : Math.floor(Math.random() * 5) + 1;
@@ -142,42 +139,53 @@ router.post('/bulk-import', verifyToken, requireRole('coordinator'), async (req,
             accepted++;
         }
 
-        if (redis) await redis.del('civic_heatmap').catch(() => {});
+        await cache.del('heatmap:all');
 
         res.json({ message: `Bulk import complete`, accepted, duplicates, jobIds });
     } catch (err) {
         res.status(500).json({ error: err.message, status: 500 });
     }
 });
-
-// ── GET /api/needs/heatmap — public ──────────────────────────────────────────
+// ── GET /api/needs/heatmap — public, cached 60s, ETag support ────────────────
 router.get('/heatmap', async (req, res) => {
     try {
-        if (redis) {
-            const cached = await redis.get('civic_heatmap').catch(() => null);
-            if (cached) return res.json({ source: 'cache', data: JSON.parse(cached) });
+        const CACHE_KEY = 'heatmap:all';
+
+        const { data, source } = await cache.getOrSet(CACHE_KEY, 60, async () => {
+            const snap = await db.collection(COLLECTIONS.NEEDS)
+                .where('status', '!=', 'resolved')
+                .get();
+
+            return snap.docs
+                .map(doc => {
+                    const d = doc.data();
+                    return d.location?.lat ? {
+                        id: doc.id,
+                        lat: d.location.lat,
+                        lng: d.location.lng,
+                        urgencyScore: d.urgencyScore,
+                        category: d.category,
+                        status: d.status,
+                        affectedCount: d.affectedCount,
+                        createdAt: d.createdAt,
+                    } : null;
+                })
+                .filter(Boolean);
+        });
+
+        // ETag support
+        const etag = `"${cache.hashForEtag(data)}"`;
+        res.setHeader('ETag', etag);
+
+        if (req.headers['if-none-match'] === etag) {
+            return res.status(304).end();
         }
 
-        const snap = await db.collection(COLLECTIONS.NEEDS).where('status', '!=', 'resolved').get();
-        const data = snap.docs
-            .map(doc => {
-                const d = doc.data();
-                return d.location?.lat ? {
-                    id: doc.id, lat: d.location.lat, lng: d.location.lng,
-                    urgencyScore: d.urgencyScore, category: d.category,
-                    status: d.status, affectedCount: d.affectedCount, createdAt: d.createdAt,
-                } : null;
-            })
-            .filter(Boolean);
-
-        if (redis) await redis.setex('civic_heatmap', 60, JSON.stringify(data)).catch(() => {});
-
-        res.json({ source: 'firestore', data });
+        res.json({ source, data });
     } catch (err) {
         res.status(500).json({ error: err.message, status: 500 });
     }
 });
-
 // ── GET /api/needs/:id — auth required ───────────────────────────────────────
 router.get('/:id', verifyToken, async (req, res) => {
     try {
@@ -203,7 +211,7 @@ router.patch('/:id/status', verifyToken, requireRole('coordinator'), async (req,
             await orgRef.update({ resolvedCount: require('firebase-admin').firestore.FieldValue.increment(1) }).catch(() => {});
         }
 
-        if (redis) await redis.del('civic_heatmap').catch(() => {});
+        await cache.del('heatmap:all');
 
         res.json({ message: 'Status updated', needId: req.params.id, status });
     } catch (err) {

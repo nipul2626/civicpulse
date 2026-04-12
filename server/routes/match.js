@@ -6,15 +6,23 @@ const { matchVolunteersToNeed } = require('../services/matchingEngine');
 const { sendTaskAssignment } = require('../services/notificationService');
 const { COLLECTIONS } = require('../config/schema');
 const { v4: uuidv4 } = require('uuid');
+const cache = require('../services/cacheService');
 
-// POST /api/match — get top 5 volunteers for a need
+// POST /api/match — get top 5 volunteers for a need (cached)
 router.post('/', verifyToken, requireRole('coordinator'), async (req, res) => {
     try {
         const { needId } = req.body;
         if (!needId) return res.status(400).json({ error: 'needId is required', status: 400 });
 
-        const matches = await matchVolunteersToNeed(needId);
-        res.json({ needId, matches });
+        const CACHE_KEY = `match:${needId}`;
+
+        const { data: matches, source } = await cache.getOrSet(
+            CACHE_KEY,
+            300, // 5 min cache
+            () => matchVolunteersToNeed(needId)
+        );
+
+        res.json({ needId, matches, source });
     } catch (err) {
         console.error('Match error:', err);
         res.status(500).json({ error: err.message, status: 500 });
@@ -75,10 +83,8 @@ router.post('/assign', verifyToken, requireRole('coordinator'), async (req, res)
         await batch.commit();
 
         // Invalidate match cache
-        const Redis = require('ioredis');
-        const redis = new Redis(process.env.REDIS_URL || 'redis://localhost:6379');
-        await redis.del(`match:${needId}`).catch(() => {});
-        redis.disconnect();
+        await cache.del(`match:${needId}`);
+        await cache.del('heatmap:all');
 
         // Send push notification
         await sendTaskAssignment(volunteerId, { taskId, needTitle: need.title, scheduledTime });
