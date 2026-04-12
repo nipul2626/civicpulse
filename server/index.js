@@ -45,6 +45,11 @@ app.use('/api/ai', require('./routes/ai'));
 app.use('/api/volunteers', require('./routes/volunteers'));
 app.use('/api/match', require('./routes/match'));
 app.use('/api/tasks', require('./routes/tasks'));
+app.use('/api/impact',        require('./routes/impact'));
+app.use('/api/donor',         require('./routes/donor'));
+app.use('/api/resources',     require('./routes/resources'));
+app.use('/api/organizations', require('./routes/organizations'));
+app.use('/api/predictions',   require('./routes/predictions'));
 
 // ── 404 ───────────────────────────────────────────────────────────────────────
 app.use((req, res) => {
