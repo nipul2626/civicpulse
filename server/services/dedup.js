@@ -1,4 +1,4 @@
-const { db } = require('../config/firebase');
+const { db } = require('./firebase');
 
 // Check if a similar need exists in last 24 hours at same location + category
 async function findDuplicate(location, category) {

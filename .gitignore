@@ -1,4 +1,12 @@
+# dependencies
 node_modules/
+
+# env files
 .env
 .env.local
+
+# build
 dist/
+
+# firebase key
+server/serviceAccountKey.json

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const multer = require('multer');
-const { transcribeAudio } = require('../services/gemini');
+const { transcribeAudio } = require('../services/aiService');
 const authMiddleware = require('../middleware/auth');
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
