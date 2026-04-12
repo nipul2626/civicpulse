@@ -10,22 +10,27 @@ import {
     Flame, Target, BarChart3, Eye, Layers, Radio
 } from "lucide-react"
 
-/* ── THEME: Earthy-dark, warm tones — distinct from coordinator's cold blue ── */
+
+/* ── LIGHT THEME: Earthy-soft, clean UI ── */
 const T = {
-    bg:       "#0A0F08",
-    surface:  "#111A0E",
-    card:     "#313c2c",
-    cardHi:   "#e8efe6",
-    border:   "rgba(120,180,80,0.12)",
+    bg:       "#F6F8F3",   // very light warm background
+    surface:  "#FFFFFF",   // main surfaces
+    card:     "#EEF3E8",   // soft green tint
+    cardHi:   "#FFFFFF",   // hover stays clean
+
+    border:   "rgba(120,180,80,0.15)",
     borderHi: "rgba(120,180,80,0.35)",
-    text:     "#EDF5E0",
-    muted:    "#7A9B6A",
-    accent:   "#78B450",  // fresh green
-    accentDim:"rgba(120,180,80,0.18)",
-    amber:    "#E8A020",
-    red:      "#E05A3A",
-    teal:     "#2DC9A0",
-    purple:   "#9B7CF8",
+
+    text:     "#1F2A1A",   // dark greenish text (not pure black)
+    muted:    "#6B7F63",   // softer muted text
+
+    accent:   "#5FA83F",   // slightly deeper green (better on light bg)
+    accentDim:"rgba(95,168,63,0.15)",
+
+    amber:    "#D48A1B",   // toned-down amber
+    red:      "#D64C2F",   // softer red
+    teal:     "#1FB89A",
+    purple:   "#7A5AF5",
 }
 
 /* ── MOCK VOLUNTEER DATA ── */
@@ -170,7 +175,7 @@ const Topbar = ({ onMenuToggle, menuOpen }) => {
     return (
         <div style={{
             position:"sticky",top:0,zIndex:100,
-            background:"rgba(10,15,8,0.95)",
+            background:"rgb(236 243 237)",
             backdropFilter:"blur(16px)",
             borderBottom:`1px solid ${T.border}`,
             padding:"14px 24px",
@@ -235,7 +240,7 @@ const Topbar = ({ onMenuToggle, menuOpen }) => {
                             <span style={{
                                 position:"absolute",top:-4,right:-4,
                                 width:16,height:16,borderRadius:"50%",
-                                background:T.red,color:"#fff",fontSize:9,fontWeight:800,
+                                background:T.red,color:"#191717",fontSize:9,fontWeight:800,
                                 display:"flex",alignItems:"center",justifyContent:"center",
                             }}>{unread}</span>
                         )}
@@ -276,7 +281,7 @@ const Topbar = ({ onMenuToggle, menuOpen }) => {
                     width:36,height:36,borderRadius:10,
                     background:`linear-gradient(135deg,${T.accent},#5A9A30)`,
                     display:"flex",alignItems:"center",justifyContent:"center",
-                    fontSize:11,fontWeight:900,color:"#fff",cursor:"pointer",
+                    fontSize:11,fontWeight:900,color:"rgb(236 243 237)",cursor:"pointer",
                 }}>
                     {VOLUNTEER.init}
                 </div>
