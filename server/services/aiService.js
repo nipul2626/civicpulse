@@ -207,7 +207,82 @@ async function transcribeAudio(audioBase64, mimeType = 'audio/webm') {
     ]);
     return result.response.text().trim();
 }
+// ── Language detection + multilingual scoring ─────────────────────────────────
+async function scoreNeedMultilingual(needData) {
+    // franc is CommonJS compatible at v3
+    const { franc } = require('franc');
 
+    const textToCheck = `${needData.title || ''} ${needData.description || ''}`.trim();
+    const detectedLang = franc(textToCheck, { minLength: 10 });
+
+    // franc returns 'und' if undetermined, or ISO 639-3 codes
+    // English codes: 'eng'. If English or undetermined, use standard scoring.
+    const NON_ENGLISH_LANGS = {
+        'hin': 'Hindi',
+        'mar': 'Marathi',
+        'ben': 'Bengali',
+        'tam': 'Tamil',
+        'tel': 'Telugu',
+        'kan': 'Kannada',
+        'mal': 'Malayalam',
+        'guj': 'Gujarati',
+        'pan': 'Punjabi',
+        'urd': 'Urdu',
+        'ori': 'Odia',
+    };
+
+    const langName = NON_ENGLISH_LANGS[detectedLang];
+
+    // If English or unknown language, use standard scoring
+    if (!langName) {
+        const result = await scoreNeed(needData);
+        return {
+            ...result,
+            detectedLanguage: detectedLang === 'eng' ? 'English' : 'Unknown',
+            originalText: null,
+            translatedText: null,
+        };
+    }
+
+    // Non-English: translate + score in one prompt (saves one API call)
+    console.log(`🌐 Detected language: ${langName} — using multilingual scoring`);
+
+    const prompt = `
+The following community need report is written in ${langName}.
+
+Original text:
+Title: ${needData.title}
+Description: ${needData.description}
+
+Your tasks:
+1. Translate the title and description to English accurately
+2. Score the need based on the translated content
+
+Return ONLY a valid JSON object with this exact structure:
+{
+  "translatedTitle": "<English translation of title>",
+  "translatedDescription": "<English translation of description>",
+  "urgencyScore": <1-5>,
+  "category": "<one of: food, water, medical, shelter, education, livelihood, sanitation, other>",
+  "affectedCount": <estimated number>,
+  "vulnerabilityFlag": <true or false>,
+  "summary": "<one sentence in English>",
+  "duplicateRisk": <true or false>
+}`;
+
+    const result = await parseAIJson(prompt, {
+        text: textToCheck,
+        category: needData.category || 'other',
+    });
+
+    return {
+        data: result.data,
+        provider: result.provider,
+        detectedLanguage: langName,
+        originalText: `${needData.title} — ${needData.description}`,
+        translatedText: `${result.data.translatedTitle} — ${result.data.translatedDescription}`,
+    };
+}
 module.exports = {
     callAI,
     scoreNeed,
@@ -217,4 +292,5 @@ module.exports = {
     detectBurnout,
     verifySkillDocument,
     transcribeAudio,
+    scoreNeedMultilingual,
 };
