@@ -2,7 +2,7 @@ require('dotenv').config();
 const { db } = require('./firebase');
 const { generateVolunteerMatchReason } = require('./aiService');
 const { COLLECTIONS } = require('../config/schema');
-
+const { computedUrgency } = require('../utils/urgencyDecay');
 // Redis for match cache
 let redis = null;
 try {
@@ -40,18 +40,38 @@ const CATEGORY_SKILLS = {
 
 function scoreSkillMatch(volunteer, need) {
     const requiredSkills = CATEGORY_SKILLS[need.category] || [];
-    if (requiredSkills.length === 0) return 10; // no skill req → neutral
+    if (requiredSkills.length === 0) return 10;
 
-    const verified = (volunteer.verifiedSkills || []).map(s => s.toLowerCase());
+    const verified   = (volunteer.verifiedSkills || []).map(s => s.toLowerCase());
     const unverified = (volunteer.skills || []).map(s => s.toLowerCase());
+    const weights    = volunteer.implicitSkillWeights || {}; // ✅ NEW
 
+    let baseScore = 0;
+
+    // Verified skill match
     for (const req of requiredSkills) {
-        if (verified.includes(req)) return 35;
+        if (verified.includes(req)) {
+            baseScore = 35;
+            break;
+        }
     }
-    for (const req of requiredSkills) {
-        if (unverified.some(s => s.includes(req) || req.includes(s))) return 20;
+
+    // Unverified skill match
+    if (baseScore === 0) {
+        for (const req of requiredSkills) {
+            if (unverified.some(s => s.includes(req) || req.includes(s))) {
+                baseScore = 20;
+                break;
+            }
+        }
     }
-    return 0;
+
+    // ✅ Implicit skill weight adjustment
+    // Range: -0.5 to +0.5 → impact: -5 to +5
+    const categoryWeight = weights[need.category] || 0;
+    const boostedScore = baseScore + (categoryWeight * 10);
+
+    return Math.max(0, Math.min(35, Math.round(boostedScore)));
 }
 
 function scoreProximity(volunteer, need, radiusMultiplier = 1) {
@@ -138,6 +158,14 @@ async function matchVolunteersToNeed(needId) {
     if (!needDoc.exists) throw new Error(`Need ${needId} not found`);
     const need = needDoc.data();
 
+// ✅ Apply urgency decay before scoring
+    const effectiveUrgency = computedUrgency(
+        need.urgencyScore,
+        need.createdAt,
+        need.status
+    );
+
+    need.effectiveUrgency = effectiveUrgency;
     // Fetch eligible volunteers
     const volSnap = await db.collection(COLLECTIONS.VOLUNTEERS)
         .where('currentTasks', '<', 3)
