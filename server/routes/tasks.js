@@ -7,7 +7,9 @@ const { sendTaskAssignment, sendTaskReminder, sendNoShowAlert } = require('../se
 const { COLLECTIONS } = require('../config/schema');
 const { v4: uuidv4 } = require('uuid');
 const { FieldValue } = require('firebase-admin').firestore;
-
+const { scheduleTaskReminder, scheduleNoShowCheck } = require('../queues/taskQueue')
+const sanitizeHtml = require('sanitize-html');
+const { applyUrgencyDecay } = require('../utils/urgencyDecay');
 // ── POST /api/tasks/create ────────────────────────────────────────────────────
 router.post('/create', verifyToken, requireRole('coordinator'), async (req, res) => {
     try {
@@ -50,16 +52,19 @@ router.post('/create', verifyToken, requireRole('coordinator'), async (req, res)
 
         // Schedule reminder and no-show check using setTimeout (Cloud Tasks substitute)
         if (scheduledTime) {
-            const taskTime = new Date(scheduledTime).getTime();
-            const reminderDelay = taskTime - Date.now() - 2 * 60 * 60 * 1000; // 2h before
-            const noShowDelay   = taskTime + 1 * 60 * 60 * 1000;              // 1h after
-
-            if (reminderDelay > 0) {
-                setTimeout(() => sendTaskReminder(assignedVolunteerId, { taskId, needTitle: need.title }), reminderDelay);
-            }
-            if (noShowDelay > 0) {
-                setTimeout(() => triggerNoShowCheck(taskId, need, req.user.uid), noShowDelay);
-            }
+            await scheduleTaskReminder(
+                taskId,
+                assignedVolunteerId,
+                need.title,
+                scheduledTime
+            );
+            await scheduleNoShowCheck(
+                taskId,
+                needId,
+                req.user.uid,
+                need.title,
+                scheduledTime
+            );
         }
 
         res.status(201).json({ message: 'Task created', taskId, task });
@@ -68,69 +73,6 @@ router.post('/create', verifyToken, requireRole('coordinator'), async (req, res)
         res.status(500).json({ error: err.message, status: 500 });
     }
 });
-
-// ── No-show check logic (internal) ───────────────────────────────────────────
-async function triggerNoShowCheck(taskId, need, coordinatorId) {
-    try {
-        const taskDoc = await db.collection(COLLECTIONS.TASKS).doc(taskId).get();
-        if (!taskDoc.exists) return;
-        const task = taskDoc.data();
-
-        // Only act if still in 'assigned' state (not started)
-        if (task.status !== 'assigned') return;
-
-        console.log(`⚠️  No-show detected for task ${taskId}, finding replacement...`);
-
-        // Find next best volunteer
-        const matches = await matchVolunteersToNeed(need.id || task.needId);
-        const nextBest = matches.find(m => m.volunteerId !== task.assignedVolunteer);
-
-        if (nextBest) {
-            const newTaskId = uuidv4();
-            const batch = db.batch();
-
-            // Mark old task as reassigned
-            batch.update(db.collection(COLLECTIONS.TASKS).doc(taskId), { status: 'reassigned' });
-
-            // Decrement old volunteer reliability
-            const oldVolRef = db.collection(COLLECTIONS.VOLUNTEERS).doc(task.assignedVolunteer);
-            const oldVolDoc = await oldVolRef.get();
-            if (oldVolDoc.exists) {
-                const currentScore = oldVolDoc.data().reliabilityScore ?? 1;
-                batch.update(oldVolRef, {
-                    reliabilityScore: Math.max(0, currentScore - 0.1),
-                    currentTasks: FieldValue.increment(-1),
-                });
-            }
-
-            // Create new task for replacement volunteer
-            const newTask = {
-                id: newTaskId, needId: task.needId, needTitle: task.needTitle,
-                needCategory: task.needCategory, assignedVolunteer: nextBest.volunteerId,
-                status: 'assigned', scheduledTime: task.scheduledTime,
-                completedAt: null, outcome: null, orgId: task.orgId,
-                createdAt: new Date(), replacedTaskId: taskId,
-            };
-            batch.set(db.collection(COLLECTIONS.TASKS).doc(newTaskId), newTask);
-            batch.update(db.collection(COLLECTIONS.VOLUNTEERS).doc(nextBest.volunteerId), {
-                currentTasks: FieldValue.increment(1),
-            });
-
-            await batch.commit();
-
-            // Notify replacement volunteer and coordinator
-            await sendTaskAssignment(nextBest.volunteerId, { taskId: newTaskId, needTitle: task.needTitle });
-            await sendNoShowAlert(coordinatorId, { taskId, needTitle: task.needTitle });
-
-            console.log(`✅ Task ${taskId} reassigned to ${nextBest.volunteerId}`);
-        } else {
-            console.warn(`No replacement found for task ${taskId}`);
-            await sendNoShowAlert(coordinatorId, { taskId, needTitle: task.needTitle });
-        }
-    } catch (err) {
-        console.error('No-show check error:', err.message);
-    }
-}
 
 // ── GET /api/tasks — filtered list ───────────────────────────────────────────
 router.get('/', verifyToken, async (req, res) => {
@@ -165,7 +107,11 @@ router.get('/', verifyToken, async (req, res) => {
 // ── PATCH /api/tasks/:id/status ───────────────────────────────────────────────
 router.patch('/:id/status', verifyToken, async (req, res) => {
     try {
+        // ✅ Sanitize outcome input
         const { status, outcome, peopleHelped, durationHours } = req.body;
+        const sanitizedOutcome = outcome
+            ? sanitizeHtml(outcome, { allowedTags: [], allowedAttributes: {} })
+            : null;
 
         const VALID_TRANSITIONS = {
             assigned: ['inProgress'],
@@ -190,7 +136,7 @@ router.patch('/:id/status', verifyToken, async (req, res) => {
         }
 
         const updates = { status, updatedAt: new Date() };
-        if (outcome) updates.outcome = outcome;
+        if (sanitizedOutcome) updates.outcome = sanitizedOutcome;
         if (peopleHelped) updates.peopleHelped = peopleHelped;
 
         const batch = db.batch();
@@ -222,6 +168,7 @@ router.patch('/:id/status', verifyToken, async (req, res) => {
             if (task.needId) {
                 batch.update(db.collection(COLLECTIONS.NEEDS).doc(task.needId), { status: 'resolved' });
             }
+
             // Update org impact counter
             if (task.orgId) {
                 batch.update(db.collection(COLLECTIONS.ORGANIZATIONS).doc(task.orgId), {
@@ -229,6 +176,7 @@ router.patch('/:id/status', verifyToken, async (req, res) => {
                     totalPeopleHelped: FieldValue.increment(peopleHelped || 0),
                 });
             }
+
             // Invalidate heatmap cache
             try {
                 const Redis = require('ioredis');
@@ -236,6 +184,33 @@ router.patch('/:id/status', verifyToken, async (req, res) => {
                 await redis.del('civic_heatmap').catch(() => {});
                 redis.disconnect();
             } catch {}
+
+            // ── Skill learning ────────────────────────────────────────
+            const coordinatorRating = req.body.coordinatorRating;
+
+            if (coordinatorRating && task.assignedVolunteer && task.needCategory) {
+                const parsed = parseInt(coordinatorRating);
+                if (!isNaN(parsed)) {
+                    const rating = Math.max(1, Math.min(5, parsed));
+
+                    const delta = (rating - 3) * 0.05;
+
+                    await db.collection(COLLECTIONS.VOLUNTEERS)
+                        .doc(task.assignedVolunteer)
+                        .update({
+                            [`implicitSkillWeights.${task.needCategory}`]: FieldValue.increment(delta),
+                            totalRatings: FieldValue.increment(1),
+                            ratingSum: FieldValue.increment(rating),
+                        })
+                        .catch(err => {
+                            console.warn('Skill learning failed:', err.message);
+                        });
+
+                    console.log(
+                        `📊 Skill learning: volunteer ${task.assignedVolunteer} ${task.needCategory} weight ${delta > 0 ? '+' : ''}${delta}`
+                    );
+                }
+            }
         }
 
         await batch.commit();
@@ -268,20 +243,5 @@ router.get('/:id', verifyToken, async (req, res) => {
     }
 });
 
-// ── POST /api/tasks/:id/no-show-check — internal ─────────────────────────────
-router.post('/:id/no-show-check', async (req, res) => {
-    try {
-        const taskDoc = await db.collection(COLLECTIONS.TASKS).doc(req.params.id).get();
-        if (!taskDoc.exists) return res.status(404).json({ error: 'Task not found' });
-        const task = taskDoc.data();
-
-        const needDoc = await db.collection(COLLECTIONS.NEEDS).doc(task.needId).get();
-        await triggerNoShowCheck(req.params.id, needDoc.data(), task.createdBy);
-
-        res.json({ message: 'No-show check triggered' });
-    } catch (err) {
-        res.status(500).json({ error: err.message, status: 500 });
-    }
-});
 
 module.exports = router;
