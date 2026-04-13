@@ -60,6 +60,12 @@ const SCHEMAS = {
         voiceTranscript: 'string',
         createdAt: 'timestamp',
         processedAt: 'timestamp',
+        originalText: 'string',
+        translatedText: 'string',
+        detectedLanguage: 'string',
+        titleTranslated: 'string',
+        descriptionTranslated: 'string',
+
     },
     task: {
         id: 'string',

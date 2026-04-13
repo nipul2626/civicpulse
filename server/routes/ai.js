@@ -6,8 +6,45 @@ const path = require('path');
 const Groq = require('groq-sdk');
 const { getQueueStatus } = require('../services/aiQueue');
 const { verifyToken } = require('../middleware/auth');
+const { v4: uuidv4 } = require('uuid');
 
-const upload = multer({ dest: '/tmp/', limits: { fileSize: 10 * 1024 * 1024 } });
+const upload = multer({
+    storage: multer.diskStorage({
+        destination: '/tmp/',
+        filename: (req, file, cb) => {
+            // ✅ Always generate safe filename
+            const ext =
+                file.mimetype === 'audio/mpeg' ? '.mp3' :
+                    file.mimetype === 'audio/wav' ? '.wav' :
+                        file.mimetype === 'audio/mp4' ? '.mp4' :
+                            file.mimetype === 'audio/ogg' ? '.ogg' :
+                                '.webm';
+
+            cb(null, `${uuidv4()}${ext}`);
+        },
+    }),
+
+    limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB
+    },
+
+    fileFilter: (req, file, cb) => {
+        // ✅ Strict audio validation
+        const allowed = [
+            'audio/webm',
+            'audio/mpeg',
+            'audio/wav',
+            'audio/mp4',
+            'audio/ogg',
+        ];
+
+        if (allowed.includes(file.mimetype)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Only audio files are allowed'), false);
+        }
+    },
+});
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
 // GET /api/ai/queue-status

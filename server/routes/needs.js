@@ -6,14 +6,32 @@ const { enqueueAIJob } = require('../services/aiQueue');
 const { COLLECTIONS, VALID_CATEGORIES, CATEGORY_PRIORITY } = require('../config/schema');
 const { v4: uuidv4 } = require('uuid');
 const cache = require('../services/cacheService');
+const { scoreNeedMultilingual } = require('../services/aiService');
+const { submitLimiter, bulkImportLimiter, circuitBreaker, generateSubmitterHash } = require('../middleware/rateLimits');
+const sanitizeHtml = require('sanitize-html');
+const { applyUrgencyDecay } = require('../utils/urgencyDecay');
 
 // Redis for heatmap cache
 
 
 // ── POST /api/needs/submit — no auth required ─────────────────────────────────
-router.post('/submit', async (req, res) => {
+router.post('/submit', submitLimiter, circuitBreaker, async (req, res) => {
     try {
-        const { title, description, category, location, affectedCount, photoURL, voiceTranscript, reportedBy, orgId } = req.body;
+        const {
+            title: rawTitle,
+            description: rawDescription,
+            category,
+            location,
+            affectedCount,
+            photoURL,
+            voiceTranscript,
+            reportedBy,
+            orgId,
+        } = req.body;
+
+// ✅ Sanitize all free-text fields
+        const title = sanitizeHtml(rawTitle || '', { allowedTags: [], allowedAttributes: {} }).trim();
+        const description = sanitizeHtml(rawDescription || '', { allowedTags: [], allowedAttributes: {} }).trim();
 
         // Validation
         if (!location?.lat || !location?.lng) return res.status(400).json({ error: 'location.lat and location.lng are required', status: 400 });
@@ -37,7 +55,14 @@ router.post('/submit', async (req, res) => {
         // Check lng manually (Firestore only allows one range filter)
         const duplicate = dupSnap.docs.find(doc => {
             const d = doc.data();
-            return Math.abs(d.location.lng - location.lng) <= LNG_DELTA;
+
+            return (
+                d.location &&
+                typeof d.location.lng === 'number' &&
+                Math.abs(d.location.lng - location.lng) <= LNG_DELTA &&
+                d.category === category &&
+                d.title?.toLowerCase() === title.toLowerCase()
+            );
         });
 
         if (duplicate) {
@@ -62,13 +87,47 @@ router.post('/submit', async (req, res) => {
             orgId: orgId || null, isDuplicate: false, mergedFrom: [],
             photoURL: photoURL || null, voiceTranscript: voiceTranscript || null,
             createdAt: new Date(), processedAt: null,
+            originalText: null,
+            translatedText: null,
+            detectedLanguage: null,
+            submitterHash: generateSubmitterHash(req.ip),
         };
         await db.collection(COLLECTIONS.NEEDS).doc(needId).set(needData);
 
-        // Enqueue AI scoring
-        const priority = CATEGORY_PRIORITY[category] || 2;
-        const { jobId, cached, result } = await enqueueAIJob('scoreNeed', { ...needData, needId }, priority, orgId);
+        // Language detection + immediate Firestore update
+        try {
+            const { franc } = require('franc');
+            const textToCheck = `${title} ${description}`.trim();
+            const detectedCode = franc(textToCheck, { minLength: 10 });
+            const LANG_MAP = {
+                'hin': 'Hindi', 'mar': 'Marathi', 'ben': 'Bengali',
+                'tam': 'Tamil', 'tel': 'Telugu', 'kan': 'Kannada',
+                'mal': 'Malayalam', 'guj': 'Gujarati', 'pan': 'Punjabi',
+                'urd': 'Urdu', 'ori': 'Odia',
+            };
+            const detectedLanguage = LANG_MAP[detectedCode] || 'English';
 
+            if (detectedLanguage !== 'English') {
+                await db.collection(COLLECTIONS.NEEDS).doc(needId).update({
+                    detectedLanguage,
+                    originalText: `${title} — ${description}`,
+                });
+                // Flag in payload so aiQueue uses multilingual scoring
+                needData.detectedLanguage = detectedLanguage;
+                needData.useMultilingual = true;
+            }
+        } catch (langErr) {
+            console.warn('Language detection failed, defaulting to English:', langErr.message);
+        }
+
+// Enqueue AI scoring (aiQueue will check useMultilingual flag)
+        const priority = CATEGORY_PRIORITY[category] || 2;
+        const { jobId, cached, result } = await enqueueAIJob(
+            'scoreNeed',
+            { ...needData, needId },
+            priority,
+            orgId
+        );
         // If cached result, apply immediately
         if (cached && result) {
             await db.collection(COLLECTIONS.NEEDS).doc(needId).update({
@@ -103,7 +162,7 @@ router.post('/submit', async (req, res) => {
 });
 
 // ── POST /api/needs/bulk-import — coordinator only ────────────────────────────
-router.post('/bulk-import', verifyToken, requireRole('coordinator'), async (req, res) => {
+router.post('/bulk-import', verifyToken, requireRole('coordinator'), bulkImportLimiter, async (req, res) => {
     try {
         let rows = req.body.rows;
 
@@ -158,7 +217,7 @@ router.get('/heatmap', async (req, res) => {
 
             return snap.docs
                 .map(doc => {
-                    const d = doc.data();
+                    const d = applyUrgencyDecay(doc.data());
                     return d.location?.lat ? {
                         id: doc.id,
                         lat: d.location.lat,
@@ -191,7 +250,8 @@ router.get('/:id', verifyToken, async (req, res) => {
     try {
         const doc = await db.collection(COLLECTIONS.NEEDS).doc(req.params.id).get();
         if (!doc.exists) return res.status(404).json({ error: 'Need not found', status: 404 });
-        res.json(doc.data());
+        const need = applyUrgencyDecay(doc.data());
+        res.json(need);
     } catch (err) {
         res.status(500).json({ error: err.message, status: 500 });
     }

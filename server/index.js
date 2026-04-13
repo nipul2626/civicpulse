@@ -9,6 +9,9 @@ const rateLimit = require('express-rate-limit');
 const { startQueueProcessor } = require('./services/aiQueue');
 const { startDailyJobs } = require('./jobs/dailyJobs');
 const { initRedis } = require('./services/cacheService');
+const { initTaskQueue } = require('./queues/taskQueue');
+const { authLimiter, aiLimiter } = require('./middleware/rateLimits');
+
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -33,12 +36,7 @@ app.use('/api/', rateLimit({
     message: { error: 'Too many requests, please try again later', status: 429 },
 }));
 
-// Stricter limit on AI routes: 10 per minute
-app.use('/api/ai/', rateLimit({
-    windowMs: 60 * 1000,
-    max: 10,
-    message: { error: 'AI rate limit reached, please wait', status: 429 },
-}));
+
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
@@ -61,6 +59,8 @@ app.use('/api/donor',         require('./routes/donor'));
 app.use('/api/resources',     require('./routes/resources'));
 app.use('/api/organizations', require('./routes/organizations'));
 app.use('/api/predictions',   require('./routes/predictions'));
+app.use('/api/auth/', authLimiter);
+app.use('/api/ai/', aiLimiter);
 
 // ── 404 ───────────────────────────────────────────────────────────────────────
 app.use((req, res) => {
@@ -86,4 +86,5 @@ app.listen(PORT, async () => {
     await initRedis();          // ✅ initialize cache layer
     startQueueProcessor();      // background jobs
     startDailyJobs();           // cron jobs
+    initTaskQueue();
 });
