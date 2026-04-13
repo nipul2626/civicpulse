@@ -1,7 +1,7 @@
 require('dotenv').config();
 const { v4: uuidv4 } = require('uuid');
 const { db } = require('./firebase');
-const { scoreNeedBatch } = require('./aiService');
+const { scoreNeedBatch, scoreNeed, scoreNeedMultilingual } = require('./aiService');
 const { COLLECTIONS } = require('../config/schema');
 
 // ── Redis setup with in-memory fallback ──────────────────────────────────────
@@ -114,8 +114,27 @@ async function processNextBatch() {
 
     try {
         const needsPayloads = validJobs.map(j => j.payload);
-        const results = await scoreNeedBatch(needsPayloads);
 
+        const results = await Promise.all(
+            needsPayloads.map(async (payload) => {
+                if (payload.useMultilingual && payload.detectedLanguage) {
+                    const r = await scoreNeedMultilingual(payload);
+
+                    // ✅ Store translation in Firestore
+                    if (r.translatedText && payload.needId) {
+                        await db.collection(COLLECTIONS.NEEDS).doc(payload.needId).update({
+                            translatedText: r.translatedText,
+                            titleTranslated: r.data?.translatedTitle || null,
+                            descriptionTranslated: r.data?.translatedDescription || null,
+                        }).catch(() => {});
+                    }
+
+                    return r;
+                }
+
+                return scoreNeed(payload);
+            })
+        );
         await Promise.all(validJobs.map(async (job, idx) => {
             const result = results[idx]?.data || results[idx];
             const cacheKey = getCacheKey(job.payload);
