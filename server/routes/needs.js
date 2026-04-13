@@ -54,24 +54,15 @@ router.post('/submit', submitLimiter, circuitBreaker, async (req, res) => {
 
         // Check lng manually (Firestore only allows one range filter)
         const duplicate = dupSnap.docs.find(doc => {
-            return snap.docs
-                .map(doc => {
-                    const d = applyUrgencyDecay(doc.data()); // ✅ apply decay
+            const d = doc.data();
 
-                    return d.location?.lat ? {
-                        id: doc.id,
-                        lat: d.location.lat,
-                        lng: d.location.lng,
-                        urgencyScore: d.urgencyScore,        // decayed value
-                        urgencyDecayed: d.urgencyDecayed,    // flag for frontend
-                        category: d.category,
-                        status: d.status,
-                        affectedCount: d.affectedCount,
-                        createdAt: d.createdAt,
-                    } : null;
-                })
-                .filter(Boolean);
-            return Math.abs(d.location.lng - location.lng) <= LNG_DELTA;
+            return (
+                d.location &&
+                typeof d.location.lng === 'number' &&
+                Math.abs(d.location.lng - location.lng) <= LNG_DELTA &&
+                d.category === category &&
+                d.title?.toLowerCase() === title.toLowerCase()
+            );
         });
 
         if (duplicate) {
@@ -226,7 +217,7 @@ router.get('/heatmap', async (req, res) => {
 
             return snap.docs
                 .map(doc => {
-                    const d = doc.data();
+                    const d = applyUrgencyDecay(doc.data());
                     return d.location?.lat ? {
                         id: doc.id,
                         lat: d.location.lat,

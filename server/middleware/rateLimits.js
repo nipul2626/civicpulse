@@ -1,7 +1,7 @@
 const rateLimit = require('express-rate-limit');
 const crypto = require('crypto');
 const { getQueueStatus } = require('../services/aiQueue');
-
+const { ipKeyGenerator } = require('express-rate-limit');
 // ── Submission limiter: 10 per IP per hour ────────────────────────────────────
 const submitLimiter = rateLimit({
     windowMs: 60 * 60 * 1000, // 1 hour
@@ -9,9 +9,11 @@ const submitLimiter = rateLimit({
     keyGenerator: (req) => {
         // Hash IP + date so we never store raw IP
         const date = new Date().toDateString();
+        const ip = ipKeyGenerator(req);
+
         return crypto
             .createHash('sha256')
-            .update(`${req.ip}${date}${process.env.RATE_LIMIT_SALT || 'civicpulse'}`)
+            .update(`${ip}${date}${process.env.RATE_LIMIT_SALT || 'civicpulse'}`)
             .digest('hex');
     },
     handler: (req, res) => {
@@ -31,7 +33,10 @@ const bulkImportLimiter = rateLimit({
     max: 5, // 5 bulk import requests per org per day (each can have 200 rows = 1000 total)
     keyGenerator: (req) => {
         // Rate limit per org, not per IP
-        return req.userDoc?.orgId || req.user?.uid || req.ip;
+        const ip = ipKeyGenerator(req);
+        return `org:${req.userDoc?.orgId}`
+            || `user:${req.user?.uid}`
+            || `ip:${ip}`;
     },
     handler: (req, res) => {
         res.status(429).json({
@@ -48,7 +53,7 @@ const bulkImportLimiter = rateLimit({
 const authLimiter = rateLimit({
     windowMs: 15 * 60 * 1000,
     max: 10,
-    keyGenerator: (req) => req.ip,
+    keyGenerator: (req) => ipKeyGenerator(req),
     handler: (req, res) => {
         res.status(429).json({
             error: 'Too many authentication attempts. Please wait 15 minutes.',
@@ -62,7 +67,7 @@ const authLimiter = rateLimit({
 const aiLimiter = rateLimit({
     windowMs: 60 * 1000,
     max: 10,
-    keyGenerator: (req) => req.user?.uid || req.ip, // per user when authenticated
+    keyGenerator: (req) => req.user?.uid || ipKeyGenerator(req), // per user when authenticated
     handler: (req, res) => {
         res.status(429).json({
             error: 'AI rate limit reached. Please wait before making more AI requests.',
@@ -95,13 +100,15 @@ async function circuitBreaker(req, res, next) {
 }
 
 // ── Submitter hash helper (stored on need document for abuse investigation) ────
-function generateSubmitterHash(ip) {
+function generateSubmitterHash(req) {
+    const ip = ipKeyGenerator(req);
     const date = new Date().toDateString();
+
     return crypto
         .createHash('sha256')
         .update(`${ip}${date}${process.env.RATE_LIMIT_SALT || 'civicpulse'}`)
         .digest('hex')
-        .substring(0, 16); // short hash, not reversible
+        .substring(0, 16);
 }
 
 module.exports = {
