@@ -11,7 +11,7 @@ const { startDailyJobs } = require('./jobs/dailyJobs');
 const { initRedis } = require('./services/cacheService');
 const { initTaskQueue } = require('./queues/taskQueue');
 const { authLimiter, aiLimiter } = require('./middleware/rateLimits');
-
+const { checkOllamaHealth } = require('./services/ollamaService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -82,9 +82,16 @@ app.use((err, req, res, next) => {
 // ── Start Server ──────────────────────────────────────────────────────────────
 app.listen(PORT, async () => {
     console.log(`✅ CivicPulse API v3 running on http://localhost:${PORT}`);
-
-    await initRedis();          // ✅ initialize cache layer
-    startQueueProcessor();      // background jobs
-    startDailyJobs();           // cron jobs
+    await initRedis();
+    startQueueProcessor();
+    startDailyJobs();
     initTaskQueue();
+
+    // Check Ollama availability (will log if found, silent if not configured)
+    const ollamaReady = await checkOllamaHealth();
+    if (ollamaReady) {
+        console.log(`🦙 Ollama layer active — self-hosted AI enabled`);
+    } else {
+        console.log(`ℹ️  Ollama not configured — using Groq + Gemini (set OLLAMA_URL to enable)`);
+    }
 });

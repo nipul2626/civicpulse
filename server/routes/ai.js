@@ -7,6 +7,7 @@ const Groq = require('groq-sdk');
 const { getQueueStatus } = require('../services/aiQueue');
 const { verifyToken } = require('../middleware/auth');
 const { v4: uuidv4 } = require('uuid');
+const aiMetrics = require('../services/aiMetrics');
 
 const upload = multer({
     storage: multer.diskStorage({
@@ -75,6 +76,11 @@ router.post('/transcribe', verifyToken, upload.single('audio'), async (req, res)
         // Always clean up temp file
         fs.unlink(req.file.path, () => {});
     }
+});
+// GET /api/ai/metrics — shows provider usage and API savings
+// No auth — useful for monitoring dashboard
+router.get('/metrics', (req, res) => {
+    res.json(aiMetrics.getSummary());
 });
 
 module.exports = router;
