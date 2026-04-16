@@ -4,6 +4,14 @@ const { db } = require('./firebase');
 const { scoreNeedBatch, scoreNeed, scoreNeedMultilingual } = require('./aiService');
 const { COLLECTIONS } = require('../config/schema');
 
+// Lazy import to avoid circular dependency
+function getPushQueueUpdate() {
+    try {
+        return require('../routes/sse').pushQueueUpdate;
+    } catch {
+        return null;
+    }
+}
 // ── Redis setup with in-memory fallback ──────────────────────────────────────
 let redis = null;
 const inMemoryQueue = [];
@@ -185,6 +193,11 @@ async function processNextBatch() {
                 }
             }
         }));
+    }
+    // Push queue status update to all SSE clients
+    const pushQueueUpdate = getPushQueueUpdate();
+    if (pushQueueUpdate) {
+        await pushQueueUpdate().catch(() => {});
     }
 }
 

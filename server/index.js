@@ -12,6 +12,7 @@ const { initRedis } = require('./services/cacheService');
 const { initTaskQueue } = require('./queues/taskQueue');
 const { authLimiter, aiLimiter } = require('./middleware/rateLimits');
 const { checkOllamaHealth } = require('./services/ollamaService');
+const { startFirestoreListeners, stopFirestoreListeners } = require('./services/sseService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -59,6 +60,7 @@ app.use('/api/donor',         require('./routes/donor'));
 app.use('/api/resources',     require('./routes/resources'));
 app.use('/api/organizations', require('./routes/organizations'));
 app.use('/api/predictions',   require('./routes/predictions'));
+app.use('/api/sse', require('./routes/sse'));
 app.use('/api/auth/', authLimiter);
 app.use('/api/ai/', aiLimiter);
 
@@ -86,6 +88,7 @@ app.listen(PORT, async () => {
     startQueueProcessor();
     startDailyJobs();
     initTaskQueue();
+    startFirestoreListeners();
 
     // Check Ollama availability (will log if found, silent if not configured)
     const ollamaReady = await checkOllamaHealth();
@@ -94,4 +97,14 @@ app.listen(PORT, async () => {
     } else {
         console.log(`ℹ️  Ollama not configured — using Groq + Gemini (set OLLAMA_URL to enable)`);
     }
+});
+process.on('SIGTERM', () => {
+    console.log('SIGTERM received — shutting down gracefully');
+    stopFirestoreListeners();
+    process.exit(0);
+});
+process.on('SIGINT', () => {
+    console.log('SIGINT received — shutting down gracefully');
+    stopFirestoreListeners();
+    process.exit(0);
 });
