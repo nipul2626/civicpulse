@@ -65,7 +65,9 @@ const SCHEMAS = {
         detectedLanguage: 'string',
         titleTranslated: 'string',
         descriptionTranslated: 'string',
-
+        submitterPhone:   'string',
+        submitterChannel: 'string',
+        submittedVia:     'string'
     },
     task: {
         id: 'string',

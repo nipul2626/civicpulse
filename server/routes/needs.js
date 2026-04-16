@@ -13,7 +13,7 @@ const { applyUrgencyDecay } = require('../utils/urgencyDecay');
 const { broadcast } = require('../services/sseService');
 const { ok, paginated, fail, notFound, serverError } = require('../utils/response');
 const { formatPaginatedResponse } = require('../utils/pagination');
-
+const { notifySubmitterByPhone } = require('../services/twilioService');
 // ── POST /api/needs/submit — no auth required ─────────────────────────────────
 router.post('/submit', submitLimiter, circuitBreaker, async (req, res) => {
     try {
@@ -104,7 +104,7 @@ router.post('/submit', submitLimiter, circuitBreaker, async (req, res) => {
         });
         // Language detection + immediate Firestore update
         try {
-            const { franc } = require('franc');
+            const franc = require('franc');
             const textToCheck = `${title} ${description}`.trim();
             const detectedCode = franc(textToCheck, { minLength: 10 });
             const LANG_MAP = {
@@ -275,13 +275,44 @@ router.patch('/:id/status', verifyToken, requireRole('coordinator'), async (req,
     try {
         const { status } = req.body;
         const validStatuses = ['pending_ai', 'active', 'assigned', 'resolved'];
-        if (!validStatuses.includes(status)) return res.status(400).json({ error: `status must be one of: ${validStatuses.join(', ')}` });
 
-        await db.collection(COLLECTIONS.NEEDS).doc(req.params.id).update({ status, updatedAt: new Date() });
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({ error: `status must be one of: ${validStatuses.join(', ')}` });
+        }
 
+        const needRef = db.collection(COLLECTIONS.NEEDS).doc(req.params.id);
+
+        // Update status
+        await needRef.update({
+            status,
+            updatedAt: new Date()
+        });
+
+        // Fetch updated data
+        const updatedNeed = await needRef.get();
+        const needData = updatedNeed.data();
+
+        // 🔔 Notify submitter (ONLY for WhatsApp/SMS users)
+        if (['assigned', 'resolved'].includes(status)) {
+            if (needData?.submitterPhone && needData?.submittedVia) {
+                await notifySubmitterByPhone(
+                    needData.submitterPhone,
+                    req.params.id,
+                    status,
+                    needData.detectedLanguage || 'English',
+                    needData.submittedVia
+                ).catch(err => {
+                    console.warn('Submitter notification failed:', err.message);
+                });
+            }
+        }
+
+        // Org stats update
         if (status === 'resolved' && req.userDoc?.orgId) {
             const orgRef = db.collection(COLLECTIONS.ORGANIZATIONS).doc(req.userDoc.orgId);
-            await orgRef.update({ resolvedCount: require('firebase-admin').firestore.FieldValue.increment(1) }).catch(() => {});
+            await orgRef.update({
+                resolvedCount: require('firebase-admin').firestore.FieldValue.increment(1)
+            }).catch(() => {});
         }
 
         await cache.del('heatmap:all');
@@ -291,6 +322,7 @@ router.patch('/:id/status', verifyToken, requireRole('coordinator'), async (req,
             { needId: req.params.id, status },
             { message: 'Status updated' }
         );
+
     } catch (err) {
         res.status(500).json({ error: err.message, status: 500 });
     }
