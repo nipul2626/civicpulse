@@ -7,19 +7,19 @@ const { calculateBurnoutRisk } = require('../services/burnoutDetection');
 const { COLLECTIONS } = require('../config/schema');
 const { FieldValue } = require('firebase-admin').firestore;
 const cache = require('../services/cacheService');
+const { ok, paginated, fail, notFound, serverError } = require('../utils/response');
+
+
+
 
 // GET /api/volunteers — coordinator auth (with caching)
 router.get('/', verifyToken, requireRole('coordinator'), async (req, res) => {
     try {
-        const { orgId, skill, available, verified } = req.query;
-
+        const { orgId, skill, available, verified, limit, cursor } = req.query;
         const CACHE_KEY = `volunteers:${orgId || 'all'}`;
-
-        // Only cache unfiltered list
-        const useCache = !skill && !available && !verified;
+        const useCache = !skill && !available && !verified && !cursor;
 
         let volunteers;
-
         if (useCache) {
             const { data } = await cache.getOrSet(CACHE_KEY, 120, async () => {
                 const snap = await db.collection(COLLECTIONS.VOLUNTEERS).get();
@@ -32,35 +32,38 @@ router.get('/', verifyToken, requireRole('coordinator'), async (req, res) => {
         }
 
         // Apply filters
-        if (orgId) volunteers = volunteers.filter(v => v.orgId === orgId);
-
+        if (orgId)            volunteers = volunteers.filter(v => v.orgId === orgId);
+        if (available === 'true') volunteers = volunteers.filter(v => (v.currentTasks || 0) < 3 && !v.burnoutFlag);
         if (skill) {
             const s = skill.toLowerCase();
             volunteers = verified === 'true'
                 ? volunteers.filter(v => (v.verifiedSkills || []).some(vs => vs.toLowerCase().includes(s)))
-                : volunteers.filter(v =>
-                    [...(v.skills || []), ...(v.verifiedSkills || [])]
-                        .some(vs => vs.toLowerCase().includes(s))
-                );
+                : volunteers.filter(v => [...(v.skills || []), ...(v.verifiedSkills || [])].some(vs => vs.toLowerCase().includes(s)));
         }
 
-        if (available === 'true') {
-            volunteers = volunteers.filter(v => (v.currentTasks || 0) < 3 && !v.burnoutFlag);
-        }
+        // Manual cursor pagination on in-memory array
+        const parsedLimit = Math.min(parseInt(limit) || 20, 100);
+        const cursorIdx = cursor ? volunteers.findIndex(v => v.id === cursor) + 1 : 0;
+        const page = volunteers.slice(cursorIdx, cursorIdx + parsedLimit);
+        const hasMore = cursorIdx + parsedLimit < volunteers.length;
 
-        // Join displayNames
-        const enriched = await Promise.all(volunteers.map(async (v) => {
+        // Join displayNames for current page only (not full list — avoids N+1 on all 500)
+        const enriched = await Promise.all(page.map(async (v) => {
             try {
                 const userDoc = await db.collection(COLLECTIONS.USERS).doc(v.userId || v.id).get();
                 return { ...v, displayName: userDoc.exists ? userDoc.data().displayName : 'Unknown' };
-            } catch {
-                return v;
-            }
+            } catch { return v; }
         }));
 
-        res.json(enriched);
+        return paginated(res, enriched, {
+            count: enriched.length,
+            hasMore,
+            nextCursor: hasMore ? page[page.length - 1]?.id : null,
+            limit: parsedLimit,
+            total: volunteers.length,
+        });
     } catch (err) {
-        res.status(500).json({ error: err.message, status: 500 });
+        return serverError(res, err);
     }
 });
 // GET /api/volunteers/burnout-risk — coordinator auth

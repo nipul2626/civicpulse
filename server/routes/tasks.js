@@ -10,6 +10,9 @@ const { FieldValue } = require('firebase-admin').firestore;
 const { scheduleTaskReminder, scheduleNoShowCheck } = require('../queues/taskQueue')
 const sanitizeHtml = require('sanitize-html');
 const { applyUrgencyDecay } = require('../utils/urgencyDecay');
+const { broadcast } = require('../services/sseService');
+const { ok, paginated, fail, notFound, serverError } = require('../utils/response');
+const { buildPaginatedQuery, formatPaginatedResponse } = require('../utils/pagination');
 // ── POST /api/tasks/create ────────────────────────────────────────────────────
 router.post('/create', verifyToken, requireRole('coordinator'), async (req, res) => {
     try {
@@ -77,33 +80,46 @@ router.post('/create', verifyToken, requireRole('coordinator'), async (req, res)
 // ── GET /api/tasks — filtered list ───────────────────────────────────────────
 router.get('/', verifyToken, async (req, res) => {
     try {
-        const { orgId, volunteerId, status, startDate, endDate } = req.query;
-        let query = db.collection(COLLECTIONS.TASKS);
+        const { orgId, volunteerId, status, startDate, endDate, limit, cursor } = req.query;
 
-        // Volunteers only see their own tasks
+        let baseQuery = db.collection(COLLECTIONS.TASKS);
+
+        // Role-based filtering
         if (req.userDoc?.role === 'volunteer') {
-            query = query.where('assignedVolunteer', '==', req.user.uid);
+            baseQuery = baseQuery.where('assignedVolunteer', '==', req.user.uid);
         } else if (volunteerId) {
-            query = query.where('assignedVolunteer', '==', volunteerId);
+            baseQuery = baseQuery.where('assignedVolunteer', '==', volunteerId);
         }
 
-        if (orgId) query = query.where('orgId', '==', orgId);
-        if (status) query = query.where('status', '==', status);
-        if (startDate) query = query.where('createdAt', '>=', new Date(startDate));
-        if (endDate) query = query.where('createdAt', '<=', new Date(endDate));
+        if (orgId)      baseQuery = baseQuery.where('orgId', '==', orgId);
+        if (status)     baseQuery = baseQuery.where('status', '==', status);
+        if (startDate)  baseQuery = baseQuery.where('createdAt', '>=', new Date(startDate));
+        if (endDate)    baseQuery = baseQuery.where('createdAt', '<=', new Date(endDate));
+
+        const parsedLimit = Math.min(parseInt(limit) || 20, 100);
+        let query = baseQuery.orderBy('createdAt', 'desc').limit(parsedLimit + 1);
+
+        // Cursor-based pagination
+        if (cursor) {
+            const cursorDoc = await db.collection(COLLECTIONS.TASKS).doc(cursor).get();
+            if (cursorDoc.exists) query = query.startAfter(cursorDoc);
+        }
 
         const snap = await query.get();
-        let tasks = snap.docs.map(d => d.data());
+        const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const hasMore = docs.length > parsedLimit;
+        if (hasMore) docs.pop();
 
-        // Sort by linked need urgency (best effort — urgency on task not stored, sort by createdAt)
-        tasks.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
-
-        res.json(tasks);
+        return paginated(res, docs, {
+            count: docs.length,
+            hasMore,
+            nextCursor: hasMore ? docs[docs.length - 1]?.id : null,
+            limit: parsedLimit,
+        });
     } catch (err) {
-        res.status(500).json({ error: err.message, status: 500 });
+        return serverError(res, err);
     }
 });
-
 // ── PATCH /api/tasks/:id/status ───────────────────────────────────────────────
 router.patch('/:id/status', verifyToken, async (req, res) => {
     try {
@@ -214,6 +230,22 @@ router.patch('/:id/status', verifyToken, async (req, res) => {
         }
 
         await batch.commit();
+
+// 🔥 Push real-time task update to dashboards
+        broadcast('tasks', 'task:updated', {
+            taskId: req.params.id,
+            status,
+            needId: task.needId,
+            orgId: task.orgId,
+        }, task.orgId);
+
+// 🔥 If task verified → update heatmap (need resolved)
+        if (status === 'verified') {
+            broadcast('heatmap', 'heatmap:need-resolved', {
+                needId: task.needId,
+            }, task.orgId);
+        }
+
         res.json({ message: 'Task status updated', taskId: req.params.id, status });
     } catch (err) {
         res.status(500).json({ error: err.message, status: 500 });
@@ -224,24 +256,22 @@ router.patch('/:id/status', verifyToken, async (req, res) => {
 router.get('/:id', verifyToken, async (req, res) => {
     try {
         const taskDoc = await db.collection(COLLECTIONS.TASKS).doc(req.params.id).get();
-        if (!taskDoc.exists) return res.status(404).json({ error: 'Task not found' });
+        if (!taskDoc.exists) return notFound(res, 'Task');
         const task = taskDoc.data();
 
-        // Enrich with need + volunteer
         const [needDoc, volDoc] = await Promise.all([
             task.needId ? db.collection(COLLECTIONS.NEEDS).doc(task.needId).get() : null,
             task.assignedVolunteer ? db.collection(COLLECTIONS.VOLUNTEERS).doc(task.assignedVolunteer).get() : null,
         ]);
 
-        res.json({
+        return ok(res, {
             ...task,
-            need: needDoc?.exists ? needDoc.data() : null,
-            volunteer: volDoc?.exists ? volDoc.data() : null,
+            need:      needDoc?.exists ? needDoc.data() : null,
+            volunteer: volDoc?.exists  ? volDoc.data()  : null,
         });
     } catch (err) {
-        res.status(500).json({ error: err.message, status: 500 });
+        return serverError(res, err);
     }
 });
-
 
 module.exports = router;
