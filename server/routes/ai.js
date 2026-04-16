@@ -48,6 +48,14 @@ const upload = multer({
 });
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
+const { getSupportedLanguages } = require('../services/languageService');
+
+router.get('/languages', (req, res) => {
+    res.json({
+        success: true,
+        data: getSupportedLanguages(),
+    });
+});
 // GET /api/ai/queue-status
 router.get('/queue-status', async (req, res) => {
     try {

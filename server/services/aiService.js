@@ -230,7 +230,7 @@ Return a JSON array where each item has:
 }
 
 async function scoreNeedMultilingual(needData) {
-    const { franc } = require('franc');
+    const franc = require('franc');
 
     const textToCheck = `${needData.title || ''} ${needData.description || ''}`.trim();
     const detectedLang = franc(textToCheck, { minLength: 10 });

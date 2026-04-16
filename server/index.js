@@ -15,6 +15,7 @@ const { checkOllamaHealth } = require('./services/ollamaService');
 const { startFirestoreListeners, stopFirestoreListeners } = require('./services/sseService');
 
 const app = express();
+app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5000;
 
 // ── Middleware ────────────────────────────────────────────────────────────────
@@ -76,6 +77,8 @@ app.use('/api/resources',     require('./routes/resources'));
 app.use('/api/organizations', require('./routes/organizations'));
 app.use('/api/predictions',   require('./routes/predictions'));
 app.use('/api/sse', require('./routes/sse'));
+app.use('/api/whatsapp', require('./routes/whatsapp'));
+app.use('/api/pwa',      require('./routes/pwa'));
 app.use('/api/auth/', authLimiter);
 app.use('/api/ai/', aiLimiter);
 
