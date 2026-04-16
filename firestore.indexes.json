@@ -1,0 +1,83 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "needs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "orgId",     "order": "ASCENDING" },
+        { "fieldPath": "status",    "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "needs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "orgId",        "order": "ASCENDING" },
+        { "fieldPath": "category",     "order": "ASCENDING" },
+        { "fieldPath": "urgencyScore", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "needs",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "category",  "order": "ASCENDING" },
+        { "fieldPath": "location.lat", "order": "ASCENDING" },
+        { "fieldPath": "createdAt", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "orgId",       "order": "ASCENDING" },
+        { "fieldPath": "status",      "order": "ASCENDING" },
+        { "fieldPath": "createdAt",   "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedVolunteer", "order": "ASCENDING" },
+        { "fieldPath": "completedAt",       "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "tasks",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "assignedVolunteer", "order": "ASCENDING" },
+        { "fieldPath": "status",            "order": "ASCENDING" },
+        { "fieldPath": "createdAt",         "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "volunteers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "orgId",           "order": "ASCENDING" },
+        { "fieldPath": "currentTasks",    "order": "ASCENDING" },
+        { "fieldPath": "reliabilityScore","order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "volunteers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "burnoutFlag",     "order": "ASCENDING" },
+        { "fieldPath": "currentTasks",    "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "aiQueue",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status",      "order": "ASCENDING" },
+        { "fieldPath": "processedAt", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

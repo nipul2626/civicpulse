@@ -5,7 +5,7 @@ const { verifyToken, requireRole } = require('../middleware/auth');
 const { generateSitrep } = require('../services/aiService');
 const { COLLECTIONS } = require('../config/schema');
 const cache = require('../services/cacheService');
-
+const { ok, fail, serverError } = require('../utils/response');
 
 // ── Shared aggregation helper ─────────────────────────────────────────────────
 async function buildImpactStats({ orgId, startDate, endDate }) {
@@ -122,7 +122,7 @@ router.get('/', async (req, res) => {
             () => buildImpactStats({ orgId, startDate, endDate })
         );
 
-        res.json({ source, ...stats });
+        return ok(res, stats, { source });
     } catch (err) {
         console.error('Impact stats error:', err);
         res.status(500).json({ error: err.message, status: 500 });
@@ -148,14 +148,14 @@ router.post('/sitrep', verifyToken, requireRole('coordinator'), async (req, res)
 
         const report = await generateSitrep(tasks, startDate, endDate);
 
-        res.json({
-            report,
-            generatedAt: new Date().toISOString(),
-            stats,
-        });
+        return ok(
+            res,
+            { report, stats },
+            { generatedAt: new Date().toISOString() }
+        );
     } catch (err) {
         console.error('Sitrep error:', err);
-        res.status(500).json({ error: err.message, status: 500 });
+        return serverError(res, err);
     }
 });
 

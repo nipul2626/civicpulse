@@ -10,9 +10,9 @@ const { scoreNeedMultilingual } = require('../services/aiService');
 const { submitLimiter, bulkImportLimiter, circuitBreaker, generateSubmitterHash } = require('../middleware/rateLimits');
 const sanitizeHtml = require('sanitize-html');
 const { applyUrgencyDecay } = require('../utils/urgencyDecay');
-
-// Redis for heatmap cache
-
+const { broadcast } = require('../services/sseService');
+const { ok, paginated, fail, notFound, serverError } = require('../utils/response');
+const { formatPaginatedResponse } = require('../utils/pagination');
 
 // ── POST /api/needs/submit — no auth required ─────────────────────────────────
 router.post('/submit', submitLimiter, circuitBreaker, async (req, res) => {
@@ -93,7 +93,15 @@ router.post('/submit', submitLimiter, circuitBreaker, async (req, res) => {
             submitterHash: generateSubmitterHash(req.ip),
         };
         await db.collection(COLLECTIONS.NEEDS).doc(needId).set(needData);
-
+        // 🔥 Broadcast new need to heatmap subscribers (real-time)
+        broadcast('heatmap', 'heatmap:new-need', {
+            id: needId,
+            lat: location.lat,
+            lng: location.lng,
+            urgencyScore: null, // AI not done yet
+            category,
+            status: 'pending_ai',
+        });
         // Language detection + immediate Firestore update
         try {
             const { franc } = require('franc');
@@ -249,9 +257,14 @@ router.get('/heatmap', async (req, res) => {
 router.get('/:id', verifyToken, async (req, res) => {
     try {
         const doc = await db.collection(COLLECTIONS.NEEDS).doc(req.params.id).get();
-        if (!doc.exists) return res.status(404).json({ error: 'Need not found', status: 404 });
-        const need = applyUrgencyDecay(doc.data());
-        res.json(need);
+        if (!doc.exists) return notFound(res, 'Need');
+
+        const need = applyUrgencyDecay({
+            id: doc.id,
+            ...doc.data(),
+        });
+
+        return ok(res, need);
     } catch (err) {
         res.status(500).json({ error: err.message, status: 500 });
     }
@@ -273,7 +286,11 @@ router.patch('/:id/status', verifyToken, requireRole('coordinator'), async (req,
 
         await cache.del('heatmap:all');
 
-        res.json({ message: 'Status updated', needId: req.params.id, status });
+        return ok(
+            res,
+            { needId: req.params.id, status },
+            { message: 'Status updated' }
+        );
     } catch (err) {
         res.status(500).json({ error: err.message, status: 500 });
     }

@@ -45,3 +45,5 @@ signInWithEmailAndPassword(auth, user.email, user.password)
         console.error('Login failed:', err.message);
         process.exit(1);
     });
+
+//hi

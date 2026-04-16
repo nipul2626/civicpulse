@@ -10,3 +10,8 @@ dist/
 
 # firebase key
 server/serviceAccountKey.json
+
+.agents/
+.claude/
+.junie/
+skills-lock.json
