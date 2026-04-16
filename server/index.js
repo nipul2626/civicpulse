@@ -18,7 +18,22 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 
 // ── Middleware ────────────────────────────────────────────────────────────────
-app.use(compression()); // ✅ MUST be first (before routes)
+
+// Disable compression for SSE
+app.use((req, res, next) => {
+    if (req.path.startsWith('/api/sse')) {
+        req.headers['x-no-compression'] = true;
+    }
+    next();
+});
+
+// Enable compression for everything else
+app.use(compression({
+    filter: (req, res) => {
+        if (req.headers['x-no-compression']) return false;
+        return compression.filter(req, res);
+    }
+}));
 
 app.use(cors({
     origin: [process.env.CLIENT_URL || 'http://localhost:5173', 'https://civicpulse.vercel.app'],
