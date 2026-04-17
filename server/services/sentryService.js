@@ -1,10 +1,13 @@
 const Sentry = require('@sentry/node');
 
+let isInitialized = false; // ✅ track state
+
 function initSentry() {
     if (!process.env.SENTRY_DSN) {
         console.log('ℹ️  Sentry not configured — add SENTRY_DSN to enable error tracking');
         return;
     }
+
     Sentry.init({
         dsn: process.env.SENTRY_DSN,
         environment: process.env.NODE_ENV || 'development',
@@ -20,10 +23,14 @@ function initSentry() {
             return event;
         },
     });
+
+    isInitialized = true; // ✅ mark initialized
     console.log('✅ Sentry error tracking initialized');
 }
 
 function captureError(err, context = {}) {
+    if (!isInitialized) return; // ✅ prevent crash
+
     Sentry.withScope((scope) => {
         Object.entries(context).forEach(([k, v]) => scope.setExtra(k, v));
         Sentry.captureException(err);
@@ -31,10 +38,18 @@ function captureError(err, context = {}) {
 }
 
 function captureMessage(message, context = {}) {
+    if (!isInitialized) return; // ✅ prevent crash
+
     Sentry.withScope((scope) => {
         Object.entries(context).forEach(([k, v]) => scope.setExtra(k, v));
         Sentry.captureMessage(message);
     });
 }
 
-module.exports = { initSentry, captureError, captureMessage, Sentry };
+module.exports = {
+    initSentry,
+    captureError,
+    captureMessage,
+    Sentry,
+    isInitialized // ✅ export this
+};

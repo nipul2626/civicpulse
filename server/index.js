@@ -4,7 +4,7 @@ const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
-const { initSentry, Sentry } = require('./services/sentryService');
+const { initSentry, Sentry, isInitialized } = require('./services/sentryService');
 const logger = require('./services/logger');
 const { startQueueProcessor } = require('./services/aiQueue');
 const { startDailyJobs } = require('./jobs/dailyJobs');
@@ -20,7 +20,9 @@ const app = express();
 app.set('trust proxy', 1);
 const PORT = process.env.PORT || 5000;
 
-app.use(Sentry.Handlers.requestHandler());
+if (isInitialized) {
+    app.use(Sentry.Handlers.requestHandler());
+}
 app.use((req, res, next) => {
     if (req.path.startsWith('/api/sse')) {
         req.headers['x-no-compression'] = true;
@@ -98,7 +100,9 @@ app.use('/api/pwa',           require('./routes/pwa'));
 app.use('/api/analytics',     require('./routes/analytics'));
 app.use('/api/demo',          require('./routes/demo'));
 
-app.use(Sentry.Handlers.errorHandler());
+if (isInitialized) {
+    app.use(Sentry.Handlers.errorHandler());
+}
 
 app.use((req, res) => {
     res.status(404).json({ success: false, error: `${req.method} ${req.path} not found`, status: 404 });
@@ -117,7 +121,7 @@ app.listen(PORT, async () => {
     initTaskQueue();
     startFirestoreListeners();
     const ollamaReady = await checkOllamaHealth();
-    logger.info(ollamaReady ? '🦙 Ollama active' : 'ℹ️  Using Groq + Gemini');
+    logger.info(ollamaReady ? 'Ollama active' : 'Using Groq + Gemini');
 });
 
 process.on('SIGTERM', () => {
