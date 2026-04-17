@@ -14,6 +14,7 @@ const { broadcast } = require('../services/sseService');
 const { ok, paginated, fail, notFound, serverError } = require('../utils/response');
 const { formatPaginatedResponse } = require('../utils/pagination');
 const { notifySubmitterByPhone } = require('../services/twilioService');
+const { notifyOnNeedStatusChange } = require('../services/lifecycleNotifications');
 // ── POST /api/needs/submit — no auth required ─────────────────────────────────
 router.post('/submit', submitLimiter, circuitBreaker, async (req, res) => {
     try {
@@ -316,6 +317,8 @@ router.patch('/:id/status', verifyToken, requireRole('coordinator'), async (req,
         }
 
         await cache.del('heatmap:all');
+
+        notifyOnNeedStatusChange(req.params.id, status).catch(() => {});
 
         return ok(
             res,
