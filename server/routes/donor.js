@@ -2,8 +2,42 @@ const express = require('express');
 const router = express.Router();
 const { db } = require('../services/firebase');
 const { COLLECTIONS } = require('../config/schema');
+const { ok, serverError } = require('../utils/response');
 
-// GET /api/donor/public-stats — sanitized, no personal data
+// Fuzzes lat/lng to ~500m radius to prevent re-identification
+function fuzzyLocation(lat, lng) {
+    if (!lat || !lng) return { lat: null, lng: null };
+    const FUZZ = 0.005; // ~500m
+    return {
+        lat: Math.round((lat + (Math.random() - 0.5) * FUZZ) * 1000) / 1000,
+        lng: Math.round((lng + (Math.random() - 0.5) * FUZZ) * 1000) / 1000,
+    };
+}
+
+// Strips all PII from a need before returning to public donor portal
+function sanitizeNeedForPublic(doc) {
+    const d = doc.data ? doc.data() : doc;
+    const fuzzed = fuzzyLocation(d.location?.lat, d.location?.lng);
+    return {
+        id: doc.id || d.id,
+        category: d.category,
+        title: d.title,
+        urgencyScore: d.urgencyScore,
+        affectedCount: d.affectedCount,
+        status: d.status,
+        aiSummary: d.aiSummary || null,
+        location: {
+            address: d.location?.address
+                ? d.location.address.split(',').slice(-2).join(',').trim() // keep only city/district
+                : 'Mumbai, India',
+            lat: fuzzed.lat,
+            lng: fuzzed.lng,
+        },
+        createdAt: d.createdAt,
+        resolvedAt: d.processedAt || null,
+    };
+}
+
 router.get('/public-stats', async (req, res) => {
     try {
         const [needsSnap, tasksSnap, volSnap] = await Promise.all([
@@ -12,11 +46,11 @@ router.get('/public-stats', async (req, res) => {
             db.collection(COLLECTIONS.VOLUNTEERS).get(),
         ]);
 
-        const peopleHelped = tasksSnap.docs.reduce((sum, d) => sum + (d.data().peopleHelped || 0), 0);
-        const totalHours   = volSnap.docs.reduce((sum, d) => sum + (d.data().totalHours || 0), 0);
+        const peopleHelped = tasksSnap.docs.reduce((s, d) => s + (d.data().peopleHelped || 0), 0);
+        const totalHours   = volSnap.docs.reduce((s, d) => s + (d.data().totalHours || 0), 0);
         const resolved     = needsSnap.docs.filter(d => d.data().status === 'resolved').length;
 
-        res.json({
+        return ok(res, {
             totalNeedsAddressed: resolved,
             volunteersActive: volSnap.size,
             peopleHelped,
@@ -24,11 +58,10 @@ router.get('/public-stats', async (req, res) => {
             lastUpdated: new Date().toISOString(),
         });
     } catch (err) {
-        res.status(500).json({ error: err.message, status: 500 });
+        return serverError(res, err);
     }
 });
 
-// GET /api/donor/resolved-needs — no personal data
 router.get('/resolved-needs', async (req, res) => {
     try {
         const snap = await db.collection(COLLECTIONS.NEEDS)
@@ -37,42 +70,26 @@ router.get('/resolved-needs', async (req, res) => {
             .limit(50)
             .get();
 
-        const results = snap.docs.map(doc => {
-            const d = doc.data();
-            return {
-                id: doc.id,
-                category: d.category,
-                title: d.title,
-                location: { address: d.location?.address, lat: d.location?.lat, lng: d.location?.lng },
-                urgencyScore: d.urgencyScore,
-                affectedCount: d.affectedCount,
-                createdAt: d.createdAt,
-                resolvedAt: d.processedAt || null,
-                aiSummary: d.aiSummary || null,
-            };
-        });
-
-        res.json(results);
+        const results = snap.docs.map(sanitizeNeedForPublic);
+        return ok(res, results);
     } catch (err) {
-        res.status(500).json({ error: err.message, status: 500 });
+        return serverError(res, err);
     }
 });
 
-// GET /api/donor/need/:id/story
 router.get('/need/:id/story', async (req, res) => {
     try {
         const needDoc = await db.collection(COLLECTIONS.NEEDS).doc(req.params.id).get();
-        if (!needDoc.exists) return res.status(404).json({ error: 'Need not found' });
-        const need = needDoc.data();
+        if (!needDoc.exists) return res.status(404).json({ success: false, error: 'Need not found' });
 
-        // Find linked completed task
+        const need = needDoc.data();
         const taskSnap = await db.collection(COLLECTIONS.TASKS)
             .where('needId', '==', req.params.id)
             .where('status', 'in', ['completed', 'verified'])
             .limit(1)
             .get();
 
-        let volunteerFirstName = null;
+        let volunteerFirstName = 'A volunteer';
         let outcome = null;
         let peopleHelped = null;
 
@@ -80,31 +97,34 @@ router.get('/need/:id/story', async (req, res) => {
             const task = taskSnap.docs[0].data();
             outcome = task.outcome;
             peopleHelped = task.peopleHelped;
-
-            // Only first name for privacy
             try {
                 const userDoc = await db.collection(COLLECTIONS.USERS).doc(task.assignedVolunteer).get();
                 if (userDoc.exists) {
-                    const fullName = userDoc.data().displayName || '';
-                    volunteerFirstName = fullName.split(' ')[0] || 'A volunteer';
+                    volunteerFirstName = (userDoc.data().displayName || '').split(' ')[0] || 'A volunteer';
                 }
             } catch {}
         }
 
-        res.json({
+        const fuzzed = fuzzyLocation(need.location?.lat, need.location?.lng);
+
+        return ok(res, {
             id: req.params.id,
             title: need.title,
             category: need.category,
-            location: need.location?.address || 'Unknown location',
-            whatWasReported: need.description,
-            whoHelped: volunteerFirstName ? `${volunteerFirstName} and the team` : 'Our volunteers',
+            location: need.location?.address
+                ? need.location.address.split(',').slice(-2).join(',').trim()
+                : 'Mumbai, India',
+            lat: fuzzed.lat,
+            lng: fuzzed.lng,
+            whatWasReported: need.description?.substring(0, 200),
+            whoHelped: `${volunteerFirstName} and the CivicPulse team`,
             outcome: outcome || need.aiSummary || 'Successfully resolved',
             peopleHelped,
             reportedAt: need.createdAt,
             resolvedAt: need.processedAt || null,
         });
     } catch (err) {
-        res.status(500).json({ error: err.message, status: 500 });
+        return serverError(res, err);
     }
 });
 
