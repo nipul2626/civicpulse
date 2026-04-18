@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, createContext, useContext } from "react"
+import { useState, useEffect, useRef, createContext, useContext, useLayoutEffect } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { motion as Motion, AnimatePresence, useTransform, useScroll } from "framer-motion"
 import {
@@ -467,21 +467,37 @@ const StepBar = ({ current, steps, dark }) => (
 
 /* ─── SLIDING PILL TAB ───────────────────────────────────────────────────── */
 const PillTabs = ({ tabs, active, onSelect, dark }) => {
-    const idx = tabs.indexOf(active)
+    const wrapRef = useRef(null)
+    const tabRefs = useRef([])
+    const [indicator, setIndicator] = useState({ left: 0, width: 0 })
+
+    useLayoutEffect(() => {
+        const idx = tabs.indexOf(active)
+        const wrap = wrapRef.current
+        const tabEl = tabRefs.current[idx]
+        if (!wrap || !tabEl) return
+        const wrapRect = wrap.getBoundingClientRect()
+        const tabRect = tabEl.getBoundingClientRect()
+        setIndicator({
+            left: tabRect.left - wrapRect.left,
+            width: tabRect.width,
+        })
+    }, [active, tabs])
+
     return (
-        <div style={{ position:"relative", display:"flex",
+        <div ref={wrapRef} style={{ position:"relative", display:"flex",
             background: dark ? "rgba(28,42,24,0.7)" : "#f0f4ec",
             borderRadius:10, padding:3,
             border: `1px solid ${dark ? "rgba(120,180,80,0.12)" : "#d4e4cc"}` }}>
             <Motion.div animate={{ x: idx * (100 / tabs.length) + "%" }}
                         style={{ position:"absolute", top:3, left:3,
-                            width:`calc(${100/tabs.length}% - 3px)`, height:"calc(100% - 6px)",
-                            background: dark ? "#1C352D" : "#1C352D",
+                            height:"calc(100% - 6px)",
+                            background:"#1C352D",
                             borderRadius:7,
                             boxShadow:"0 2px 8px rgba(0,0,0,0.18)" }}
                         transition={{ type:"spring", stiffness:400, damping:30 }} />
-            {tabs.map(tab => (
-                <button key={tab} onClick={() => onSelect(tab)}
+            {tabs.map((tab, idx) => (
+                <button key={tab} ref={el => (tabRefs.current[idx] = el)} onClick={() => onSelect(tab)}
                         style={{ flex:1, padding:"8px 12px", fontSize:13, fontWeight:800,
                             background:"transparent", border:"none", cursor:"pointer",
                             color: active === tab ? "#EBF4DD" : (dark ? "#7a9b6a" : "#90AB8B"),
@@ -1510,6 +1526,8 @@ const AboutSection = () => {
 const NGOSection = ({ onNgoRegister }) => {
     const { dark } = useTheme()
     const sectionBg = dark ? "#0a0f08" : "#f0f4ec"
+    const [active, setActive] = useState(0)
+    const [hovered, setHovered] = useState(false)
     const quantity = NGOS.length
     const cardW = 170, cardH = 240
     const translateZ = Math.round((cardW + cardH) * 0.72)
@@ -1550,7 +1568,6 @@ const NGOSection = ({ onNgoRegister }) => {
 
     return (
         <section id="ngos" style={{ padding:"96px 0", position:"relative", overflow:"hidden", background:sectionBg }}>
-            <style>{carouselStyle}</style>
             <BgParticles dark={dark} />
 
             <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 24px", position:"relative", zIndex:10 }}>
@@ -1607,74 +1624,92 @@ const NGOSection = ({ onNgoRegister }) => {
                                                     </div>
                                                 )}
                                             </div>
-
-                                            <p style={{ fontWeight:900, fontSize:13, color:"#fff", marginBottom:3, lineHeight:1.3 }}>{ngo.name}</p>
-                                            <p style={{ fontSize:10, color:"rgba(255,255,255,0.75)",
-                                                marginBottom:10, display:"flex", alignItems:"center", gap:3 }}>
-                                                <MapPin size={9}/> {ngo.city}
-                                            </p>
-
-                                            {/* Badge row */}
-                                            <div style={{ display:"flex", gap:5, marginBottom:8, flexWrap:"wrap" }}>
-                                                <span style={{ fontSize:9, fontWeight:800, padding:"3px 8px", borderRadius:6,
-                                                    background:"rgba(255,255,255,0.25)", color:"#fff" }}>{ngo.badge}</span>
-                                                <span style={{ fontSize:9, fontWeight:700, padding:"3px 8px", borderRadius:6,
-                                                    background:"rgba(255,255,255,0.15)", color:"rgba(255,255,255,0.9)" }}>{ngo.focus}</span>
-                                            </div>
-
-                                            <p style={{ fontSize:10, color:"rgba(255,255,255,0.75)", lineHeight:1.5,
-                                                marginBottom:10, flex:1, overflow:"hidden",
-                                                display:"-webkit-box", WebkitLineClamp:3, WebkitBoxOrient:"vertical" }}>
-                                                {ngo.desc}
-                                            </p>
-
-                                            {/* Stats */}
-                                            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:5, marginBottom:10 }}>
-                                                {[{l:"Volunteers",v:ngo.volunteers},{l:"Needs",v:ngo.needs},{l:"Rating",v:`${ngo.rating}★`}].map(s => (
-                                                    <div key={s.l} style={{ textAlign:"center", padding:"5px 4px", borderRadius:8,
-                                                        background:"rgba(255,255,255,0.15)" }}>
-                                                        <p style={{ fontWeight:900, fontSize:11, color:"#fff", margin:0 }}>{s.v}</p>
-                                                        <p style={{ fontSize:8, color:"rgba(255,255,255,0.7)", margin:0 }}>{s.l}</p>
-                                                    </div>
-                                                ))}
-                                            </div>
-
-                                            {/* CTA */}
-                                            <button style={{ width:"100%", padding:"8px", borderRadius:10, fontSize:11, fontWeight:800,
-                                                background:"rgba(255,255,255,0.22)", color:"#fff",
-                                                border:"1.5px solid rgba(255,255,255,0.3)", cursor:"pointer",
-                                                display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
-                                                View NGO <ChevronRight size={11}/>
-                                            </button>
+                                            {ngo.verified && (
+                                                <div style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 8px", borderRadius:8, fontSize:9, fontWeight:800, background:"rgba(255,255,255,0.2)", color:"#fff" }}>
+                                                    <Shield size={8}/> Verified
+                                                </div>
+                                            )}
                                         </div>
+                                        <p style={{ fontWeight:900, fontSize:13, color:"#fff", marginBottom:3, lineHeight:1.3 }}>{ngo.name}</p>
+                                        <p style={{ fontSize:10, color:"rgba(255,255,255,0.78)", marginBottom:10, display:"flex", alignItems:"center", gap:3 }}>
+                                            <MapPin size={9}/> {ngo.city}
+                                        </p>
+                                        <div style={{ display:"flex", gap:5, marginBottom:8, flexWrap:"wrap" }}>
+                                            <span style={{ fontSize:9, fontWeight:800, padding:"3px 8px", borderRadius:6, background:"rgba(255,255,255,0.25)", color:"#fff" }}>{ngo.badge}</span>
+                                            <span style={{ fontSize:9, fontWeight:700, padding:"3px 8px", borderRadius:6, background:"rgba(255,255,255,0.15)", color:"rgba(255,255,255,0.9)" }}>{ngo.focus}</span>
+                                        </div>
+                                        <p style={{ fontSize:10, color:"rgba(255,255,255,0.78)", lineHeight:1.5, marginBottom:10, flex:1, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:3, WebkitBoxOrient:"vertical" }}>
+                                            {ngo.desc}
+                                        </p>
+                                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:5, marginBottom:10 }}>
+                                            {[{l:"Volunteers",v:ngo.volunteers},{l:"Needs",v:ngo.needs},{l:"Rating",v:`${ngo.rating}★`}].map(s => (
+                                                <div key={s.l} style={{ textAlign:"center", padding:"5px 4px", borderRadius:8, background:"rgba(255,255,255,0.15)" }}>
+                                                    <p style={{ fontWeight:900, fontSize:11, color:"#fff", margin:0 }}>{s.v}</p>
+                                                    <p style={{ fontSize:8, color:"rgba(255,255,255,0.72)", margin:0 }}>{s.l}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <button style={{ width:"100%", padding:"8px", borderRadius:10, fontSize:11, fontWeight:800,
+                                            background:"rgba(255,255,255,0.22)", color:"#fff", border:"1.5px solid rgba(255,255,255,0.3)", cursor:"pointer",
+                                            display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
+                                            View NGO <ChevronRight size={11}/>
+                                        </button>
                                     </div>
-                                )
+                                    )
+
+
                             })}
                         </div>
+
+                        <AnimatePresence>
+                            {hovered && (
+                                <>
+                                    <Motion.button
+                                        initial={{ opacity:0, x:-16 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:-16 }}
+                                        onClick={prev}
+                                        style={{ position:"absolute", left:16, top:"50%", transform:"translateY(-50%)",
+                                            width:42, height:42, borderRadius:"50%", border:`1px solid ${dark ? "rgba(120,180,80,0.3)" : "rgba(28,53,45,0.28)"}`,
+                                            background: dark ? "rgba(10,15,8,0.9)" : "rgba(255,255,255,0.95)",
+                                            color: dark ? "#dff5c6" : "#1C352D", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", zIndex:45 }}>
+                                        <ChevronLeft size={18}/>
+                                    </Motion.button>
+                                    <Motion.button
+                                        initial={{ opacity:0, x:16 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:16 }}
+                                        onClick={next}
+                                        style={{ position:"absolute", right:16, top:"50%", transform:"translateY(-50%)",
+                                            width:42, height:42, borderRadius:"50%", border:`1px solid ${dark ? "rgba(120,180,80,0.3)" : "rgba(28,53,45,0.28)"}`,
+                                            background: dark ? "rgba(10,15,8,0.9)" : "rgba(255,255,255,0.95)",
+                                            color: dark ? "#dff5c6" : "#1C352D", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", zIndex:45 }}>
+                                        <ChevronRight size={18}/>
+                                    </Motion.button>
+                                </>
+                            )}
+                        </AnimatePresence>
                     </div>
+
+                    <p style={{ textAlign:"center", fontSize:11, color: dark ? "#4a6b3a" : "#90AB8B", marginBottom:32 }}>
+                        Hover to spread cards · {quantity} themed NGO cards · arrows appear on hover
+                    </p>
+
+                    {/* Register CTA */}
+                    <Motion.div initial={{ opacity:0, y:20 }} whileInView={{ opacity:1, y:0 }}
+                                viewport={{ once:true }} transition={{ delay:0.3 }}
+                                style={{ textAlign:"center" }}>
+                        <GradientBtn onClick={onNgoRegister} dark={dark} style={{ margin:"0 auto" }}>
+                            <Building2 size={16}/> Register your NGO <ArrowRight size={14}/>
+                        </GradientBtn>
+                        <p style={{ fontSize:11, marginTop:12, color: dark ? "#4a6b3a" : "#90AB8B" }}>
+                            Free to register · Verified within 48 hours · Instant access to volunteer pool
+                        </p>
+                    </Motion.div>
                 </div>
 
-                <p style={{ textAlign:"center", fontSize:11, color: dark ? "#4a6b3a" : "#90AB8B", marginBottom:32 }}>
-                    ↙ Hover the carousel to pause · {quantity} verified NGOs shown
-                </p>
-
-                {/* Register CTA */}
-                <Motion.div initial={{ opacity:0, y:20 }} whileInView={{ opacity:1, y:0 }}
-                            viewport={{ once:true }} transition={{ delay:0.3 }}
-                            style={{ textAlign:"center" }}>
-                    <GradientBtn onClick={onNgoRegister} dark={dark} style={{ margin:"0 auto" }}>
-                        <Building2 size={16}/> Register your NGO <ArrowRight size={14}/>
-                    </GradientBtn>
-                    <p style={{ fontSize:11, marginTop:12, color: dark ? "#4a6b3a" : "#90AB8B" }}>
-                        Free to register · Verified within 48 hours · Instant access to volunteer pool
-                    </p>
-                </Motion.div>
-            </div>
+                </div>
         </section>
-    )
+)
 }
 
-/* ─── CONTACT SECTION ────────────────────────────────────────────────────── */
+
 const ContactSection = () => {
     const { dark } = useTheme()
     const [formState, setFormState] = useState({ name:"", email:"", subject:"", message:"" })
@@ -1838,7 +1873,6 @@ const ContactSection = () => {
     )
 }
 
-/* ─── FOOTER ─────────────────────────────────────────────────────────────── */
 const Footer = () => {
     const { dark } = useTheme()
     const footerBg = dark ? "#0D1F19" : "#e7efe3"
@@ -1947,7 +1981,7 @@ const Footer = () => {
     )
 }
 
-/* ─── SCROLL TO TOP ──────────────────────────────────────────────────────── */
+
 const ScrollTop = () => {
     const { dark } = useTheme()
     const { scrollYProgress } = useScroll()
@@ -1978,7 +2012,7 @@ const ScrollTop = () => {
     )
 }
 
-/* ─── ROOT COMPONENT ─────────────────────────────────────────────────────── */
+
 const LandingPage = () => {
     const [dark,      setDark]     = useState(false)
     const [authMode,  setAuthMode]  = useState(null)
