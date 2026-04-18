@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, createContext, useContext, useLayoutEffect } from "react"
+import { useState, useEffect, useRef, createContext, useContext } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { motion as Motion, AnimatePresence, useTransform, useScroll } from "framer-motion"
 import {
@@ -467,37 +467,21 @@ const StepBar = ({ current, steps, dark }) => (
 
 /* ─── SLIDING PILL TAB ───────────────────────────────────────────────────── */
 const PillTabs = ({ tabs, active, onSelect, dark }) => {
-    const wrapRef = useRef(null)
-    const tabRefs = useRef([])
-    const [indicator, setIndicator] = useState({ left: 0, width: 0 })
-
-    useLayoutEffect(() => {
-        const idx = tabs.indexOf(active)
-        const wrap = wrapRef.current
-        const tabEl = tabRefs.current[idx]
-        if (!wrap || !tabEl) return
-        const wrapRect = wrap.getBoundingClientRect()
-        const tabRect = tabEl.getBoundingClientRect()
-        setIndicator({
-            left: tabRect.left - wrapRect.left,
-            width: tabRect.width,
-        })
-    }, [active, tabs])
-
+    const idx = tabs.indexOf(active)
     return (
-        <div ref={wrapRef} style={{ position:"relative", display:"flex",
+        <div style={{ position:"relative", display:"flex",
             background: dark ? "rgba(28,42,24,0.7)" : "#f0f4ec",
             borderRadius:10, padding:3,
             border: `1px solid ${dark ? "rgba(120,180,80,0.12)" : "#d4e4cc"}` }}>
             <Motion.div animate={{ x: idx * (100 / tabs.length) + "%" }}
                         style={{ position:"absolute", top:3, left:3,
-                            height:"calc(100% - 6px)",
-                            background:"#1C352D",
+                            width:`calc(${100/tabs.length}% - 3px)`, height:"calc(100% - 6px)",
+                            background: dark ? "#1C352D" : "#1C352D",
                             borderRadius:7,
                             boxShadow:"0 2px 8px rgba(0,0,0,0.18)" }}
                         transition={{ type:"spring", stiffness:400, damping:30 }} />
-            {tabs.map((tab, idx) => (
-                <button key={tab} ref={el => (tabRefs.current[idx] = el)} onClick={() => onSelect(tab)}
+            {tabs.map(tab => (
+                <button key={tab} onClick={() => onSelect(tab)}
                         style={{ flex:1, padding:"8px 12px", fontSize:13, fontWeight:800,
                             background:"transparent", border:"none", cursor:"pointer",
                             color: active === tab ? "#EBF4DD" : (dark ? "#7a9b6a" : "#90AB8B"),
@@ -1526,8 +1510,6 @@ const AboutSection = () => {
 const NGOSection = ({ onNgoRegister }) => {
     const { dark } = useTheme()
     const sectionBg = dark ? "#0a0f08" : "#f0f4ec"
-    const [active, setActive] = useState(0)
-    const [hovered, setHovered] = useState(false)
     const quantity = NGOS.length
     const cardW = 170, cardH = 240
     const translateZ = Math.round((cardW + cardH) * 0.72)
@@ -1568,6 +1550,7 @@ const NGOSection = ({ onNgoRegister }) => {
 
     return (
         <section id="ngos" style={{ padding:"96px 0", position:"relative", overflow:"hidden", background:sectionBg }}>
+            <style>{carouselStyle}</style>
             <BgParticles dark={dark} />
 
             <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 24px", position:"relative", zIndex:10 }}>
@@ -1624,70 +1607,55 @@ const NGOSection = ({ onNgoRegister }) => {
                                                     </div>
                                                 )}
                                             </div>
-                                            {ngo.verified && (
-                                                <div style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 8px", borderRadius:8, fontSize:9, fontWeight:800, background:"rgba(255,255,255,0.2)", color:"#fff" }}>
-                                                    <Shield size={8}/> Verified
-                                                </div>
-                                            )}
-                                        </div>
-                                        <p style={{ fontWeight:900, fontSize:13, color:"#fff", marginBottom:3, lineHeight:1.3 }}>{ngo.name}</p>
-                                        <p style={{ fontSize:10, color:"rgba(255,255,255,0.78)", marginBottom:10, display:"flex", alignItems:"center", gap:3 }}>
-                                            <MapPin size={9}/> {ngo.city}
-                                        </p>
-                                        <div style={{ display:"flex", gap:5, marginBottom:8, flexWrap:"wrap" }}>
-                                            <span style={{ fontSize:9, fontWeight:800, padding:"3px 8px", borderRadius:6, background:"rgba(255,255,255,0.25)", color:"#fff" }}>{ngo.badge}</span>
-                                            <span style={{ fontSize:9, fontWeight:700, padding:"3px 8px", borderRadius:6, background:"rgba(255,255,255,0.15)", color:"rgba(255,255,255,0.9)" }}>{ngo.focus}</span>
-                                        </div>
-                                        <p style={{ fontSize:10, color:"rgba(255,255,255,0.78)", lineHeight:1.5, marginBottom:10, flex:1, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:3, WebkitBoxOrient:"vertical" }}>
-                                            {ngo.desc}
-                                        </p>
-                                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:5, marginBottom:10 }}>
-                                            {[{l:"Volunteers",v:ngo.volunteers},{l:"Needs",v:ngo.needs},{l:"Rating",v:`${ngo.rating}★`}].map(s => (
-                                                <div key={s.l} style={{ textAlign:"center", padding:"5px 4px", borderRadius:8, background:"rgba(255,255,255,0.15)" }}>
-                                                    <p style={{ fontWeight:900, fontSize:11, color:"#fff", margin:0 }}>{s.v}</p>
-                                                    <p style={{ fontSize:8, color:"rgba(255,255,255,0.72)", margin:0 }}>{s.l}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                        <button style={{ width:"100%", padding:"8px", borderRadius:10, fontSize:11, fontWeight:800,
-                                            background:"rgba(255,255,255,0.22)", color:"#fff", border:"1.5px solid rgba(255,255,255,0.3)", cursor:"pointer",
-                                            display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
-                                            View NGO <ChevronRight size={11}/>
-                                        </button>
-                                    </div>
-                                </Motion.div>
-                            )
-                        })}
-                    </div>
 
-                    <AnimatePresence>
-                        {hovered && (
-                            <>
-                                <Motion.button
-                                    initial={{ opacity:0, x:-16 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:-16 }}
-                                    onClick={prev}
-                                    style={{ position:"absolute", left:16, top:"50%", transform:"translateY(-50%)",
-                                        width:42, height:42, borderRadius:"50%", border:`1px solid ${dark ? "rgba(120,180,80,0.3)" : "rgba(28,53,45,0.28)"}`,
-                                        background: dark ? "rgba(10,15,8,0.9)" : "rgba(255,255,255,0.95)",
-                                        color: dark ? "#dff5c6" : "#1C352D", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", zIndex:45 }}>
-                                    <ChevronLeft size={18}/>
-                                </Motion.button>
-                                <Motion.button
-                                    initial={{ opacity:0, x:16 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:16 }}
-                                    onClick={next}
-                                    style={{ position:"absolute", right:16, top:"50%", transform:"translateY(-50%)",
-                                        width:42, height:42, borderRadius:"50%", border:`1px solid ${dark ? "rgba(120,180,80,0.3)" : "rgba(28,53,45,0.28)"}`,
-                                        background: dark ? "rgba(10,15,8,0.9)" : "rgba(255,255,255,0.95)",
-                                        color: dark ? "#dff5c6" : "#1C352D", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", zIndex:45 }}>
-                                    <ChevronRight size={18}/>
-                                </Motion.button>
-                            </>
-                        )}
-                    </AnimatePresence>
+                                            <p style={{ fontWeight:900, fontSize:13, color:"#fff", marginBottom:3, lineHeight:1.3 }}>{ngo.name}</p>
+                                            <p style={{ fontSize:10, color:"rgba(255,255,255,0.75)",
+                                                marginBottom:10, display:"flex", alignItems:"center", gap:3 }}>
+                                                <MapPin size={9}/> {ngo.city}
+                                            </p>
+
+                                            {/* Badge row */}
+                                            <div style={{ display:"flex", gap:5, marginBottom:8, flexWrap:"wrap" }}>
+                                                <span style={{ fontSize:9, fontWeight:800, padding:"3px 8px", borderRadius:6,
+                                                    background:"rgba(255,255,255,0.25)", color:"#fff" }}>{ngo.badge}</span>
+                                                <span style={{ fontSize:9, fontWeight:700, padding:"3px 8px", borderRadius:6,
+                                                    background:"rgba(255,255,255,0.15)", color:"rgba(255,255,255,0.9)" }}>{ngo.focus}</span>
+                                            </div>
+
+                                            <p style={{ fontSize:10, color:"rgba(255,255,255,0.75)", lineHeight:1.5,
+                                                marginBottom:10, flex:1, overflow:"hidden",
+                                                display:"-webkit-box", WebkitLineClamp:3, WebkitBoxOrient:"vertical" }}>
+                                                {ngo.desc}
+                                            </p>
+
+                                            {/* Stats */}
+                                            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:5, marginBottom:10 }}>
+                                                {[{l:"Volunteers",v:ngo.volunteers},{l:"Needs",v:ngo.needs},{l:"Rating",v:`${ngo.rating}★`}].map(s => (
+                                                    <div key={s.l} style={{ textAlign:"center", padding:"5px 4px", borderRadius:8,
+                                                        background:"rgba(255,255,255,0.15)" }}>
+                                                        <p style={{ fontWeight:900, fontSize:11, color:"#fff", margin:0 }}>{s.v}</p>
+                                                        <p style={{ fontSize:8, color:"rgba(255,255,255,0.7)", margin:0 }}>{s.l}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {/* CTA */}
+                                            <button style={{ width:"100%", padding:"8px", borderRadius:10, fontSize:11, fontWeight:800,
+                                                background:"rgba(255,255,255,0.22)", color:"#fff",
+                                                border:"1.5px solid rgba(255,255,255,0.3)", cursor:"pointer",
+                                                display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
+                                                View NGO <ChevronRight size={11}/>
+                                            </button>
+                                        </div>
+                                    </div>
+                                )
+                            })}
+                        </div>
+                    </div>
                 </div>
 
                 <p style={{ textAlign:"center", fontSize:11, color: dark ? "#4a6b3a" : "#90AB8B", marginBottom:32 }}>
-                    Hover to spread cards · {quantity} themed NGO cards · arrows appear on hover
+                    ↙ Hover the carousel to pause · {quantity} verified NGOs shown
                 </p>
 
                 {/* Register CTA */}
@@ -1905,26 +1873,26 @@ const Footer = () => {
                                 { icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>, color:"#e1306c", label:"Instagram" },
                                 { icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028 14.09 14.09 0 001.226-1.994.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03z"/></svg>, color:"#7289da", label:"Discord" },
                             ].map((s, i) => (
-                                    <Motion.a key={i} href="#"
-                                              whileHover={{ scale:1.1, y:-3 }}
-                                              style={{ width:34, height:34, borderRadius:10,
-                                                  display:"flex", alignItems:"center", justifyContent:"center",
-                                                  background: surface,
-                                                  color: dark ? "#90AB8B" : "#4B6457",
-                                                  border:`1px solid ${dark ? "rgba(90,120,99,0.2)" : "rgba(90,120,99,0.24)"}`,
-                                                  transition:"all 0.2s" }}
-                                              onMouseEnter={e => {
-                                                  e.currentTarget.style.background = `${s.color}30`
-                                                  e.currentTarget.style.color = s.color
-                                                  e.currentTarget.style.borderColor = `${s.color}55`
-                                              }}
-                                              onMouseLeave={e => {
-                                                  e.currentTarget.style.background = surface
-                                                  e.currentTarget.style.color = dark ? "#90AB8B" : "#4B6457"
-                                                  e.currentTarget.style.borderColor = dark ? "rgba(90,120,99,0.2)" : "rgba(90,120,99,0.24)"
-                                              }}>
-                                        {s.icon}
-                                    </Motion.a>
+                                <Motion.a key={i} href="#"
+                                          whileHover={{ scale:1.1, y:-3 }}
+                                          style={{ width:34, height:34, borderRadius:10,
+                                              display:"flex", alignItems:"center", justifyContent:"center",
+                                              background: surface,
+                                              color: dark ? "#90AB8B" : "#4B6457",
+                                              border:`1px solid ${dark ? "rgba(90,120,99,0.2)" : "rgba(90,120,99,0.24)"}`,
+                                              transition:"all 0.2s" }}
+                                          onMouseEnter={e => {
+                                              e.currentTarget.style.background = `${s.color}30`
+                                              e.currentTarget.style.color = s.color
+                                              e.currentTarget.style.borderColor = `${s.color}55`
+                                          }}
+                                          onMouseLeave={e => {
+                                              e.currentTarget.style.background = surface
+                                              e.currentTarget.style.color = dark ? "#90AB8B" : "#4B6457"
+                                              e.currentTarget.style.borderColor = dark ? "rgba(90,120,99,0.2)" : "rgba(90,120,99,0.24)"
+                                          }}>
+                                    {s.icon}
+                                </Motion.a>
                             ))}
                         </div>
                     </div>
