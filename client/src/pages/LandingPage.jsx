@@ -4,7 +4,7 @@ import { motion as Motion, AnimatePresence, useTransform, useScroll } from "fram
 import {
     Zap, Menu, X, ArrowRight, Mail, Lock, Eye, EyeOff,
     User, Building2, Check, MapPin, Phone, Globe,
-    ChevronRight, Shield, BarChart3, Users, Heart,
+    ChevronRight, ChevronLeft, Shield, BarChart3, Users, Heart,
     MessageSquare, Send,
     TrendingUp, Clock,
     Sparkles, Target, Activity
@@ -172,47 +172,42 @@ const DayNightToggle = ({ dark, onToggle, small }) => {
 const GradientBtn = ({ children, onClick, style, className, dark, small, outline }) => {
     const [hovered, setHovered] = useState(false)
     const grad = dark
-        ? "linear-gradient(90deg, #78b450, #3ec9b0)"
-        : "linear-gradient(90deg, #2d5a2d, #5A7863)"
-    const innerBg = outline
-        ? (dark ? "rgba(10,15,8,0.72)" : "rgba(255,255,255,0.82)")
-        : (dark ? "#0a0f08" : "#1C352D")
-    const textCol = outline
-        ? (dark ? "#dff5c6" : "#1C352D")
-        : (dark ? "#edf5e0" : "#EBF4DD")
+        ? "linear-gradient(108deg, #8ad557, #3dd3bf)"
+        : "linear-gradient(108deg, #2f5f42, #4e8a71)"
+    const baseBg = outline ? (dark ? "rgba(10,15,8,0.9)" : "#f4f8f2") : (dark ? "#0a130d" : "#17372d")
+    const textCol = outline ? (dark ? "#d9f5bf" : "#1C352D") : "#EBF4DD"
     return (
-        <div style={{ position:"relative", display:"flex", width:"fit-content", ...style }}
-             onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
-            <div style={{
-                position:"absolute",
-                inset: hovered ? "-2px" : "0px",
-                borderRadius:"0.9em",
-                background: grad,
-                filter: "blur(16px)",
-                opacity: hovered ? 0.45 : 0,
-                transition:"all 0.28s ease",
-                pointerEvents:"none",
-                zIndex:0,
-            }} />
-            <div style={{ padding:3, background: grad, borderRadius:"0.9em", position:"relative", zIndex:1, width:"100%" }}>
-                <Motion.button
-                    whileHover={{ scale:1.02 }} whileTap={{ scale:0.96 }}
-                    onClick={onClick} className={className}
-                    style={{
-                        background: innerBg, color: textCol,
-                        border: outline ? `1.5px solid ${dark ? "rgba(196,245,154,0.9)" : "#1C352D"}` : "none",
-                        borderRadius:"0.5em",
-                        padding: small ? "7px 16px" : "11px 24px",
-                        fontSize: small ? 12 : 14, fontWeight:800,
-                        cursor:"pointer", display:"flex", alignItems:"center",
-                        gap:7, whiteSpace:"nowrap",
-                        width:"100%", justifyContent:"center",
-                        boxShadow: outline && dark ? "inset 0 0 0 1px rgba(120,180,80,0.28)" : "none",
-                    }}>
-                    {children}
-                </Motion.button>
-            </div>
-        </div>
+        <Motion.button
+            whileHover={{ scale:1.015 }} whileTap={{ scale:0.985 }}
+            onClick={onClick} className={className}
+            onMouseEnter={() => setHovered(true)}
+            onMouseLeave={() => setHovered(false)}
+            style={{
+                border:"2px solid transparent",
+                borderRadius:14,
+                cursor:"pointer",
+                display:"inline-flex",
+                width:"100%",
+                justifyContent:"center",
+                alignItems:"center",
+                gap:7,
+                whiteSpace:"nowrap",
+                fontWeight:800,
+                fontSize: small ? 12 : 14,
+                padding: small ? "8px 16px" : "11px 24px",
+                color:textCol,
+                backgroundImage: `linear-gradient(${baseBg}, ${baseBg}), ${grad}`,
+                backgroundOrigin:"border-box",
+                backgroundClip:"padding-box, border-box",
+                boxShadow: hovered
+                    ? (dark ? "0 8px 24px rgba(62,198,165,0.28)" : "0 8px 20px rgba(47,116,88,0.2)")
+                    : "none",
+                transition:"all 0.2s ease",
+                ...style,
+            }}
+        >
+            {children}
+        </Motion.button>
     )
 }
 
@@ -489,7 +484,7 @@ const PillTabs = ({ tabs, active, onSelect, dark }) => {
             background: dark ? "rgba(28,42,24,0.7)" : "#f0f4ec",
             borderRadius:10, padding:3,
             border: `1px solid ${dark ? "rgba(120,180,80,0.12)" : "#d4e4cc"}` }}>
-            <Motion.div animate={{ x: idx * (100 / tabs.length) + "%" }}
+            <Motion.div animate={{ x: indicator.left, width: indicator.width }}
                         style={{ position:"absolute", top:3, left:3,
                             height:"calc(100% - 6px)",
                             background:"#1C352D",
@@ -1529,42 +1524,22 @@ const NGOSection = ({ onNgoRegister }) => {
     const [active, setActive] = useState(0)
     const [hovered, setHovered] = useState(false)
     const quantity = NGOS.length
-    const cardW = 170, cardH = 240
-    const translateZ = Math.round((cardW + cardH) * 0.72)
 
-    const carouselStyle = `
-        @keyframes rotateCarousel {
-            from { transform: perspective(1200px) rotateX(-12deg) rotateY(0deg); }
-            to   { transform: perspective(1200px) rotateX(-12deg) rotateY(-360deg); }
-        }
-        .ngo-ring {
-            animation: rotateCarousel 32s linear infinite;
-            transform-style: preserve-3d;
-            position: relative;
-            width: ${cardW}px;
-            height: ${cardH}px;
-            margin: 0 auto;
-        }
-        @media (max-width: 1100px) {
-            .ngo-ring { animation-duration: 38s; }
-        }
-        @media (max-width: 760px) {
-            .ngo-ring {
-                width: 140px;
-                height: 205px;
-            }
-        }
-        .ngo-ring:hover { animation-play-state: paused; }
-        .ngo-card-3d {
-            position: absolute;
-            width: ${cardW}px;
-            height: ${cardH}px;
-            border-radius: 20px;
-            overflow: hidden;
-            top: 0; left: 0;
-            backface-visibility: hidden;
-        }
-    `
+    useEffect(() => {
+        if (hovered) return
+        const t = setInterval(() => setActive(p => (p + 1) % quantity), 2500)
+        return () => clearInterval(t)
+    }, [hovered, quantity])
+
+    const next = () => setActive(p => (p + 1) % quantity)
+    const prev = () => setActive(p => (p - 1 + quantity) % quantity)
+
+    const relativeIndex = (idx) => {
+        let diff = idx - active
+        if (diff > quantity / 2) diff -= quantity
+        if (diff < -quantity / 2) diff += quantity
+        return diff
+    }
 
     return (
         <section id="ngos" style={{ padding:"96px 0", position:"relative", overflow:"hidden", background:sectionBg }}>
@@ -1589,40 +1564,52 @@ const NGOSection = ({ onNgoRegister }) => {
                     </p>
                 </Motion.div>
 
-                {/* 3D Carousel */}
-                <div style={{ display:"flex", justifyContent:"center", marginBottom:30 }}>
-                    <div style={{ perspective:1200, perspectiveOrigin:"50% 48%", height:cardH + 130, width:"100%", maxWidth:900, overflow:"visible" }}>
-                        <div className="ngo-ring"
-                             style={{ marginTop:56, transformStyle:"preserve-3d" }}>
-                            {NGOS.map((ngo, idx) => {
-                                const angle = (360 / quantity) * idx
-                                const rgb = ngo.colorCard
-                                return (
-                                    <div key={ngo.name} className="ngo-card-3d"
-                                         style={{ transform:`rotateY(${angle}deg) translateZ(${translateZ}px)`,
-                                             background: `linear-gradient(160deg, rgb(${rgb}) 0%, rgba(${rgb},0.7) 100%)`,
-                                             border:`1px solid rgba(255,255,255,0.15)`,
-                                             boxShadow:`0 20px 60px rgba(0,0,0,0.35)` }}>
-                                        {/* Gradient strip */}
-                                        <div style={{ height:6,
-                                            background:"linear-gradient(90deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1))" }} />
-                                        <div style={{ padding:16, display:"flex", flexDirection:"column", height:"calc(100% - 6px)" }}>
-                                            {/* Avatar */}
-                                            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
-                                                <div style={{ width:46, height:46, borderRadius:14,
-                                                    background:"rgba(255,255,255,0.2)", backdropFilter:"blur(8px)",
-                                                    display:"flex", alignItems:"center", justifyContent:"center",
-                                                    fontWeight:900, fontSize:16, color:"#fff",
-                                                    border:"1.5px solid rgba(255,255,255,0.3)" }}>
-                                                    {ngo.avatar}
-                                                </div>
-                                                {ngo.verified && (
-                                                    <div style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 8px",
-                                                        borderRadius:8, fontSize:9, fontWeight:800,
-                                                        background:"rgba(255,255,255,0.2)", color:"#fff" }}>
-                                                        <Shield size={8}/> Verified
-                                                    </div>
-                                                )}
+                {/* Coverflow carousel */}
+                <div
+                    style={{ position:"relative", height:390, marginBottom:30 }}
+                    onMouseEnter={() => setHovered(true)}
+                    onMouseLeave={() => setHovered(false)}
+                >
+                    <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", overflow:"visible" }}>
+                        {NGOS.map((ngo, idx) => {
+                            const rel = relativeIndex(idx)
+                            if (Math.abs(rel) > 3) return null
+                            const spread = hovered ? 165 : 120
+                            const x = rel * spread
+                            const y = Math.abs(rel) * 14
+                            const rot = rel * -5
+                            const sc = rel === 0 ? (hovered ? 1.03 : 0.98) : Math.max(0.74, 0.95 - Math.abs(rel) * 0.08)
+                            const opacity = rel === 0 ? 1 : hovered ? Math.max(0.45, 0.92 - Math.abs(rel) * 0.16) : Math.max(0.3, 0.82 - Math.abs(rel) * 0.2)
+                            const z = 30 - Math.abs(rel) * 5
+                            const rgb = ngo.colorCard
+
+                            return (
+                                <Motion.div
+                                    key={ngo.name}
+                                    animate={{ x, y, rotate: rot, scale: sc, opacity }}
+                                    transition={{ type:"spring", stiffness:120, damping:18 }}
+                                    style={{
+                                        width: 210,
+                                        height: 300,
+                                        borderRadius: 18,
+                                        overflow: "hidden",
+                                        position: "absolute",
+                                        zIndex: z,
+                                        background:`linear-gradient(165deg, rgb(${rgb}) 0%, rgba(${rgb},0.62) 100%)`,
+                                        border:"1px solid rgba(235,244,221,0.26)",
+                                        boxShadow: rel === 0 ? "0 22px 70px rgba(0,0,0,0.38)" : "0 12px 42px rgba(0,0,0,0.22)",
+                                        cursor: rel === 0 ? "default" : "pointer",
+                                        backdropFilter:"blur(3px)",
+                                    }}
+                                    onClick={() => setActive(idx)}
+                                >
+                                    <div style={{ height:5, background:"linear-gradient(90deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1))" }} />
+                                    <div style={{ padding:12, display:"flex", flexDirection:"column", height:"calc(100% - 5px)" }}>
+                                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                                            <div style={{ width:40, height:40, borderRadius:12, background:"rgba(255,255,255,0.2)",
+                                                display:"flex", alignItems:"center", justifyContent:"center",
+                                                fontWeight:900, fontSize:14, color:"#fff", border:"1.5px solid rgba(255,255,255,0.3)" }}>
+                                                {ngo.avatar}
                                             </div>
                                             {ngo.verified && (
                                                 <div style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 8px", borderRadius:8, fontSize:9, fontWeight:800, background:"rgba(255,255,255,0.2)", color:"#fff" }}>
@@ -1630,86 +1617,83 @@ const NGOSection = ({ onNgoRegister }) => {
                                                 </div>
                                             )}
                                         </div>
-                                        <p style={{ fontWeight:900, fontSize:13, color:"#fff", marginBottom:3, lineHeight:1.3 }}>{ngo.name}</p>
-                                        <p style={{ fontSize:10, color:"rgba(255,255,255,0.78)", marginBottom:10, display:"flex", alignItems:"center", gap:3 }}>
+                                        <p style={{ fontWeight:900, fontSize:12, color:"#fff", marginBottom:3, lineHeight:1.3 }}>{ngo.name}</p>
+                                        <p style={{ fontSize:9, color:"rgba(255,255,255,0.78)", marginBottom:8, display:"flex", alignItems:"center", gap:3 }}>
                                             <MapPin size={9}/> {ngo.city}
                                         </p>
-                                        <div style={{ display:"flex", gap:5, marginBottom:8, flexWrap:"wrap" }}>
-                                            <span style={{ fontSize:9, fontWeight:800, padding:"3px 8px", borderRadius:6, background:"rgba(255,255,255,0.25)", color:"#fff" }}>{ngo.badge}</span>
-                                            <span style={{ fontSize:9, fontWeight:700, padding:"3px 8px", borderRadius:6, background:"rgba(255,255,255,0.15)", color:"rgba(255,255,255,0.9)" }}>{ngo.focus}</span>
+                                        <div style={{ display:"flex", gap:4, marginBottom:8, flexWrap:"wrap" }}>
+                                            <span style={{ fontSize:8, fontWeight:800, padding:"3px 7px", borderRadius:6, background:"rgba(255,255,255,0.25)", color:"#fff" }}>{ngo.badge}</span>
+                                            <span style={{ fontSize:8, fontWeight:700, padding:"3px 7px", borderRadius:6, background:"rgba(255,255,255,0.15)", color:"rgba(255,255,255,0.9)" }}>{ngo.focus}</span>
                                         </div>
-                                        <p style={{ fontSize:10, color:"rgba(255,255,255,0.78)", lineHeight:1.5, marginBottom:10, flex:1, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:3, WebkitBoxOrient:"vertical" }}>
+                                        <p style={{ fontSize:9, color:"rgba(255,255,255,0.78)", lineHeight:1.4, marginBottom:8, flex:1, overflow:"hidden", display:"-webkit-box", WebkitLineClamp:3, WebkitBoxOrient:"vertical" }}>
                                             {ngo.desc}
                                         </p>
-                                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:5, marginBottom:10 }}>
+                                        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:4, marginBottom:8 }}>
                                             {[{l:"Volunteers",v:ngo.volunteers},{l:"Needs",v:ngo.needs},{l:"Rating",v:`${ngo.rating}★`}].map(s => (
-                                                <div key={s.l} style={{ textAlign:"center", padding:"5px 4px", borderRadius:8, background:"rgba(255,255,255,0.15)" }}>
-                                                    <p style={{ fontWeight:900, fontSize:11, color:"#fff", margin:0 }}>{s.v}</p>
-                                                    <p style={{ fontSize:8, color:"rgba(255,255,255,0.72)", margin:0 }}>{s.l}</p>
+                                                <div key={s.l} style={{ textAlign:"center", padding:"4px 3px", borderRadius:7, background:"rgba(255,255,255,0.15)" }}>
+                                                    <p style={{ fontWeight:900, fontSize:10, color:"#fff", margin:0 }}>{s.v}</p>
+                                                    <p style={{ fontSize:7, color:"rgba(255,255,255,0.72)", margin:0 }}>{s.l}</p>
                                                 </div>
                                             ))}
                                         </div>
-                                        <button style={{ width:"100%", padding:"8px", borderRadius:10, fontSize:11, fontWeight:800,
+                                        <button style={{ width:"100%", padding:"7px", borderRadius:9, fontSize:10, fontWeight:800,
                                             background:"rgba(255,255,255,0.22)", color:"#fff", border:"1.5px solid rgba(255,255,255,0.3)", cursor:"pointer",
                                             display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
                                             View NGO <ChevronRight size={11}/>
                                         </button>
                                     </div>
-                                    )
-
-
-                            })}
-                        </div>
-
-                        <AnimatePresence>
-                            {hovered && (
-                                <>
-                                    <Motion.button
-                                        initial={{ opacity:0, x:-16 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:-16 }}
-                                        onClick={prev}
-                                        style={{ position:"absolute", left:16, top:"50%", transform:"translateY(-50%)",
-                                            width:42, height:42, borderRadius:"50%", border:`1px solid ${dark ? "rgba(120,180,80,0.3)" : "rgba(28,53,45,0.28)"}`,
-                                            background: dark ? "rgba(10,15,8,0.9)" : "rgba(255,255,255,0.95)",
-                                            color: dark ? "#dff5c6" : "#1C352D", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", zIndex:45 }}>
-                                        <ChevronLeft size={18}/>
-                                    </Motion.button>
-                                    <Motion.button
-                                        initial={{ opacity:0, x:16 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:16 }}
-                                        onClick={next}
-                                        style={{ position:"absolute", right:16, top:"50%", transform:"translateY(-50%)",
-                                            width:42, height:42, borderRadius:"50%", border:`1px solid ${dark ? "rgba(120,180,80,0.3)" : "rgba(28,53,45,0.28)"}`,
-                                            background: dark ? "rgba(10,15,8,0.9)" : "rgba(255,255,255,0.95)",
-                                            color: dark ? "#dff5c6" : "#1C352D", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", zIndex:45 }}>
-                                        <ChevronRight size={18}/>
-                                    </Motion.button>
-                                </>
-                            )}
-                        </AnimatePresence>
+                                </Motion.div>
+                            )
+                        })}
                     </div>
 
-                    <p style={{ textAlign:"center", fontSize:11, color: dark ? "#4a6b3a" : "#90AB8B", marginBottom:32 }}>
-                        Hover to spread cards · {quantity} themed NGO cards · arrows appear on hover
+                    <AnimatePresence>
+                        {hovered && (
+                            <>
+                                <Motion.button
+                                    initial={{ opacity:0, x:-16 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:-16 }}
+                                    onClick={prev}
+                                    style={{ position:"absolute", left:16, top:"50%", transform:"translateY(-50%)",
+                                        width:42, height:42, borderRadius:"50%", border:`1px solid ${dark ? "rgba(120,180,80,0.3)" : "rgba(28,53,45,0.28)"}`,
+                                        background: dark ? "rgba(10,15,8,0.9)" : "rgba(255,255,255,0.95)",
+                                        color: dark ? "#dff5c6" : "#1C352D", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", zIndex:45 }}>
+                                    <ChevronLeft size={18}/>
+                                </Motion.button>
+                                <Motion.button
+                                    initial={{ opacity:0, x:16 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0, x:16 }}
+                                    onClick={next}
+                                    style={{ position:"absolute", right:16, top:"50%", transform:"translateY(-50%)",
+                                        width:42, height:42, borderRadius:"50%", border:`1px solid ${dark ? "rgba(120,180,80,0.3)" : "rgba(28,53,45,0.28)"}`,
+                                        background: dark ? "rgba(10,15,8,0.9)" : "rgba(255,255,255,0.95)",
+                                        color: dark ? "#dff5c6" : "#1C352D", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", zIndex:45 }}>
+                                    <ChevronRight size={18}/>
+                                </Motion.button>
+                            </>
+                        )}
+                    </AnimatePresence>
+                </div>
+
+                <p style={{ textAlign:"center", fontSize:11, color: dark ? "#4a6b3a" : "#90AB8B", marginBottom:24 }}>
+                    Hover to spread cards · {quantity} themed NGO cards · arrows appear on hover
+                </p>
+
+                {/* Register CTA */}
+                <Motion.div initial={{ opacity:0, y:20 }} whileInView={{ opacity:1, y:0 }}
+                            viewport={{ once:true }} transition={{ delay:0.3 }}
+                            style={{ textAlign:"center" }}>
+                    <GradientBtn onClick={onNgoRegister} dark={dark} style={{ margin:"0 auto" }}>
+                        <Building2 size={16}/> Register your NGO <ArrowRight size={14}/>
+                    </GradientBtn>
+                    <p style={{ fontSize:11, marginTop:12, color: dark ? "#4a6b3a" : "#90AB8B" }}>
+                        Free to register · Verified within 48 hours · Instant access to volunteer pool
                     </p>
-
-                    {/* Register CTA */}
-                    <Motion.div initial={{ opacity:0, y:20 }} whileInView={{ opacity:1, y:0 }}
-                                viewport={{ once:true }} transition={{ delay:0.3 }}
-                                style={{ textAlign:"center" }}>
-                        <GradientBtn onClick={onNgoRegister} dark={dark} style={{ margin:"0 auto" }}>
-                            <Building2 size={16}/> Register your NGO <ArrowRight size={14}/>
-                        </GradientBtn>
-                        <p style={{ fontSize:11, marginTop:12, color: dark ? "#4a6b3a" : "#90AB8B" }}>
-                            Free to register · Verified within 48 hours · Instant access to volunteer pool
-                        </p>
-                    </Motion.div>
-                </div>
-
-                </div>
+                </Motion.div>
+            </div>
         </section>
-)
+    )
 }
 
-
+/* ─── CONTACT SECTION ────────────────────────────────────────────────────── */
 const ContactSection = () => {
     const { dark } = useTheme()
     const [formState, setFormState] = useState({ name:"", email:"", subject:"", message:"" })
@@ -1873,6 +1857,7 @@ const ContactSection = () => {
     )
 }
 
+/* ─── FOOTER ─────────────────────────────────────────────────────────────── */
 const Footer = () => {
     const { dark } = useTheme()
     const footerBg = dark ? "#0D1F19" : "#e7efe3"
@@ -1981,7 +1966,7 @@ const Footer = () => {
     )
 }
 
-
+/* ─── SCROLL TO TOP ──────────────────────────────────────────────────────── */
 const ScrollTop = () => {
     const { dark } = useTheme()
     const { scrollYProgress } = useScroll()
@@ -2012,20 +1997,19 @@ const ScrollTop = () => {
     )
 }
 
-
+/* ─── ROOT COMPONENT ─────────────────────────────────────────────────────── */
 const LandingPage = () => {
-    const [dark,      setDark]     = useState(false)
-    const [authMode,  setAuthMode]  = useState(null)
-    const [ngoModal,  setNgoModal]  = useState(false)
     const location = useLocation()
-
-    const routeAuthMode = location.state?.openAuth ?? null
+    const initialRouteAuth = location.state?.openAuth ?? null
+    const [dark,      setDark]     = useState(false)
+    const [authMode,  setAuthMode]  = useState(initialRouteAuth)
+    const [ngoModal,  setNgoModal]  = useState(false)
 
     useEffect(() => {
-        if (routeAuthMode) {
-            window.history.replaceState({}, "")
+        if (initialRouteAuth) {
+            window.history.replaceState({}, document.title, location.pathname)
         }
-    }, [routeAuthMode])
+    }, [initialRouteAuth, location.pathname])
 
     useEffect(() => {
         document.body.style.background = dark ? "#0a0f08" : "#f0f4ec"
@@ -2040,7 +2024,13 @@ const LandingPage = () => {
                 <Navbar onAuthClick={m => setAuthMode(m)} onNgoRegister={() => setNgoModal(true)} />
 
                 <AnimatePresence>
-                    {(authMode ?? routeAuthMode) && <AuthModal mode={(authMode ?? routeAuthMode)} onClose={() => setAuthMode(null)} onSwitch={m => setAuthMode(m)} />}
+                    {authMode && (
+                        <AuthModal
+                            mode={authMode}
+                            onClose={() => setAuthMode(null)}
+                            onSwitch={m => setAuthMode(m)}
+                        />
+                    )}
                 </AnimatePresence>
 
                 <AnimatePresence>
