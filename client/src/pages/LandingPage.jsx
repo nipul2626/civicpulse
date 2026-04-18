@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, createContext, useContext, useLayoutEffect
 import { useLocation, useNavigate } from "react-router-dom"
 import { motion as Motion, AnimatePresence, useTransform, useScroll } from "framer-motion"
 import {
-    Zap, Menu, X, ArrowRight, Mail, Lock, Eye, EyeOff,
+    Zap, X, ArrowRight, Mail, Lock, Eye, EyeOff,
     User, Building2, Check, MapPin, Phone, Globe,
     ChevronRight, ChevronLeft, Shield, BarChart3, Users, Heart,
     MessageSquare, Send,
@@ -1146,7 +1146,6 @@ const AuthModal = ({ mode, onClose, onSwitch }) => (
 const Navbar = ({ onAuthClick, onNgoRegister }) => {
     const { dark, toggle } = useTheme()
     const [scrolled, setScrolled] = useState(false)
-    const [mobileOpen, setMobileOpen] = useState(false)
     const { scrollY } = useScroll()
 
     useEffect(() => {
@@ -1155,7 +1154,6 @@ const Navbar = ({ onAuthClick, onNgoRegister }) => {
     }, [scrollY])
 
     const scrollTo = (href) => {
-        setMobileOpen(false)
         const el = document.querySelector(href)
         if (el) el.scrollIntoView({ behavior:"smooth" })
     }
@@ -1229,40 +1227,8 @@ const Navbar = ({ onAuthClick, onNgoRegister }) => {
                         </GradientBtn>
                     </div>
 
-                    {/* Mobile menu button */}
-                    <button onClick={() => setMobileOpen(p=>!p)} className="flex md:hidden"
-                            style={{ width:34, height:34, borderRadius:8, background:"transparent",
-                                border:`1px solid ${dark?"rgba(120,180,80,0.2)":"#d4e4cc"}`,
-                                color:textCol, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
-                        {mobileOpen ? <X size={16}/> : <Menu size={16}/>}
-                    </button>
                 </div>
             </div>
-
-            {/* Mobile menu */}
-            <AnimatePresence>
-                {mobileOpen && (
-                    <Motion.div initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:"auto" }}
-                                exit={{ opacity:0, height:0 }}
-                                style={{ borderTop:`1px solid ${dark?"rgba(120,180,80,0.12)":"#e8f0e0"}`,
-                                    background: dark ? "#0a0f08" : "#fff", overflow:"hidden" }}>
-                        <div style={{ padding:20, display:"flex", flexDirection:"column", gap:14 }}>
-                            {NAV_LINKS.map(l => (
-                                <button key={l.label} onClick={() => scrollTo(l.href)}
-                                        style={{ textAlign:"left", fontSize:14, fontWeight:700, color:textCol,
-                                            background:"none", border:"none", cursor:"pointer", padding:0 }}>
-                                    {l.label}
-                                </button>
-                            ))}
-                            <div style={{ display:"flex", gap:8, paddingTop:8,
-                                borderTop:`1px solid ${dark?"rgba(120,180,80,0.1)":"#e8f0e0"}` }}>
-                                <GradientBtn onClick={() => { onAuthClick("login"); setMobileOpen(false) }} dark={dark} outline small>Sign In</GradientBtn>
-                                <GradientBtn onClick={() => { onAuthClick("signup"); setMobileOpen(false) }} dark={dark} small>Join Free</GradientBtn>
-                            </div>
-                        </div>
-                    </Motion.div>
-                )}
-            </AnimatePresence>
         </Motion.nav>
     )
 }
@@ -1524,6 +1490,28 @@ const NGOSection = ({ onNgoRegister }) => {
     const [active, setActive] = useState(0)
     const [hovered, setHovered] = useState(false)
     const quantity = NGOS.length
+    const ringStyle = `
+        @keyframes ngoRotate {
+            from { transform: perspective(1100px) rotateX(-12deg) rotateY(0deg); }
+            to { transform: perspective(1100px) rotateX(-12deg) rotateY(-360deg); }
+        }
+        .ngo-rotor {
+            position: relative;
+            width: 220px;
+            height: 310px;
+            transform-style: preserve-3d;
+            animation: ngoRotate 24s linear infinite;
+        }
+        .ngo-rotor-card {
+            position:absolute;
+            inset:0;
+            border-radius:18px;
+            overflow:hidden;
+            backface-visibility: hidden;
+            border:1px solid rgba(235,244,221,0.24);
+            box-shadow:0 12px 40px rgba(0,0,0,0.2);
+        }
+    `
 
     useEffect(() => {
         if (hovered) return
@@ -1544,6 +1532,7 @@ const NGOSection = ({ onNgoRegister }) => {
     return (
         <section id="ngos" style={{ padding:"96px 0", position:"relative", overflow:"hidden", background:sectionBg }}>
             <BgParticles dark={dark} />
+            <style>{ringStyle}</style>
 
             <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 24px", position:"relative", zIndex:10 }}>
                 <Motion.div initial={{ opacity:0, y:30 }} whileInView={{ opacity:1, y:0 }}
@@ -1564,45 +1553,68 @@ const NGOSection = ({ onNgoRegister }) => {
                     </p>
                 </Motion.div>
 
-                {/* Coverflow carousel */}
+                {/* Idle = rotating 3D ring, Hover = spread coverflow */}
                 <div
                     style={{ position:"relative", height:390, marginBottom:30 }}
                     onMouseEnter={() => setHovered(true)}
                     onMouseLeave={() => setHovered(false)}
                 >
-                    <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", overflow:"visible" }}>
-                        {NGOS.map((ngo, idx) => {
-                            const rel = relativeIndex(idx)
-                            if (Math.abs(rel) > 3) return null
-                            const spread = hovered ? 165 : 120
-                            const x = rel * spread
-                            const y = Math.abs(rel) * 14
-                            const rot = rel * -5
-                            const sc = rel === 0 ? (hovered ? 1.03 : 0.98) : Math.max(0.74, 0.95 - Math.abs(rel) * 0.08)
-                            const opacity = rel === 0 ? 1 : hovered ? Math.max(0.45, 0.92 - Math.abs(rel) * 0.16) : Math.max(0.3, 0.82 - Math.abs(rel) * 0.2)
-                            const z = 30 - Math.abs(rel) * 5
-                            const rgb = ngo.colorCard
+                    {!hovered ? (
+                        <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", overflow:"visible" }}>
+                            <div className="ngo-rotor">
+                                {NGOS.map((ngo, idx) => {
+                                    const angle = (360 / quantity) * idx
+                                    const rgb = ngo.colorCard
+                                    return (
+                                        <div
+                                            key={ngo.name}
+                                            className="ngo-rotor-card"
+                                            style={{ transform:`rotateY(${angle}deg) translateZ(290px)`,
+                                                background:`linear-gradient(165deg, rgb(${rgb}) 0%, rgba(${rgb},0.62) 100%)` }}
+                                        >
+                                            <div style={{ height:5, background:"linear-gradient(90deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1))" }} />
+                                            <div style={{ padding:12, color:"#fff", fontSize:12, fontWeight:800 }}>
+                                                {ngo.name}
+                                            </div>
+                                        </div>
+                                    )
+                                })}
+                            </div>
+                        </div>
+                    ) : (
+                        <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", overflow:"visible" }}>
+                            {NGOS.map((ngo, idx) => {
+                                const rel = relativeIndex(idx)
+                                if (Math.abs(rel) > 3) return null
+                                const spread = 165
+                                const x = rel * spread
+                                const y = Math.abs(rel) * 14
+                                const rot = rel * -5
+                                const sc = rel === 0 ? 1.03 : Math.max(0.74, 0.95 - Math.abs(rel) * 0.08)
+                                const opacity = rel === 0 ? 1 : Math.max(0.45, 0.92 - Math.abs(rel) * 0.16)
+                                const z = 30 - Math.abs(rel) * 5
+                                const rgb = ngo.colorCard
 
-                            return (
-                                <Motion.div
-                                    key={ngo.name}
-                                    animate={{ x, y, rotate: rot, scale: sc, opacity }}
-                                    transition={{ type:"spring", stiffness:120, damping:18 }}
-                                    style={{
-                                        width: 210,
-                                        height: 300,
-                                        borderRadius: 18,
-                                        overflow: "hidden",
-                                        position: "absolute",
-                                        zIndex: z,
-                                        background:`linear-gradient(165deg, rgb(${rgb}) 0%, rgba(${rgb},0.62) 100%)`,
-                                        border:"1px solid rgba(235,244,221,0.26)",
-                                        boxShadow: rel === 0 ? "0 22px 70px rgba(0,0,0,0.38)" : "0 12px 42px rgba(0,0,0,0.22)",
-                                        cursor: rel === 0 ? "default" : "pointer",
-                                        backdropFilter:"blur(3px)",
-                                    }}
-                                    onClick={() => setActive(idx)}
-                                >
+                                return (
+                                    <Motion.div
+                                        key={ngo.name}
+                                        animate={{ x, y, rotate: rot, scale: sc, opacity }}
+                                        transition={{ type:"spring", stiffness:120, damping:18 }}
+                                        style={{
+                                            width: 210,
+                                            height: 300,
+                                            borderRadius: 18,
+                                            overflow: "hidden",
+                                            position: "absolute",
+                                            zIndex: z,
+                                            background:`linear-gradient(165deg, rgb(${rgb}) 0%, rgba(${rgb},0.62) 100%)`,
+                                            border:"1px solid rgba(235,244,221,0.26)",
+                                            boxShadow: rel === 0 ? "0 22px 70px rgba(0,0,0,0.38)" : "0 12px 42px rgba(0,0,0,0.22)",
+                                            cursor: rel === 0 ? "default" : "pointer",
+                                            backdropFilter:"blur(3px)",
+                                        }}
+                                        onClick={() => setActive(idx)}
+                                    >
                                     <div style={{ height:5, background:"linear-gradient(90deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1))" }} />
                                     <div style={{ padding:12, display:"flex", flexDirection:"column", height:"calc(100% - 5px)" }}>
                                         <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
@@ -1642,10 +1654,11 @@ const NGOSection = ({ onNgoRegister }) => {
                                             View NGO <ChevronRight size={11}/>
                                         </button>
                                     </div>
-                                </Motion.div>
-                            )
-                        })}
-                    </div>
+                                    </Motion.div>
+                                )
+                            })}
+                        </div>
+                    )}
 
                     <AnimatePresence>
                         {hovered && (
@@ -1674,7 +1687,9 @@ const NGOSection = ({ onNgoRegister }) => {
                 </div>
 
                 <p style={{ textAlign:"center", fontSize:11, color: dark ? "#4a6b3a" : "#90AB8B", marginBottom:24 }}>
-                    Hover to spread cards · {quantity} themed NGO cards · arrows appear on hover
+                    {hovered
+                        ? `Hover mode: spread cards · ${quantity} themed NGO cards · arrows visible`
+                        : `Auto mode: rotating 3D ring · hover to spread and control`}
                 </p>
 
                 {/* Register CTA */}
