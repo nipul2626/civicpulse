@@ -65,18 +65,20 @@
     }
 }
 
-/* ✅ ONLY KEEP THIS — CLEAN + MATCHES COMPONENT */
-.grad-btn .grad-glow {
+.grad-btn .glow-layer {
     position: absolute;
     inset: 0;
-    border-radius: 0.9em;
-    background: linear-gradient(90deg, #1a8c40, #5a9a30);
-    filter: blur(18px);
+    border-radius: 10px;
+    background: linear-gradient(45deg, #2dc9a0, #5a9a35, #8aca70);
+    filter: blur(14px);
     opacity: 0;
-    transition: opacity 0.3s ease;
+    transition: 0.4s;
 }
 
-/* ✅ HOVER TRIGGER */
+.grad-btn:hover .glow-layer {
+    opacity: 0.8;
+}
+
 .grad-btn:hover .grad-glow {
     opacity: 1;
 }
