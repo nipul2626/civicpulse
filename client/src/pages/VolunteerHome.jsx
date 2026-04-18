@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, useLayoutEffect } from "react"
 import { motion, AnimatePresence } from "framer-motion"
 import {
     Zap, MapPin, Clock, CheckCircle, Star,
@@ -196,14 +196,69 @@ const Badge = ({ children, color=C.green, bg }) => (
     }}>{children}</span>
 )
 
-const Pill = ({ children, active, color=C.green, onClick }) => (
-    <motion.button whileTap={{ scale:.96 }} onClick={onClick} style={{
-        padding:"6px 14px", borderRadius:20, border:`1px solid ${active ? color : C.border}`,
-        background: active ? `${color}15` : "transparent", color: active ? color : C.muted,
-        fontSize:12, fontWeight: active ? 700 : 500, cursor:"pointer",
-        fontFamily:"'Outfit',sans-serif", transition:"all .18s",
-    }}>{children}</motion.button>
-)
+const SnapPillTabs = ({ tabs, active, onChange }) => {
+    const wrapRef = useRef(null)
+    const itemRefs = useRef([])
+    const [pill, setPill] = useState({ left: 0, width: 0 })
+    useLayoutEffect(() => {
+        const idx = tabs.findIndex(t => (typeof t === "string" ? t : t.value) === active)
+        const wrap = wrapRef.current
+        const item = itemRefs.current[idx]
+        if (!wrap || !item) return
+        const wr = wrap.getBoundingClientRect()
+        const ir = item.getBoundingClientRect()
+        setPill({ left: ir.left - wr.left, width: ir.width })
+    }, [tabs, active])
+    return (
+        <div ref={wrapRef} style={{ position:"relative", display:"flex", borderRadius:12, padding:3,
+            border:`1px solid ${C.border}`, background:C.surface }}>
+            <motion.div animate={{ x:pill.left, width:pill.width }} transition={{ type:"spring", stiffness:380, damping:30 }}
+                        style={{ position:"absolute", top:3, left:3, height:"calc(100% - 6px)", borderRadius:9, background:"#17372d" }} />
+            {tabs.map((t, idx) => {
+                const v = typeof t === "string" ? t : t.value
+                const l = typeof t === "string" ? t : t.label
+                return (
+                    <button key={v} ref={el => (itemRefs.current[idx] = el)} onClick={() => onChange(v)}
+                            style={{ position:"relative", zIndex:2, flex:1, border:"none", background:"transparent",
+                                color: active===v ? "#EBF4DD" : C.muted, fontSize:12, fontWeight:700, padding:"7px 12px",
+                                borderRadius:9, cursor:"pointer", textTransform:"capitalize" }}>
+                        {l}
+                    </button>
+                )
+            })}
+        </div>
+    )
+}
+
+const ThemedDropdown = ({ value, options, onChange, width=170 }) => {
+    const [open, setOpen] = useState(false)
+    return (
+        <div style={{ position:"relative", width }}>
+            <button onClick={() => setOpen(p=>!p)}
+                    style={{ width:"100%", borderRadius:10, border:`1px solid ${C.borderHi}`, background:C.surface,
+                        color:C.text, fontSize:12, fontWeight:700, padding:"8px 10px", cursor:"pointer",
+                        display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                {value} <Icon name="chevron" size={12} color={C.muted}/>
+            </button>
+            <AnimatePresence>
+                {open && (
+                    <motion.div initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:6 }}
+                                style={{ position:"absolute", top:"calc(100% + 6px)", left:0, right:0, zIndex:160,
+                                    background:C.surface, border:`1px solid ${C.borderHi}`, borderRadius:10, overflow:"hidden",
+                                    boxShadow:"0 14px 26px rgba(0,0,0,0.16)" }}>
+                        {options.map(opt => (
+                            <button key={opt} onClick={() => { onChange(opt); setOpen(false) }}
+                                    style={{ width:"100%", textAlign:"left", padding:"8px 10px", border:"none", cursor:"pointer",
+                                        background:value===opt ? `${C.green}20` : "transparent", color:C.text, fontSize:12, fontWeight:600 }}>
+                                {opt}
+                            </button>
+                        ))}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    )
+}
 
 const StatCard = ({ label, value, color=C.green, icon, change }) => (
     <motion.div whileHover={{ y:-2 }} style={{
@@ -567,6 +622,7 @@ const Tasks = ({ onTaskOpen }) => {
     const [filter, setFilter] = useState("all")
     const [catFilter, setCatFilter] = useState("all")
     const [search, setSearch] = useState("")
+    const categoryOptions = ["all","medical","food","water","shelter","education"]
 
     const allTasks = [...TASKS, ...COMPLETED.map(t => ({ ...t, status:"done" }))]
     const filtered = allTasks.filter(t => {
@@ -591,19 +647,29 @@ const Tasks = ({ onTaskOpen }) => {
                     <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search tasks..."
                            style={{ width:"100%", padding:"10px 14px 10px 40px", borderRadius:12, border:`1px solid ${C.border}`, background:C.surface, color:C.text, fontSize:13, fontFamily:"'Outfit',sans-serif", outline:"none", boxSizing:"border-box" }}/>
                 </div>
-                <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
-                    {["all","active","upcoming","done"].map(f => (
-                        <Pill key={f} active={filter === f} onClick={() => setFilter(f)}
-                              color={f === "active" ? C.red : f === "upcoming" ? C.amber : f === "done" ? C.teal : C.green}>
-                            {f.charAt(0).toUpperCase() + f.slice(1)}
-                        </Pill>
-                    ))}
-                    <div style={{ width:1, background:C.border, margin:"0 4px" }}/>
-                    {["all","medical","food","water","shelter","education"].map(c => (
-                        <Pill key={c} active={catFilter === c} onClick={() => setCatFilter(c)} color={c === "all" ? C.green : CAT[c]?.color || C.green}>
-                            {c === "all" ? "All Cats" : CAT[c]?.label || c}
-                        </Pill>
-                    ))}
+                <div style={{ display:"flex", gap:10, flexWrap:"wrap", alignItems:"center" }}>
+                    <div style={{ minWidth:300, flex:1 }}>
+                        <SnapPillTabs
+                            tabs={[
+                                { value:"all", label:"All" },
+                                { value:"active", label:"Active" },
+                                { value:"upcoming", label:"Upcoming" },
+                                { value:"done", label:"Done" }
+                            ]}
+                            active={filter}
+                            onChange={setFilter}
+                        />
+                    </div>
+                    <ThemedDropdown
+                        width={176}
+                        value={catFilter === "all" ? "All Categories" : (CAT[catFilter]?.label || catFilter)}
+                        options={categoryOptions.map(c => c === "all" ? "All Categories" : CAT[c]?.label || c)}
+                        onChange={(picked) => {
+                            if (picked === "All Categories") return setCatFilter("all")
+                            const match = categoryOptions.find(c => (CAT[c]?.label || c) === picked)
+                            setCatFilter(match || "all")
+                        }}
+                    />
                 </div>
             </div>
 
@@ -641,12 +707,15 @@ const MapPage = () => {
                     <h2 style={{ fontSize:20, fontWeight:800, color:C.text, margin:"0 0 4px", fontFamily:"'Outfit',sans-serif" }}>Need Heatmap</h2>
                     <p style={{ fontSize:13, color:C.muted, margin:0 }}>Mumbai · Live density data</p>
                 </div>
-                <div style={{ display:"flex", gap:6 }}>
-                    {["heatmap","list"].map(v => (
-                        <Pill key={v} active={view === v} onClick={() => setView(v)}>
-                            {v === "heatmap" ? "Map View" : "List View"}
-                        </Pill>
-                    ))}
+                <div style={{ width:220 }}>
+                    <SnapPillTabs
+                        tabs={[
+                            { value:"heatmap", label:"Map View" },
+                            { value:"list", label:"List View" }
+                        ]}
+                        active={view}
+                        onChange={setView}
+                    />
                 </div>
             </div>
 
@@ -795,12 +864,16 @@ const LeaderboardPage = () => {
                     <h2 style={{ fontSize:20, fontWeight:800, color:C.text, margin:"0 0 4px", fontFamily:"'Outfit',sans-serif" }}>Leaderboard</h2>
                     <p style={{ fontSize:13, color:C.muted, margin:0 }}>Your zone · Dharavi, Mumbai</p>
                 </div>
-                <div style={{ display:"flex", gap:6 }}>
-                    {["week","month","all"].map(p => (
-                        <Pill key={p} active={period === p} onClick={() => setPeriod(p)}>
-                            {p === "all" ? "All Time" : p.charAt(0).toUpperCase() + p.slice(1)}
-                        </Pill>
-                    ))}
+                <div style={{ width:240 }}>
+                    <SnapPillTabs
+                        tabs={[
+                            { value:"week", label:"Week" },
+                            { value:"month", label:"Month" },
+                            { value:"all", label:"All Time" }
+                        ]}
+                        active={period}
+                        onChange={setPeriod}
+                    />
                 </div>
             </div>
 
@@ -1161,6 +1234,7 @@ const Sidebar = ({ active, onNav, collapsed }) => (
 const Topbar = ({ page, onToggle, notifOpen, setNotifOpen }) => {
     const unread = NOTIFS.filter(n => n.unread).length
     const titles = { dashboard:"Dashboard", tasks:"My Tasks", map:"Heatmap", leaderboard:"Leaderboard", messages:"Messages", profile:"Profile" }
+    const [zone, setZone] = useState("All Zones")
 
     return (
         <div style={{ height:60, borderBottom:`1px solid ${C.border}`, background:C.surface, display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 24px", flexShrink:0, position:"sticky", top:0, zIndex:50 }}>
@@ -1173,6 +1247,12 @@ const Topbar = ({ page, onToggle, notifOpen, setNotifOpen }) => {
             </div>
 
             <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                <ThemedDropdown
+                    width={130}
+                    value={zone}
+                    options={["All Zones","Dharavi","Kurla","Andheri","Chembur"]}
+                    onChange={setZone}
+                />
                 <motion.div animate={{ opacity:[1,.5,1] }} transition={{ duration:2, repeat:Infinity }}
                             style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 12px", borderRadius:20, background:C.greenLt, border:`1px solid ${C.green}25` }}>
                     <div style={{ width:6, height:6, borderRadius:"50%", background:C.green, boxShadow:`0 0 7px ${C.green}` }}/>

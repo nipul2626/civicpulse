@@ -115,6 +115,53 @@ const Card = ({ children, style={}, className="" }) => (
     }}>{children}</div>
 )
 
+const GradientBtn = ({ children, onClick, outline, style={} }) => {
+    const grad = "linear-gradient(108deg, #8ad557, #3dd3bf)"
+    const baseBg = outline ? "#f4f8f2" : "#17372d"
+    const textCol = outline ? "#1C352D" : "#EBF4DD"
+    return (
+        <motion.button whileHover={{ scale:1.015 }} whileTap={{ scale:0.985 }} onClick={onClick}
+                       style={{ border:"2px solid transparent", borderRadius:12, cursor:"pointer",
+                           display:"inline-flex", alignItems:"center", justifyContent:"center", gap:7,
+                           fontWeight:800, fontSize:12, padding:"8px 14px", whiteSpace:"nowrap", color:textCol,
+                           backgroundImage:`linear-gradient(${baseBg}, ${baseBg}), ${grad}`, backgroundOrigin:"border-box",
+                           backgroundClip:"padding-box, border-box", ...style }}>
+            {children}
+        </motion.button>
+    )
+}
+
+const ThemedDropdown = ({ value, options, onChange, width=138 }) => {
+    const [open, setOpen] = useState(false)
+    return (
+        <div style={{ position:"relative", width }}>
+            <button onClick={() => setOpen(p=>!p)}
+                    style={{ width:"100%", borderRadius:10, border:`1px solid ${c.border}`,
+                        background:"#fff", color:c.text, fontSize:12, fontWeight:700, padding:"8px 10px",
+                        cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                {value} <ChevronDown size={12}/>
+            </button>
+            <AnimatePresence>
+                {open && (
+                    <motion.div initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:6 }}
+                                style={{ position:"absolute", top:"calc(100% + 5px)", left:0, right:0, zIndex:160,
+                                    background:"#fff", border:`1px solid ${c.border}`, borderRadius:10, overflow:"hidden",
+                                    boxShadow:"0 14px 26px rgba(0,0,0,0.12)" }}>
+                        {options.map(opt => (
+                            <button key={opt} onClick={() => { onChange(opt); setOpen(false) }}
+                                    style={{ width:"100%", textAlign:"left", border:"none", cursor:"pointer",
+                                        padding:"8px 10px", background:value===opt?"rgba(90,120,99,0.15)":"transparent",
+                                        color:c.text, fontSize:12, fontWeight:600 }}>
+                                {opt}
+                            </button>
+                        ))}
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    )
+}
+
 /* ─── SIDEBAR ────────────────────────────────────────────────────────────── */
 const NAV = [
     { icon:<Home size={18}/>,        label:"Dashboard",  key:"dashboard" },
@@ -240,6 +287,8 @@ const Topbar = ({ collapsed, onNewNeed }) => {
     const [notifs, setNotifs] = useState(3)
     const [showNotifs, setShowNotifs] = useState(false)
     const [search, setSearch] = useState("")
+    const [zone, setZone] = useState("All Zones")
+    const [priority, setPriority] = useState("All Priority")
     const navigate = useNavigate()
 
     useEffect(() => {
@@ -293,26 +342,21 @@ const Topbar = ({ collapsed, onNewNeed }) => {
                            onBlur={e => e.target.style.borderColor=c.border} />
                 </div>
 
+                <ThemedDropdown value={zone} onChange={setZone}
+                                options={["All Zones","Dharavi","Kurla","Andheri","Chembur"]} />
+                <ThemedDropdown value={priority} onChange={setPriority}
+                                options={["All Priority","Urgent","High","Medium","Low"]} />
+
                 {/* Report Need */}
-                <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }}
-                               onClick={onNewNeed}
-                               style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 14px",
-                                   borderRadius:10, background:"#E05A3A", color:"#fff", fontWeight:700,
-                                   fontSize:12, border:"none", cursor:"pointer" }}>
+                <GradientBtn onClick={onNewNeed}
+                             style={{ backgroundImage:"linear-gradient(#E05A3A,#E05A3A), linear-gradient(108deg,#ff8f74,#ff5c3d)" }}>
                     <Plus size={13} /> Report Need
-                </motion.button>
+                </GradientBtn>
 
                 {/* Open Heatmap */}
-                <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }}
-                               onClick={() => navigate("/heatmap")}
-                               style={{ display:"flex", alignItems:"center", gap:6, padding:"8px 14px",
-                                   borderRadius:10, background: "#ffffff",
-                                   border: "1px solid rgba(45,90,45,0.15)",
-                                   color: "#1a2e1a",
-                                   fontWeight:700,
-                                   fontSize:12,  cursor:"pointer" }}>
+                <GradientBtn outline onClick={() => navigate("/heatmap")}>
                     <MapPin size={13} /> Open Heatmap
-                </motion.button>
+                </GradientBtn>
 
                 {/* Notifications */}
                 <div style={{ position:"relative" }}>
