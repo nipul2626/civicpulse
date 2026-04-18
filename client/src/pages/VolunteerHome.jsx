@@ -211,16 +211,17 @@ const SnapPillTabs = ({ tabs, active, onChange }) => {
     }, [tabs, active])
     return (
         <div ref={wrapRef} style={{ position:"relative", display:"flex", borderRadius:12, padding:3,
-            border:`1px solid ${C.border}`, background:C.surface }}>
+            border:`1px solid ${C.borderHi}`, background:"#f7faf6", boxShadow:"inset 0 1px 0 rgba(255,255,255,0.75)" }}>
             <motion.div animate={{ x:pill.left, width:pill.width }} transition={{ type:"spring", stiffness:380, damping:30 }}
-                        style={{ position:"absolute", top:3, left:3, height:"calc(100% - 6px)", borderRadius:9, background:"#17372d" }} />
+                        style={{ position:"absolute", top:3, left:3, height:"calc(100% - 6px)", borderRadius:9,
+                            background:"linear-gradient(45deg,#0ce39a,#69007f,#fc0987)", boxShadow:"0 6px 16px rgba(64, 16, 90, 0.25)" }} />
             {tabs.map((t, idx) => {
                 const v = typeof t === "string" ? t : t.value
                 const l = typeof t === "string" ? t : t.label
                 return (
                     <button key={v} ref={el => (itemRefs.current[idx] = el)} onClick={() => onChange(v)}
                             style={{ position:"relative", zIndex:2, flex:1, border:"none", background:"transparent",
-                                color: active===v ? "#EBF4DD" : C.muted, fontSize:12, fontWeight:700, padding:"7px 12px",
+                                color: active===v ? "#fff" : C.muted, fontSize:12, fontWeight:700, padding:"7px 12px",
                                 borderRadius:9, cursor:"pointer", textTransform:"capitalize" }}>
                         {l}
                     </button>
@@ -235,7 +236,9 @@ const ThemedDropdown = ({ value, options, onChange, width=170 }) => {
     return (
         <div style={{ position:"relative", width }}>
             <button onClick={() => setOpen(p=>!p)}
-                    style={{ width:"100%", borderRadius:10, border:`1px solid ${C.borderHi}`, background:C.surface,
+                    style={{ width:"100%", borderRadius:10, border:"1px solid transparent",
+                        backgroundImage:"linear-gradient(#f7faf6,#f7faf6), linear-gradient(45deg,#0ce39a,#69007f,#fc0987)",
+                        backgroundOrigin:"border-box", backgroundClip:"padding-box,border-box",
                         color:C.text, fontSize:12, fontWeight:700, padding:"8px 10px", cursor:"pointer",
                         display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                 {value} <Icon name="chevron" size={12} color={C.muted}/>
@@ -244,12 +247,12 @@ const ThemedDropdown = ({ value, options, onChange, width=170 }) => {
                 {open && (
                     <motion.div initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:6 }}
                                 style={{ position:"absolute", top:"calc(100% + 6px)", left:0, right:0, zIndex:160,
-                                    background:C.surface, border:`1px solid ${C.borderHi}`, borderRadius:10, overflow:"hidden",
+                                    background:"#fefefe", border:`1px solid ${C.borderHi}`, borderRadius:10, overflow:"hidden",
                                     boxShadow:"0 14px 26px rgba(0,0,0,0.16)" }}>
                         {options.map(opt => (
                             <button key={opt} onClick={() => { onChange(opt); setOpen(false) }}
                                     style={{ width:"100%", textAlign:"left", padding:"8px 10px", border:"none", cursor:"pointer",
-                                        background:value===opt ? `${C.green}20` : "transparent", color:C.text, fontSize:12, fontWeight:600 }}>
+                                        background:value===opt ? "rgba(105,0,127,0.1)" : "transparent", color:C.text, fontSize:12, fontWeight:600 }}>
                                 {opt}
                             </button>
                         ))}

@@ -111,21 +111,22 @@ const c = {
 const Card = ({ children, style={}, className="" }) => (
     <div className={className} style={{
         background:c.card, border:`1px solid ${c.border}`,
-        borderRadius:16, ...style
+        borderRadius:16, boxShadow:"0 8px 24px rgba(16,34,22,0.06)", ...style
     }}>{children}</div>
 )
 
 const GradientBtn = ({ children, onClick, outline, style={} }) => {
-    const grad = "linear-gradient(108deg, #8ad557, #3dd3bf)"
-    const baseBg = outline ? "#f4f8f2" : "#17372d"
-    const textCol = outline ? "#1C352D" : "#EBF4DD"
+    const grad = "linear-gradient(45deg, #0ce39a, #69007f, #fc0987)"
+    const baseBg = outline ? "#f3f7f1" : "#1b1b1f"
+    const textCol = outline ? "#1C352D" : "#ffffff"
     return (
-        <motion.button whileHover={{ scale:1.015 }} whileTap={{ scale:0.985 }} onClick={onClick}
+        <motion.button whileHover={{ scale:1.015, boxShadow:"0 10px 24px rgba(117, 16, 135, 0.24)" }}
+                       whileTap={{ scale:0.985 }} onClick={onClick}
                        style={{ border:"2px solid transparent", borderRadius:12, cursor:"pointer",
                            display:"inline-flex", alignItems:"center", justifyContent:"center", gap:7,
                            fontWeight:800, fontSize:12, padding:"8px 14px", whiteSpace:"nowrap", color:textCol,
                            backgroundImage:`linear-gradient(${baseBg}, ${baseBg}), ${grad}`, backgroundOrigin:"border-box",
-                           backgroundClip:"padding-box, border-box", ...style }}>
+                           backgroundClip:"padding-box, border-box", boxShadow:"0 6px 16px rgba(15,20,20,0.16)", ...style }}>
             {children}
         </motion.button>
     )
@@ -145,12 +146,12 @@ const ThemedDropdown = ({ value, options, onChange, width=138 }) => {
                 {open && (
                     <motion.div initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:6 }}
                                 style={{ position:"absolute", top:"calc(100% + 5px)", left:0, right:0, zIndex:160,
-                                    background:"#fff", border:`1px solid ${c.border}`, borderRadius:10, overflow:"hidden",
+                                    background:"#fbfdfb", border:`1px solid ${c.border}`, borderRadius:10, overflow:"hidden",
                                     boxShadow:"0 14px 26px rgba(0,0,0,0.12)" }}>
                         {options.map(opt => (
                             <button key={opt} onClick={() => { onChange(opt); setOpen(false) }}
                                     style={{ width:"100%", textAlign:"left", border:"none", cursor:"pointer",
-                                        padding:"8px 10px", background:value===opt?"rgba(90,120,99,0.15)":"transparent",
+                                        padding:"8px 10px", background:value===opt?"rgba(105,0,127,0.11)":"transparent",
                                         color:c.text, fontSize:12, fontWeight:600 }}>
                                 {opt}
                             </button>
@@ -349,7 +350,7 @@ const Topbar = ({ collapsed, onNewNeed }) => {
 
                 {/* Report Need */}
                 <GradientBtn onClick={onNewNeed}
-                             style={{ backgroundImage:"linear-gradient(#E05A3A,#E05A3A), linear-gradient(108deg,#ff8f74,#ff5c3d)" }}>
+                             style={{ backgroundImage:"linear-gradient(#1f1f22,#1f1f22), linear-gradient(45deg,#ff9966,#ff5e62,#b721ff)" }}>
                     <Plus size={13} /> Report Need
                 </GradientBtn>
 
@@ -386,12 +387,13 @@ const Topbar = ({ collapsed, onNewNeed }) => {
                                 <p style={{ color:c.text, fontSize:12, fontWeight:800, marginBottom:10 }}>Notifications</p>
                                 {FEED.slice(0,4).map(f => (
                                     <div key={f.id} style={{ display:"flex", gap:8, padding:"8px 0",
-                                        borderBottom:`1px solid ${c.border}` }}>
-                                        <span style={{ fontSize:14 }}>{f.icon}</span>
-                                        <div>
+                                        borderBottom:`1px solid ${c.border}`, position:"relative" }}>
+                                        <span style={{ fontSize:14, marginTop:1 }}>{f.icon}</span>
+                                        <div style={{ flex:1 }}>
                                             <p style={{ color:c.text, fontSize:11, fontWeight:600, margin:0 }}>{f.text}</p>
                                             <p style={{ color:c.muted, fontSize:10, margin:0 }}>{f.time}</p>
                                         </div>
+                                        <div style={{ width:3, borderRadius:3, alignSelf:"stretch", background:"linear-gradient(to bottom, #2eadff, #7e61ff)" }}/>
                                     </div>
                                 ))}
                             </motion.div>
@@ -412,7 +414,10 @@ const StatCards = () => (
                         transition={{ delay:i*0.07 }}
                         whileHover={{ y:-3, transition:{ duration:0.15 } }}
                         style={{ background:c.card, border:`1px solid ${c.border}`, borderRadius:16,
-                            padding:"18px 20px", cursor:"default", position:"relative", overflow:"hidden" }}>
+                            padding:"18px 20px", cursor:"default", position:"relative", overflow:"hidden",
+                            boxShadow:"0 10px 20px rgba(18,45,29,0.07)" }}>
+                <div style={{ position:"absolute", left:0, top:10, bottom:10, width:4, borderRadius:4,
+                    background:s.urgent ? "linear-gradient(to bottom,#ff9966,#ff5e62)" : "linear-gradient(to bottom,#2eadff,#7e61ff)" }}/>
                 {s.urgent && (
                     <motion.div animate={{ opacity:[0.5,1,0.5] }} transition={{ duration:1.5, repeat:Infinity }}
                                 style={{ position:"absolute", top:10, right:10, display:"flex", alignItems:"center",
