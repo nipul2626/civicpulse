@@ -227,7 +227,8 @@ const AppSidebar = ({ dark, onToggleDark, collapsed, onToggleCollapse }) => {
     return (
         <motion.aside animate={{ width: collapsed?64:220 }} transition={{ type:"spring", stiffness:300, damping:30 }}
                       style={{ position:"fixed", left:0, top:0, bottom:0, zIndex:2000, background: dark?"#050a04":"#1C352D", overflow:"hidden", borderRight:"1px solid rgba(255,255,255,0.05)", display:"flex", flexDirection:"column", flexShrink:0 }}>
-            <div style={{ padding:"16px 12px", borderBottom:"1px solid rgba(255,255,255,0.06)", display:"flex", alignItems:"center", gap:10 }}>
+            <div style={{ padding:"16px 12px", borderBottom:"1px solid rgba(255,255,255,0.06)", display:"flex", alignItems:"center", gap: collapsed ? 0 : 10,
+                justifyContent: collapsed ? "center" : "flex-start", }}>
                 <div style={{ width:32, height:32, borderRadius:10, background:"#3a7a3a", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
                     <Zap size={15} color="#d0f0a0"/>
                 </div>

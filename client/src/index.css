@@ -19,6 +19,9 @@
     ::-webkit-scrollbar-thumb { background: #90AB8B; border-radius: 3px; }
 }
 
+* {
+    transition: background 0.2s ease, border 0.2s ease;
+}
 @layer components {
 
     .glass {
@@ -62,16 +65,18 @@
     }
 }
 
-.grad-btn .glow-layer {
+/* ✅ ONLY KEEP THIS — CLEAN + MATCHES COMPONENT */
+.grad-btn .grad-glow {
     position: absolute;
     inset: 0;
-    border-radius: 10px;
-    background: linear-gradient(45deg, #2dc9a0, #5a9a35, #8aca70);
-    filter: blur(14px);
+    border-radius: 0.9em;
+    background: linear-gradient(90deg, #1a8c40, #5a9a30);
+    filter: blur(18px);
     opacity: 0;
-    transition: 0.4s;
+    transition: opacity 0.3s ease;
 }
 
-.grad-btn:hover .glow-layer {
-    opacity: 0.8;
+/* ✅ HOVER TRIGGER */
+.grad-btn:hover .grad-glow {
+    opacity: 1;
 }

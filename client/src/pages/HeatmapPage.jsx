@@ -64,7 +64,7 @@ const makePinIcon = (need) => {
     const html  = `
     <div style="position:relative;width:${size}px;height:${size}px">
       ${pulse ? `<div style="position:absolute;inset:0;border-radius:50%;background:${color};opacity:.25;animation:civicPulse 1.8s ease-out infinite"></div><div style="position:absolute;inset:4px;border-radius:50%;background:${color};opacity:.15;animation:civicPulse 1.8s ease-out infinite .4s"></div>` : ""}
-      <div style="position:absolute;inset:0;border-radius:50%;background:white;border:3px solid ${color};display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px ${color}55;font-size:${Math.floor(size*0.36)}px">${emoji}</div>
+      <div style="position:absolute;inset:0;border-radius:50%;background:white;border:3px solid ${color};display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px ${color}88, 0 0 12px ${color}55;font-size:${Math.floor(size*0.36)}px">${emoji}</div>
     </div>`
     return L.divIcon({ html, className: "", iconSize: [size, size], iconAnchor: [size/2, size/2] })
 }
@@ -79,15 +79,59 @@ const FlyTo = ({ coords }) => {
 
 // Gradient border button
 const GradBtn = ({ onClick, children, full }) => (
-    <motion.div whileHover={{ filter: "drop-shadow(0 0 8px rgba(45,167,80,0.55))" }}
-                onClick={onClick}
-                style={{ padding: 2, background: "linear-gradient(90deg,#1a8c40,#2d5a2d,#5a9a30)", borderRadius: "0.9em", cursor: "pointer", width: full ? "100%" : undefined }}>
-        <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
-                       style={{ background: "#0d1f0d", color: "#d0f0a0", border: "none", borderRadius: "0.6em", padding: "9px 16px", fontSize: 12, fontWeight: 800, cursor: "pointer", display: "flex", alignItems: "center", gap: 7, fontFamily: "inherit", whiteSpace: "nowrap", width: full ? "100%" : undefined, justifyContent: full ? "center" : undefined }}>
+    <motion.div
+        className="grad-btn"
+        whileHover={{ scale: 1.01 }}
+        style={{
+            position: "relative",
+            padding: 2,
+            borderRadius: "0.9em",
+            background: "linear-gradient(90deg,#1a8c40,#2d5a2d,#5a9a30)",
+            cursor: "pointer",
+            width: full ? "100%" : undefined
+        }}
+        onClick={onClick}
+    >
+        {/* 🔥 GLOW LAYER */}
+        <div
+            className="grad-glow"
+            style={{
+                position: "absolute",
+                inset: 0,
+                borderRadius: "0.9em",
+                background: "linear-gradient(90deg,#1a8c40,#5a9a30)",
+                opacity: 0,
+                filter: "blur(22px)",
+                transition: "0.3s",
+                zIndex: 0
+            }}
+        />
+
+        {/* 🔥 BUTTON */}
+        <motion.button
+            whileTap={{ scale: 0.96 }}
+            style={{
+                position: "relative",
+                zIndex: 2,
+                background: "#0d1f0d",
+                color: "#d0f0a0",
+                border: "none",
+                borderRadius: "0.6em",
+                padding: "9px 16px",
+                fontSize: 12,
+                fontWeight: 800,
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: 7,
+                width: full ? "100%" : undefined,
+                justifyContent: full ? "center" : "flex-start",
+            }}
+        >
             {children}
         </motion.button>
     </motion.div>
-)
+);
 
 // Animated mic button
 const MicBtn = ({ active, onToggle }) => (
@@ -106,8 +150,20 @@ const PillToggle = ({ options, value, onChange, dark }) => {
     const idx = options.findIndex(o => o.value === value)
     return (
         <div style={{ display: "flex", position: "relative", borderRadius: 10, background: dark ? "rgba(255,255,255,0.06)" : "rgba(90,120,99,0.1)", padding: 3 }}>
-            <motion.div animate={{ x: idx * (100 / options.length) + "%" }} transition={{ type: "spring", stiffness: 420, damping: 30, mass: 0.6 }}
-                        style={{ position: "absolute", top: 3, bottom: 3, left: 3, width: `calc(${100/options.length}% - 3px)`, background: dark ? "#4a7a35" : "#2d5a2d", borderRadius: 8 }} />
+            <motion.div
+                animate={{
+                    left: `calc(${idx} * (100% / ${options.length}) + 3px)`
+                }}
+                transition={{ type: "spring", stiffness: 420, damping: 30 }}
+                style={{
+                    position: "absolute",
+                    top: 3,
+                    bottom: 3,
+                    width: `calc(100% / ${options.length} - 6px)`,
+                    background: dark ? "#4a7a35" : "#2d5a2d",
+                    borderRadius: 8
+                }}
+            />
             {options.map(o => (
                 <button key={o.value} onClick={() => onChange(o.value)}
                         style={{ flex: 1, padding: "5px 8px", border: "none", background: "transparent", fontSize: 11, fontWeight: 700, cursor: "pointer", position: "relative", zIndex: 1, color: value === o.value ? "#fff" : dark ? "#7a9b6a" : "#5a7a5a", fontFamily: "inherit", whiteSpace: "nowrap" }}>
@@ -122,21 +178,113 @@ const PillToggle = ({ options, value, onChange, dark }) => {
 const LiquidRadio = ({ options, value, onChange, dark }) => (
     <div style={{ display: "flex", flexWrap: "wrap", gap: 5 }}>
         {options.map(o => (
-            <motion.button key={o.value} onClick={() => onChange(o.value)} whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
-                           style={{ padding: "5px 10px", borderRadius: 20, border: "1.5px solid", fontSize: 11, fontWeight: 700, cursor: "pointer", fontFamily: "inherit", transition: "all .18s", background: value === o.value ? (o.color || (dark ? "#4a7a35" : "#1C352D")) : "transparent", borderColor: value === o.value ? (o.color || (dark ? "#4a7a35" : "#1C352D")) : dark ? "rgba(120,180,80,0.18)" : "rgba(90,120,99,0.2)", color: value === o.value ? "#fff" : dark ? "#7a9b6a" : "#5a7a5a" }}>
+            <motion.button
+                key={o.value}
+                onClick={() => onChange(o.value)}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                style={{
+                    padding: "5px 10px",
+                    borderRadius: 20,
+                    border: "1.5px solid",
+                    fontSize: 11,
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    fontFamily: "inherit",
+                    transition: "all .18s",
+
+                    // ✅ FIXED BACKGROUND (soft tint instead of solid)
+                    background: value === o.value
+                        ? (o.color
+                            ? o.color + "22"
+                            : (dark ? "#4a7a3522" : "#1C352D22"))
+                        : "transparent",
+
+                    // ✅ FIXED BORDER (no harsh glow)
+                    borderColor: value === o.value
+                        ? (o.color || (dark ? "#4a7a35" : "#1C352D"))
+                        : (dark ? "rgba(120,180,80,0.18)" : "rgba(90,120,99,0.2)"),
+
+                    // ✅ FIXED TEXT COLOR (no white, no neon)
+                    color: value === o.value
+                        ? (o.color || "#a0dc50")
+                        : (dark ? "#7a9b6a" : "#5a7a5a"),
+                }}
+            >
                 {o.label}
             </motion.button>
         ))}
     </div>
-)
+);
 
 // Notification card (dark bg, colored left strip)
 const NotifCard = ({ children, color = "#5b5bf0", dark, style: s = {} }) => (
-    <div style={{ background: dark ? "#18181b" : "rgba(255,255,255,0.95)", borderRadius: 12, overflow: "hidden", position: "relative", border: dark ? "1px solid rgba(120,180,80,0.08)" : "1.5px solid rgba(90,120,99,0.1)", ...s }}>
-        <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 3, background: `linear-gradient(180deg,${color},${color}77)` }} />
-        <div style={{ paddingLeft: 11 }}>{children}</div>
-    </div>
-)
+    <motion.div
+        whileHover={{ boxShadow: `0 0 18px ${color}88` }}
+        style={{
+            position: "relative",
+            borderRadius: 12,
+            overflow: "hidden",
+            background: dark
+                ? "linear-gradient(180deg, rgba(25,35,20,0.9), rgba(15,25,15,0.9))"
+                : "rgba(255,255,255,0.95)",
+            border: dark
+                ? "1px solid rgba(120,180,80,0.08)"
+                : "1.5px solid rgba(90,120,99,0.1)",
+            transition: "all 0.25s ease",
+            ...s
+        }}
+    >
+        {/* 🔥 LEFT SIDE GLOW (DIRECTIONAL) */}
+        <motion.div
+            initial={{ opacity: 0 }}
+            whileHover={{ opacity: 0.4 }}
+            transition={{ duration: 0.3 }}
+            style={{
+                position: "absolute",
+                left: -40,
+                top: "50%",
+                transform: "translateY(-50%)",
+                width: 120,
+                height: 120,
+                background: `radial-gradient(circle, ${color}, transparent)`,
+                filter: "blur(30px)",
+                pointerEvents: "none"
+            }}
+        />
+
+        {/* ✅ BORDER GLOW */}
+        <motion.div
+            initial={{ boxShadow: `0 0 0px ${color}` }}
+            whileHover={{ boxShadow: `0 0 18px ${color}88` }}
+            transition={{ duration: 0.25 }}
+            style={{
+                position: "absolute",
+                inset: 0,
+                borderRadius: 12,
+                pointerEvents: "none"
+            }}
+        />
+
+        {/* ✅ LEFT ACCENT BAR (kept from your original) */}
+        <div
+            style={{
+                position: "absolute",
+                left: 0,
+                top: 0,
+                bottom: 0,
+                width: 3,
+                background: `linear-gradient(180deg, ${color}, ${color}77)`,
+                boxShadow: `0 0 10px ${color}55`
+            }}
+        />
+
+        {/* ✅ CONTENT */}
+        <div style={{ paddingLeft: 11 }}>
+            {children}
+        </div>
+    </motion.div>
+);
 
 // Stat chip with count-up
 const StatChip = ({ icon: Icon, value, label, color, delay, dark }) => {
@@ -148,7 +296,7 @@ const StatChip = ({ icon: Icon, value, label, color, delay, dark }) => {
         return () => clearInterval(iv)
     }, [value])
     return (
-        <motion.div initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }}>
+        <motion.div initial={{ opacity: 0.25, y: -8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay }} style={{ minWidth:130 }}>
             <NotifCard color={color} dark={dark}>
                 <div style={{ padding: "9px 12px", display: "flex", alignItems: "center", gap: 9 }}>
                     <div style={{ width: 28, height: 28, borderRadius: 8, background: color + "18", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
@@ -166,7 +314,9 @@ const StatChip = ({ icon: Icon, value, label, color, delay, dark }) => {
 
 // Day/night toggle
 const DayNightToggle = ({ dark, onToggle }) => (
-    <motion.button onClick={onToggle} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.95 }}
+    <motion.button
+
+        onClick={onToggle} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.95 }}
                    style={{ width: 50, height: 26, borderRadius: 13, border: "none", cursor: "pointer", background: dark ? "linear-gradient(135deg,#0a0f1a,#1a2540)" : "linear-gradient(135deg,#87ceeb,#c8e6f5)", position: "relative", overflow: "hidden", flexShrink: 0 }}>
         {dark
             ? [[8,5],[18,13],[34,7],[42,17]].map(([x,y],i) => <div key={i} style={{ position:"absolute", left:x, top:y, width:2, height:2, borderRadius:"50%", background:"#fff", opacity:.8 }} />)
@@ -184,36 +334,112 @@ const AppSidebar = ({ dark, onToggleDark, collapsed, onToggleCollapse }) => {
         <motion.aside animate={{ width: collapsed ? 64 : 220 }} transition={{ type:"spring", stiffness:300, damping:30 }}
                       style={{ position:"fixed", left:0, top:0, bottom:0, zIndex:2000, background: dark ? "#050a04" : "#1C352D", overflow:"hidden", borderRight:"1px solid rgba(255,255,255,0.05)", display:"flex", flexDirection:"column", flexShrink:0 }}>
 
-            <div style={{ padding:"16px 12px", borderBottom:"1px solid rgba(255,255,255,0.06)", display:"flex", alignItems:"center", gap:10 }}>
-                <div style={{ width:32, height:32, borderRadius:10, background:"#3a7a3a", display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+            <div
+                style={{
+                    padding: "16px 12px",
+                    position: "relative",
+                    borderBottom: "1px solid rgba(255,255,255,0.06)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 10
+                }}
+            >
+                {/* LOGO */}
+                <div
+                    style={{
+                        width: 32,
+                        height: 32,
+                        borderRadius: 10,
+                        background: "#3a7a3a",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0
+                    }}
+                >
                     <Zap size={15} color="#d0f0a0" />
                 </div>
+
+                {/* TEXT */}
                 <AnimatePresence>
                     {!collapsed && (
-                        <motion.div initial={{ opacity:0, x:-8 }} animate={{ opacity:1, x:0 }} exit={{ opacity:0 }} style={{ overflow:"hidden", whiteSpace:"nowrap" }}>
-                            <p style={{ fontSize:13, fontWeight:900, color:"#d0f0a0", margin:0 }}>CivicPulse</p>
-                            <p style={{ fontSize:10, color:"rgba(255,255,255,0.35)", margin:0 }}>Coordinator</p>
+                        <motion.div
+                            initial={{ opacity: 0, x: -8 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0 }}
+                            style={{ overflow: "hidden", whiteSpace: "nowrap" }}
+                        >
+                            <p style={{ fontSize: 13, fontWeight: 900, color: "#d0f0a0", margin: 0 }}>
+                                CivicPulse
+                            </p>
+                            <p style={{ fontSize: 10, color: "rgba(255,255,255,0.35)", margin: 0 }}>
+                                Coordinator
+                            </p>
                         </motion.div>
                     )}
                 </AnimatePresence>
-                <motion.button onClick={onToggleCollapse} whileHover={{ scale:1.1 }} style={{ marginLeft:"auto", background:"rgba(255,255,255,0.07)", border:"none", cursor:"pointer", borderRadius:7, width:22, height:22, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                    <ChevronLeft size={11} color="rgba(255,255,255,0.45)" style={{ transform: collapsed ? "rotate(180deg)" : "none", transition:"transform .3s" }} />
+
+                {/* 🔥 FIXED COLLAPSE BUTTON */}
+                <motion.button
+                    onClick={onToggleCollapse}
+                    whileHover={{ scale: 1.15 }}
+                    whileTap={{ scale: 0.95 }}
+                    style={{
+
+
+                        width: 28,
+                        height: 28,
+                        borderRadius: 8,
+                        border: "none",
+                        cursor: "pointer",
+
+                        background: "rgba(255,255,255,0.08)",
+                        backdropFilter: "blur(6px)",
+
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+
+                        zIndex: 20
+                    }}
+                >
+                    <ChevronLeft
+                        size={13}
+                        color="rgba(255,255,255,0.6)"
+                        style={{
+                            transform: collapsed ? "rotate(180deg)" : "none",
+                            transition: "transform 0.3s ease"
+                        }}
+                    />
                 </motion.button>
             </div>
 
             <nav style={{ flex:1, padding:"8px 8px", overflowY:"auto", display:"flex", flexDirection:"column", gap:2 }}>
                 {NAV_ITEMS.map(({ to, icon: Icon, label }) => (
                     <NavLink key={to} to={to}
-                             style={({ isActive }) => ({ display:"flex", alignItems:"center", gap:10, padding:"9px 12px", borderRadius:10, textDecoration:"none", background: isActive ? "rgba(160,220,80,0.12)" : "transparent", color: isActive ? "#a0dc50" : "rgba(255,255,255,0.42)", fontFamily:"inherit", fontSize:12.5, fontWeight:600, transition:"all .2s", whiteSpace:"nowrap", overflow:"hidden" })}>
-                        <Icon size={17} style={{ flexShrink:0 }} />
-                        <AnimatePresence>{!collapsed && <motion.span initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}>{label}</motion.span>}</AnimatePresence>
+                             style={({ isActive }) => ({ display:"flex", height: 36, alignItems:"center", minWidth: 0,gap: 10,justifyContent: collapsed ? "center" : "flex-start", padding: collapsed ? "9px 0" : "9px 12px", borderRadius:10, textDecoration:"none", background: isActive ? "rgba(160,220,80,0.12)" : "transparent", color: isActive ? "#a0dc50" : "rgba(255,255,255,0.42)", fontFamily:"inherit", fontSize:12.5, fontWeight:600, transition:"all .2s", whiteSpace:"nowrap", overflow:"hidden" })}>
+                        <Icon size={17} style={{ flexShrink:0, margin: collapsed ? "0 auto" : 0 }} />
+                        <AnimatePresence>{!collapsed && <motion.span
+                            animate={{
+                                opacity: collapsed ? 0 : 1,
+                                x: collapsed ? -10 : 0
+                            }}
+                            transition={{ duration: 0.2 }}
+                            style={{
+                                whiteSpace: "nowrap",
+                                overflow: "hidden",
+                                display: "inline-block"
+                            }}
+                        >
+                            {label}
+                        </motion.span>}</AnimatePresence>
                     </NavLink>
                 ))}
             </nav>
 
             <div style={{ padding:"8px", borderTop:"1px solid rgba(255,255,255,0.06)" }}>
                 {!collapsed && (
-                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:6, padding:"0 4px" }}>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8, padding:"0 4px" }}>
                         <span style={{ fontSize:10, color:"rgba(255,255,255,0.28)", fontFamily:"inherit" }}>Dark mode</span>
                         <DayNightToggle dark={dark} onToggle={onToggleDark} />
                     </div>
@@ -246,7 +472,7 @@ const NeedCard = ({ need, active, onClick, dark }) => {
                 <span style={{ fontSize:9.5, fontWeight:700, padding:"2px 7px", borderRadius:20, background:s.bg, color:s.text, display:"flex", alignItems:"center", gap:3 }}>
           <span style={{ width:5, height:5, borderRadius:"50%", background:s.dot, display:"inline-block" }}/>{s.label}
         </span>
-                <span style={{ fontSize:10, color: dark ? "#4a6a3a" : "#b0c4b8", marginLeft:"auto" }}>{need.time}</span>
+                <span style={{ fontSize:10, color: dark ? "#6f9f5a" : "#b0c4b8", marginLeft:"auto" }}>{need.time}</span>
             </div>
         </motion.div>
     )
@@ -255,7 +481,7 @@ const NeedCard = ({ need, active, onClick, dark }) => {
 /* ─── VOLUNTEER CARD ─────────────────────────────────────────────────────── */
 const VolCard = ({ vol, onAssign, dark }) => (
     <motion.div whileHover={{ y:-1 }}
-                style={{ borderRadius:12, padding:"10px 12px", background: dark ? "#1c2a18" : "rgba(255,255,255,0.9)", border:`1.5px solid ${dark ? "rgba(120,180,80,0.1)" : "rgba(90,120,99,0.12)"}`, marginBottom:6, display:"flex", alignItems:"center", gap:10 }}>
+                style={{ borderRadius:12, padding:"14px 16px", background: dark ? "#1c2a18" : "rgba(255,255,255,0.9)", border:`1.5px solid ${dark ? "rgba(120,180,80,0.1)" : "rgba(90,120,99,0.12)"}`, marginBottom:6, display:"flex", alignItems:"center", gap:10 }}>
         <div style={{ width:34, height:34, borderRadius:10, flexShrink:0, background: vol.available ? (dark ? "rgba(120,180,80,0.12)" : "#EBF4DD") : (dark ? "rgba(255,255,255,0.04)" : "#f1f0ee"), display:"flex", alignItems:"center", justifyContent:"center", fontWeight:900, fontSize:11, color: vol.available ? (dark ? "#78b450" : "#3B4953") : dark ? "#4a6a3a" : "#90AB8B", border:`2px solid ${vol.available ? (dark ? "#78b450" : "#5A7863") : dark ? "rgba(120,180,80,0.08)" : "rgba(90,120,99,0.15)"}` }}>
             {vol.name.split(" ").map(n => n[0]).join("")}
         </div>
@@ -265,7 +491,7 @@ const VolCard = ({ vol, onAssign, dark }) => (
         </div>
         <div style={{ display:"flex", flexDirection:"column", alignItems:"flex-end", gap:2 }}>
             <span style={{ fontSize:9.5, fontWeight:700, padding:"2px 7px", borderRadius:20, background: vol.available ? "#f0fdf4" : "#f9fafb", color: vol.available ? "#16a34a" : "#90AB8B" }}>{vol.available ? "Free" : "Busy"}</span>
-            <span style={{ fontSize:9.5, color: dark ? "#4a6a3a" : "#b0c4b8" }}>{vol.reliability}% reliable</span>
+            <span style={{ fontSize:9.5, color: dark ? "#6f9f5a" : "#b0c4b8" }}>{vol.reliability}% reliable</span>
         </div>
         {onAssign && (
             <motion.button whileHover={{ scale:1.1 }} whileTap={{ scale:.9 }} onClick={() => onAssign(vol)}
@@ -353,13 +579,16 @@ const ActivityPanel = ({ dark }) => {
                     <p style={{ fontSize:13, fontWeight:900, color: dark ? "#edf5e0" : "#1C352D", margin:0 }}>Live Activity</p>
                 </div>
             </div>
-            <div style={{ flex:1, overflowY:"auto", padding:"8px 10px" }}>
+            <div style={{ flex:1, overflowY:"auto", padding:"12px 12px",
+                display:"flex",
+                flexDirection:"column",
+                gap:8}}>
                 {MOCK_ACTIVITY.map((item,i)=>(
                     <motion.div key={item.id} initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }} transition={{ delay:i*.07 }} style={{ marginBottom:6 }}>
                         <NotifCard color={ACT_COLORS[item.type]||"#5b5bf0"} dark={dark}>
                             <div style={{ padding:"9px 10px 9px 0" }}>
-                                <p style={{ fontSize:11, color: dark ? "#cde8c0" : "#1C352D", margin:0, lineHeight:1.5, fontWeight:600 }}>{item.msg}</p>
-                                <p style={{ fontSize:9.5, color: dark ? "#4a6a3a" : "#b0c4b8", margin:"3px 0 0", fontWeight:500 }}>{item.time}</p>
+                                <p style={{ fontSize:11, color: dark ? "#e8ffd8" : "#1C352D", margin:0, lineHeight:1.5, fontWeight:600 }}>{item.msg}</p>
+                                <p style={{ fontSize:9.5, color: dark ? "#6f9f5a" : "#b0c4b8", margin:"3px 0 0", fontWeight:500 }}>{item.time}</p>
                             </div>
                         </NotifCard>
                     </motion.div>
@@ -370,7 +599,7 @@ const ActivityPanel = ({ dark }) => {
                     {catData.map(c=>(
                         <div key={c.name} style={{ marginBottom:7 }}>
                             <div style={{ display:"flex", justifyContent:"space-between", marginBottom:3 }}>
-                                <span style={{ fontSize:10.5, fontWeight:700, color: dark ? "#cde8c0" : "#3B4953" }}>{c.name}</span>
+                                <span style={{ fontSize:10.5, fontWeight:700, color: dark ? "#e8ffd8" : "#3B4953" }}>{c.name}</span>
                                 <span style={{ fontSize:10, color:c.color, fontWeight:800 }}>{c.pct}%</span>
                             </div>
                             <div style={{ height:4, background: dark ? "rgba(255,255,255,0.05)" : "rgba(0,0,0,0.05)", borderRadius:4, overflow:"hidden" }}>
@@ -467,8 +696,8 @@ export default function HeatmapPage() {
                     <div style={{ width:300, flexShrink:0, display:"flex", flexDirection:"column", background:panelBg, borderRight:`1px solid ${dark ? "rgba(120,180,80,0.07)" : "rgba(90,120,99,0.09)"}`, overflow:"hidden" }}>
 
                         {/* Search */}
-                        <div style={{ padding:"10px 12px", borderBottom:`1px solid ${dark ? "rgba(120,180,80,0.07)" : "rgba(90,120,99,0.08)"}` }}>
-                            <div style={{ display:"flex", alignItems:"center", gap:7, background: dark ? "rgba(120,180,80,0.04)" : "rgba(255,255,255,0.92)", border:`1.5px solid ${dark ? "rgba(120,180,80,0.1)" : "rgba(90,120,99,0.14)"}`, borderRadius:12, padding:"7px 10px" }}>
+                        <div style={{ padding:"14px 16px", borderBottom:`1px solid ${dark ? "rgba(120,180,80,0.07)" : "rgba(90,120,99,0.08)"}` }}>
+                            <div style={{ display:"flex", alignItems:"center", gap:7, background: dark ? "rgba(120,180,80,0.04)" : "rgba(255,255,255,0.92)", border:`1.5px solid ${dark ? "rgba(120,180,80,0.1)" : "rgba(90,120,99,0.14)"}`, borderRadius:12, padding:"9px 12px" }}>
                                 <Search size={13} color={dark ? "#7a9b6a" : "#90AB8B"} style={{ flexShrink:0 }}/>
                                 <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search zone or need..." style={{ flex:1, background:"transparent", border:"none", outline:"none", fontSize:12, color: dark ? "#edf5e0" : "#1C352D", fontFamily:"inherit" }}/>
                                 {search && <button onClick={()=>setSearch("")} style={{ border:"none", background:"none", cursor:"pointer", display:"flex" }}><X size={11} color="#90AB8B"/></button>}
@@ -477,7 +706,7 @@ export default function HeatmapPage() {
                         </div>
 
                         {/* Filters */}
-                        <div style={{ padding:"10px 12px", borderBottom:`1px solid ${dark ? "rgba(120,180,80,0.07)" : "rgba(90,120,99,0.08)"}`, display:"flex", flexDirection:"column", gap:9 }}>
+                        <div style={{ padding:"14px 16px", borderBottom:`1px solid ${dark ? "rgba(120,180,80,0.07)" : "rgba(90,120,99,0.08)"}`, display:"flex", flexDirection:"column", gap:12 }}>
                             <div>
                                 <p style={{ fontSize:9.5, fontWeight:700, color: dark ? "#7a9b6a" : "#90AB8B", textTransform:"uppercase", letterSpacing:".5px", margin:"0 0 6px" }}>Category</p>
                                 <LiquidRadio options={CATS.map(c=>({ value:c, label:c==="all"?"All":CAT_EMOJI[c]+" "+c[0].toUpperCase()+c.slice(1), color: c!=="all"?CAT_COLOR[c]:undefined }))} value={catFilter} onChange={setCatFilter} dark={dark}/>
@@ -511,7 +740,7 @@ export default function HeatmapPage() {
                                 : MOCK_VOLUNTEERS.map(vol=><VolCard key={vol.id} vol={vol} onAssign={selectedNeed?handleAssign:null} dark={dark}/>)
                             }
                             {!showVolPanel && filtered.length===0 && (
-                                <div style={{ textAlign:"center", padding:"40px 0", color: dark ? "#4a6a3a" : "#b0c4b8" }}>
+                                <div style={{ textAlign:"center", padding:"40px 0", color: dark ? "#6f9f5a" : "#b0c4b8" }}>
                                     <p style={{ fontSize:12, fontWeight:600 }}>No needs match filters</p>
                                 </div>
                             )}
@@ -540,7 +769,7 @@ export default function HeatmapPage() {
                         </AnimatePresence>
 
                         {/* Submit button */}
-                        <div style={{ padding:"10px 12px", borderTop:`1px solid ${dark ? "rgba(120,180,80,0.07)" : "rgba(90,120,99,0.09)"}` }}>
+                        <div style={{ padding:"14px 16px", borderTop:`1px solid ${dark ? "rgba(120,180,80,0.07)" : "rgba(90,120,99,0.09)"}` }}>
                             <GradBtn full onClick={()=>setShowModal(true)}><Plus size={13}/> Report New Need</GradBtn>
                         </div>
                     </div>
@@ -572,12 +801,12 @@ export default function HeatmapPage() {
 
                         {/* Bottom legend */}
                         <motion.div initial={{ opacity:0, y:14 }} animate={{ opacity:1, y:0 }} transition={{ delay:.5 }}
-                                    style={{ position:"absolute", bottom:16, left:"50%", transform:"translateX(-50%)", zIndex:1000, pointerEvents:"none", display:"flex", alignItems:"center", gap:11, padding:"8px 18px", background:"rgba(255,255,255,0.92)", backdropFilter:"blur(20px)", borderRadius:14, border:"1.5px solid rgba(90,120,99,0.15)", boxShadow:"0 4px 20px rgba(28,53,45,0.1)", whiteSpace:"nowrap" }}>
+                                    style={{ position:"absolute", bottom:16, left:"50%", transform:"translateX(-50%)", zIndex:1000, pointerEvents:"none", display:"flex", alignItems:"center", gap:11, padding:"8px 18px", background: dark ? "rgba(20,30,20,0.9)" : "rgba(255,255,255,0.92)", backdropFilter:"blur(20px)", borderRadius:14, border:"1.5px solid rgba(90,120,99,0.15)", boxShadow:"0 4px 20px rgba(28,53,45,0.1)", whiteSpace:"nowrap" }}>
                             <span style={{ fontSize:9.5, fontWeight:700, color:"#90AB8B", textTransform:"uppercase", letterSpacing:".5px" }}>Urgency</span>
                             {[1,2,3,4,5].map(u=>(
                                 <div key={u} style={{ display:"flex", alignItems:"center", gap:4 }}>
                                     <div style={{ width:10, height:10, borderRadius:"50%", background:U_COLOR[u] }}/>
-                                    <span style={{ fontSize:10.5, fontWeight:700, color:"#3B4953" }}>{u===1?"Low":u===3?"Med":u===5?"Critical":u}</span>
+                                    <span style={{ fontSize:10.5, fontWeight:700, color: dark ? "#e8ffd8" : "#3B4953" }}>{u===1?"Low":u===3?"Med":u===5?"Critical":u}</span>
                                 </div>
                             ))}
                             <div style={{ width:1, height:14, background:"#e8f0e0" }}/>
