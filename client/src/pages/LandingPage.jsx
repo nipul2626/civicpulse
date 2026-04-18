@@ -4,7 +4,7 @@ import { motion as Motion, AnimatePresence, useTransform, useScroll } from "fram
 import {
     Zap, Menu, X, ArrowRight, Mail, Lock, Eye, EyeOff,
     User, Building2, Check, MapPin, Phone, Globe,
-    ChevronRight, ChevronLeft, Shield, BarChart3, Users, Heart,
+    ChevronRight, Shield, BarChart3, Users, Heart,
     MessageSquare, Send,
     TrendingUp, Clock,
     Sparkles, Target, Activity
@@ -171,54 +171,48 @@ const DayNightToggle = ({ dark, onToggle, small }) => {
 /* ─── GRADIENT BORDER BUTTON ─────────────────────────────────────────────── */
 const GradientBtn = ({ children, onClick, style, className, dark, small, outline }) => {
     const [hovered, setHovered] = useState(false)
-    const borderGrad = dark
-        ? "linear-gradient(110deg, #7fd650, #36d7c5)"
-        : "linear-gradient(110deg, #2b5e3a, #4f8a70)"
-    const baseBg = outline
-        ? (dark ? "rgba(10,15,8,0.88)" : "rgba(255,255,255,0.92)")
-        : (dark ? "#0b140d" : "#17372d")
-    const textCol = outline ? (dark ? "#dff7c7" : "#17372d") : "#ebf4dd"
+    const grad = dark
+        ? "linear-gradient(90deg, #78b450, #3ec9b0)"
+        : "linear-gradient(90deg, #2d5a2d, #5A7863)"
+    const innerBg = outline
+        ? (dark ? "rgba(10,15,8,0.72)" : "rgba(255,255,255,0.82)")
+        : (dark ? "#0a0f08" : "#1C352D")
+    const textCol = outline
+        ? (dark ? "#dff5c6" : "#1C352D")
+        : (dark ? "#edf5e0" : "#EBF4DD")
     return (
-        <Motion.button
-            whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }}
-            onClick={onClick} className={className}
-            onMouseEnter={() => setHovered(true)}
-            onMouseLeave={() => setHovered(false)}
-            style={{
-                position:"relative",
-                border:"none",
-                borderRadius:12,
-                padding:2.5,
-                cursor:"pointer",
-                display:"inline-flex",
-                width:"100%",
-                justifyContent:"center",
-                backgroundImage: borderGrad,
-                boxShadow: hovered ? (dark ? "0 0 22px rgba(66,210,170,0.28)" : "0 0 18px rgba(49,130,96,0.24)") : "none",
-                transition:"box-shadow 0.2s ease",
-                ...style,
-            }}
-        >
-            <span
-                style={{
-                    width:"100%",
-                    display:"flex",
-                    alignItems:"center",
-                    justifyContent:"center",
-                    gap:7,
-                    borderRadius:10,
-                    background: baseBg,
-                    color:textCol,
-                    fontWeight:800,
-                    fontSize: small ? 12 : 14,
-                    padding: small ? "8px 16px" : "11px 24px",
-                    whiteSpace:"nowrap",
-                    border: outline ? `1px solid ${dark ? "rgba(204,247,167,0.45)" : "rgba(28,53,45,0.35)"}` : "1px solid transparent",
-                }}
-            >
-                {children}
-            </span>
-        </Motion.button>
+        <div style={{ position:"relative", display:"flex", width:"fit-content", ...style }}
+             onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+            <div style={{
+                position:"absolute",
+                inset: hovered ? "-2px" : "0px",
+                borderRadius:"0.9em",
+                background: grad,
+                filter: "blur(16px)",
+                opacity: hovered ? 0.45 : 0,
+                transition:"all 0.28s ease",
+                pointerEvents:"none",
+                zIndex:0,
+            }} />
+            <div style={{ padding:3, background: grad, borderRadius:"0.9em", position:"relative", zIndex:1, width:"100%" }}>
+                <Motion.button
+                    whileHover={{ scale:1.02 }} whileTap={{ scale:0.96 }}
+                    onClick={onClick} className={className}
+                    style={{
+                        background: innerBg, color: textCol,
+                        border: outline ? `1.5px solid ${dark ? "rgba(196,245,154,0.9)" : "#1C352D"}` : "none",
+                        borderRadius:"0.5em",
+                        padding: small ? "7px 16px" : "11px 24px",
+                        fontSize: small ? 12 : 14, fontWeight:800,
+                        cursor:"pointer", display:"flex", alignItems:"center",
+                        gap:7, whiteSpace:"nowrap",
+                        width:"100%", justifyContent:"center",
+                        boxShadow: outline && dark ? "inset 0 0 0 1px rgba(120,180,80,0.28)" : "none",
+                    }}>
+                    {children}
+                </Motion.button>
+            </div>
+        </div>
     )
 }
 
@@ -495,7 +489,7 @@ const PillTabs = ({ tabs, active, onSelect, dark }) => {
             background: dark ? "rgba(28,42,24,0.7)" : "#f0f4ec",
             borderRadius:10, padding:3,
             border: `1px solid ${dark ? "rgba(120,180,80,0.12)" : "#d4e4cc"}` }}>
-            <Motion.div animate={{ x: indicator.left, width: indicator.width }}
+            <Motion.div animate={{ x: idx * (100 / tabs.length) + "%" }}
                         style={{ position:"absolute", top:3, left:3,
                             height:"calc(100% - 6px)",
                             background:"#1C352D",
@@ -1535,22 +1529,42 @@ const NGOSection = ({ onNgoRegister }) => {
     const [active, setActive] = useState(0)
     const [hovered, setHovered] = useState(false)
     const quantity = NGOS.length
+    const cardW = 170, cardH = 240
+    const translateZ = Math.round((cardW + cardH) * 0.72)
 
-    useEffect(() => {
-        if (hovered) return
-        const t = setInterval(() => setActive(p => (p + 1) % quantity), 2500)
-        return () => clearInterval(t)
-    }, [hovered, quantity])
-
-    const next = () => setActive(p => (p + 1) % quantity)
-    const prev = () => setActive(p => (p - 1 + quantity) % quantity)
-
-    const relativeIndex = (idx) => {
-        let diff = idx - active
-        if (diff > quantity / 2) diff -= quantity
-        if (diff < -quantity / 2) diff += quantity
-        return diff
-    }
+    const carouselStyle = `
+        @keyframes rotateCarousel {
+            from { transform: perspective(1200px) rotateX(-12deg) rotateY(0deg); }
+            to   { transform: perspective(1200px) rotateX(-12deg) rotateY(-360deg); }
+        }
+        .ngo-ring {
+            animation: rotateCarousel 32s linear infinite;
+            transform-style: preserve-3d;
+            position: relative;
+            width: ${cardW}px;
+            height: ${cardH}px;
+            margin: 0 auto;
+        }
+        @media (max-width: 1100px) {
+            .ngo-ring { animation-duration: 38s; }
+        }
+        @media (max-width: 760px) {
+            .ngo-ring {
+                width: 140px;
+                height: 205px;
+            }
+        }
+        .ngo-ring:hover { animation-play-state: paused; }
+        .ngo-card-3d {
+            position: absolute;
+            width: ${cardW}px;
+            height: ${cardH}px;
+            border-radius: 20px;
+            overflow: hidden;
+            top: 0; left: 0;
+            backface-visibility: hidden;
+        }
+    `
 
     return (
         <section id="ngos" style={{ padding:"96px 0", position:"relative", overflow:"hidden", background:sectionBg }}>
@@ -1575,51 +1589,40 @@ const NGOSection = ({ onNgoRegister }) => {
                     </p>
                 </Motion.div>
 
-                {/* Coverflow carousel */}
-                <div
-                    style={{ position:"relative", height:460, marginBottom:26 }}
-                    onMouseEnter={() => setHovered(true)}
-                    onMouseLeave={() => setHovered(false)}
-                >
-                    <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", overflow:"visible" }}>
-                        {NGOS.map((ngo, idx) => {
-                            const rel = relativeIndex(idx)
-                            if (Math.abs(rel) > 3) return null
-                            const spread = hovered ? 172 : 132
-                            const x = rel * spread
-                            const rot = rel * -9
-                            const sc = rel === 0 ? (hovered ? 1.04 : 1) : Math.max(0.77, 1 - Math.abs(rel) * 0.08)
-                            const opacity = rel === 0 ? 1 : hovered ? Math.max(0.4, 0.9 - Math.abs(rel) * 0.18) : Math.max(0.28, 0.82 - Math.abs(rel) * 0.25)
-                            const z = 30 - Math.abs(rel) * 5
-                            const rgb = ngo.colorCard
-
-                            return (
-                                <Motion.div
-                                    key={ngo.name}
-                                    animate={{ x, rotateY: rot, scale: sc, opacity }}
-                                    transition={{ type:"spring", stiffness:120, damping:18 }}
-                                    style={{
-                                        width: 260,
-                                        height: 360,
-                                        borderRadius: 22,
-                                        overflow: "hidden",
-                                        position: "absolute",
-                                        zIndex: z,
-                                        background:`linear-gradient(165deg, rgb(${rgb}) 0%, rgba(${rgb},0.62) 100%)`,
-                                        border:"1px solid rgba(235,244,221,0.26)",
-                                        boxShadow: rel === 0 ? "0 22px 70px rgba(0,0,0,0.38)" : "0 12px 42px rgba(0,0,0,0.22)",
-                                        cursor: rel === 0 ? "default" : "pointer",
-                                        backdropFilter:"blur(3px)",
-                                    }}
-                                    onClick={() => setActive(idx)}
-                                >
-                                    <div style={{ height:6, background:"linear-gradient(90deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1))" }} />
-                                    <div style={{ padding:16, display:"flex", flexDirection:"column", height:"calc(100% - 6px)" }}>
-                                        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
-                                            <div style={{ width:46, height:46, borderRadius:14, background:"rgba(255,255,255,0.2)",
-                                                display:"flex", alignItems:"center", justifyContent:"center",
-                                                fontWeight:900, fontSize:16, color:"#fff", border:"1.5px solid rgba(255,255,255,0.3)" }}>
-                                                {ngo.avatar}
+                {/* 3D Carousel */}
+                <div style={{ display:"flex", justifyContent:"center", marginBottom:30 }}>
+                    <div style={{ perspective:1200, perspectiveOrigin:"50% 48%", height:cardH + 130, width:"100%", maxWidth:900, overflow:"visible" }}>
+                        <div className="ngo-ring"
+                             style={{ marginTop:56, transformStyle:"preserve-3d" }}>
+                            {NGOS.map((ngo, idx) => {
+                                const angle = (360 / quantity) * idx
+                                const rgb = ngo.colorCard
+                                return (
+                                    <div key={ngo.name} className="ngo-card-3d"
+                                         style={{ transform:`rotateY(${angle}deg) translateZ(${translateZ}px)`,
+                                             background: `linear-gradient(160deg, rgb(${rgb}) 0%, rgba(${rgb},0.7) 100%)`,
+                                             border:`1px solid rgba(255,255,255,0.15)`,
+                                             boxShadow:`0 20px 60px rgba(0,0,0,0.35)` }}>
+                                        {/* Gradient strip */}
+                                        <div style={{ height:6,
+                                            background:"linear-gradient(90deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1))" }} />
+                                        <div style={{ padding:16, display:"flex", flexDirection:"column", height:"calc(100% - 6px)" }}>
+                                            {/* Avatar */}
+                                            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                                                <div style={{ width:46, height:46, borderRadius:14,
+                                                    background:"rgba(255,255,255,0.2)", backdropFilter:"blur(8px)",
+                                                    display:"flex", alignItems:"center", justifyContent:"center",
+                                                    fontWeight:900, fontSize:16, color:"#fff",
+                                                    border:"1.5px solid rgba(255,255,255,0.3)" }}>
+                                                    {ngo.avatar}
+                                                </div>
+                                                {ngo.verified && (
+                                                    <div style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 8px",
+                                                        borderRadius:8, fontSize:9, fontWeight:800,
+                                                        background:"rgba(255,255,255,0.2)", color:"#fff" }}>
+                                                        <Shield size={8}/> Verified
+                                                    </div>
+                                                )}
                                             </div>
                                             {ngo.verified && (
                                                 <div style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 8px", borderRadius:8, fontSize:9, fontWeight:800, background:"rgba(255,255,255,0.2)", color:"#fff" }}>
