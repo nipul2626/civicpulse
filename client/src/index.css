@@ -19,6 +19,9 @@
     ::-webkit-scrollbar-thumb { background: #90AB8B; border-radius: 3px; }
 }
 
+* {
+    transition: background 0.2s ease, border 0.2s ease;
+}
 @layer components {
 
     .glass {
@@ -60,4 +63,22 @@
         background: linear-gradient(135deg, #EBF4DD 0%, #f5f7f2 50%, #e8f0e0 100%);
         min-height: 100vh;
     }
+}
+
+.grad-btn .glow-layer {
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    background: linear-gradient(45deg, #2dc9a0, #5a9a35, #8aca70);
+    filter: blur(14px);
+    opacity: 0;
+    transition: 0.4s;
+}
+
+.grad-btn:hover .glow-layer {
+    opacity: 0.8;
+}
+
+.grad-btn:hover .grad-glow {
+    opacity: 1;
 }
