@@ -1,190 +1,64 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef, createContext, useContext } from "react"
 import { useLocation, useNavigate } from "react-router-dom"
 import { motion, AnimatePresence, useTransform, useScroll } from "framer-motion"
 import {
     Zap, Menu, X, ArrowRight, Mail, Lock, Eye, EyeOff,
     User, Building2, Check, MapPin, Phone, Globe,
     ChevronRight, Shield, BarChart3, Users, Heart,
-    MessageSquare, Send,
+    MessageSquare, Send, Sun, Moon,
     TrendingUp, Clock, AlertCircle,
-    Sparkles, Target, Activity
+    Sparkles, Target, Activity, Star
 } from "lucide-react"
 
-/* ─── INLINE INPUT COMPONENT (no external dep) ──────────────────────────── */
-const Input = ({ label, type = "text", placeholder, value, onChange, icon }) => (
-    <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-        {label && (
-            <label style={{ fontSize:13, fontWeight:600, color:"#3B4953" }}>{label}</label>
-        )}
-        <div style={{ position:"relative" }}>
-            {icon && (
-                <div style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)",
-                    color:"#90AB8B", pointerEvents:"none", display:"flex" }}>
-                    {icon}
-                </div>
-            )}
-            <input type={type} value={value} onChange={onChange} placeholder={placeholder}
-                   style={{
-                       width:"100%", borderRadius:12, padding:"11px 16px",
-                       paddingLeft: icon ? 40 : 16,
-                       fontSize:14, outline:"none", boxSizing:"border-box",
-                       background:"#f8faf6", border:"1.5px solid #d4e4cc", color:"#1C352D",
-                       transition:"all 0.2s",
-                   }}
-                   onFocus={e => { e.target.style.borderColor="#5A7863"; e.target.style.background="#fff"; e.target.style.boxShadow="0 0 0 3px rgba(90,120,99,0.12)" }}
-                   onBlur={e => { e.target.style.borderColor="#d4e4cc"; e.target.style.background="#f8faf6"; e.target.style.boxShadow="none" }}
-            />
-        </div>
-    </div>
-)
+/* ─── THEME CONTEXT ─────────────────────────────────────────────────────── */
+const ThemeContext = createContext({ dark: false, toggle: () => {} })
+const useTheme = () => useContext(ThemeContext)
 
 /* ─── CONSTANTS ─────────────────────────────────────────────────────────── */
-
 const NAV_LINKS = [
-    { label: "Home",       href: "#home"     },
-    { label: "About",      href: "#about"    },
-    { label: "NGOs",       href: "#ngos"     },
-    { label: "Contact",    href: "#contact"  },
+    { label: "Home",    href: "#home"    },
+    { label: "About",   href: "#about"   },
+    { label: "NGOs",    href: "#ngos"    },
+    { label: "Contact", href: "#contact" },
 ]
 
 const STATS = [
-    { value: "2,400+", label: "Active Volunteers", icon: <Users size={18} /> },
-    { value: "180+",   label: "NGOs Registered",   icon: <Building2 size={18} /> },
-    { value: "94%",    label: "Match Accuracy",     icon: <Target size={18} /> },
-    { value: "12,000+",label: "Needs Addressed",    icon: <Heart size={18} /> },
+    { value: "2,400+",  label: "Active Volunteers", icon: <Users size={18} />,    tooltip: "Maharashtra: 620+\nKarnataka: 480+\nDelhi NCR: 390+\nTamil Nadu: 310+\n+600 across India", growth: "+18% this month" },
+    { value: "180+",    label: "NGOs Registered",   icon: <Building2 size={18} />, tooltip: "Environmental: 42\nEducation: 38\nHealth: 31\nSkill Dev: 29\n+40 more focus areas", growth: "+12 new this month" },
+    { value: "94%",     label: "Match Accuracy",     icon: <Target size={18} />,    tooltip: "Skill match: 97%\nProximity: 91%\nAvailability: 93%\nHistory score: 95%", growth: "Up from 89% last year" },
+    { value: "12,000+", label: "Needs Addressed",    icon: <Heart size={18} />,     tooltip: "Medical: 3,200+\nFood & Nutrition: 2,800+\nEducation: 2,100+\nDisaster: 1,900+\n+2,000 others", growth: "+1,400 this quarter" },
 ]
 
 const FEATURES = [
-    {
-        icon: <Sparkles size={22} />,
-        title: "AI-Powered Urgency Scoring",
-        desc: "Every field report is scored in real-time using Gemini AI — so coordinators always know what needs attention first.",
-        color: "#5A7863",
-    },
-    {
-        icon: <Users size={22} />,
-        title: "Smart Volunteer Matching",
-        desc: "A 6-factor algorithm matches volunteers by skill, proximity, availability, and past history. Zero manual calls.",
-        color: "#3B7D6E",
-    },
-    {
-        icon: <BarChart3 size={22} />,
-        title: "Live Impact Dashboard",
-        desc: "Donors see exactly where their contributions go — in real-time. Transparent, powerful, trust-building.",
-        color: "#4A6741",
-    },
-    {
-        icon: <Activity size={22} />,
-        title: "Geo Heatmaps",
-        desc: "Visual hotspots of community need overlaid on live maps. Identify underserved zones at a glance.",
-        color: "#2D5E4E",
-    },
-    {
-        icon: <Shield size={22} />,
-        title: "Verified NGO Network",
-        desc: "All NGOs go through a structured verification process. Every volunteer knows they're contributing to legitimate causes.",
-        color: "#5A7863",
-    },
-    {
-        icon: <TrendingUp size={22} />,
-        title: "Closed-Loop Tracking",
-        desc: "From survey submission to volunteer deployed to donor notified — the full loop closes in one platform.",
-        color: "#3B5C38",
-    },
+    { icon: <Sparkles size={22} />,  title: "AI-Powered Urgency Scoring",  desc: "Every field report is scored in real-time using Gemini AI — so coordinators always know what needs attention first.", color: "#5A7863" },
+    { icon: <Users size={22} />,     title: "Smart Volunteer Matching",     desc: "A 6-factor algorithm matches volunteers by skill, proximity, availability, and past history. Zero manual calls.", color: "#3B7D6E" },
+    { icon: <BarChart3 size={22} />, title: "Live Impact Dashboard",        desc: "Donors see exactly where their contributions go — in real-time. Transparent, powerful, trust-building.", color: "#4A6741" },
+    { icon: <Activity size={22} />,  title: "Geo Heatmaps",                 desc: "Visual hotspots of community need overlaid on live maps. Identify underserved zones at a glance.", color: "#2D5E4E" },
+    { icon: <Shield size={22} />,    title: "Verified NGO Network",          desc: "All NGOs go through a structured verification process. Every volunteer knows they're contributing to legitimate causes.", color: "#5A7863" },
+    { icon: <TrendingUp size={22} />, title: "Closed-Loop Tracking",        desc: "From survey submission to volunteer deployed to donor notified — the full loop closes in one platform.", color: "#3B5C38" },
 ]
 
 const NGOS = [
-    {
-        name: "Green Horizon Foundation",
-        city: "Mumbai, Maharashtra",
-        focus: "Environment & Climate",
-        volunteers: 248,
-        needs: 34,
-        rating: 4.9,
-        verified: true,
-        badge: "Top Rated",
-        badgeColor: "#5A7863",
-        desc: "Working on urban reforestation, plastic-free drives, and climate resilience programs across coastal Maharashtra.",
-        avatar: "GH",
-        since: "2019",
-    },
-    {
-        name: "Asha Jyoti Trust",
-        city: "Delhi NCR",
-        focus: "Education & Literacy",
-        volunteers: 315,
-        needs: 51,
-        rating: 4.8,
-        verified: true,
-        badge: "Most Active",
-        badgeColor: "#3B7D6E",
-        desc: "Bridging education gaps in slum communities through peer-tutoring networks and digital literacy programs.",
-        avatar: "AJ",
-        since: "2016",
-    },
-    {
-        name: "Prayas Welfare Society",
-        city: "Pune, Maharashtra",
-        focus: "Health & Nutrition",
-        volunteers: 190,
-        needs: 28,
-        rating: 4.7,
-        verified: true,
-        badge: "New",
-        badgeColor: "#6B8F71",
-        desc: "Mobile health clinics, nutrition camps, and maternal health support reaching 12 rural talukas every month.",
-        avatar: "PW",
-        since: "2021",
-    },
-    {
-        name: "Udaan Skill Center",
-        city: "Bengaluru, Karnataka",
-        focus: "Skill Development",
-        volunteers: 167,
-        needs: 19,
-        rating: 4.8,
-        verified: true,
-        badge: "High Impact",
-        badgeColor: "#4A6741",
-        desc: "Vocational training for youth from marginalised backgrounds — from coding bootcamps to carpentry workshops.",
-        avatar: "US",
-        since: "2020",
-    },
-    {
-        name: "Sevalaya Trust",
-        city: "Chennai, Tamil Nadu",
-        focus: "Women Empowerment",
-        volunteers: 280,
-        needs: 42,
-        rating: 4.9,
-        verified: true,
-        badge: "Top Rated",
-        badgeColor: "#5A7863",
-        desc: "Self-help groups, legal aid clinics, and micro-finance support for women entrepreneurs across Tamil Nadu.",
-        avatar: "ST",
-        since: "2017",
-    },
-    {
-        name: "Jal Shakti NGO",
-        city: "Jaipur, Rajasthan",
-        focus: "Water & Sanitation",
-        volunteers: 142,
-        needs: 23,
-        rating: 4.6,
-        verified: true,
-        badge: "Urgent Needs",
-        badgeColor: "#C4853E",
-        desc: "Rainwater harvesting, borewell restoration, and open defecation free village campaigns across desert regions.",
-        avatar: "JS",
-        since: "2018",
-    },
+    { name: "Green Horizon Foundation", city: "Mumbai, Maharashtra",    focus: "Environment & Climate",  volunteers: 248, needs: 34, rating: 4.9, verified: true, badge: "Top Rated",    badgeColor: "#5A7863", desc: "Urban reforestation, plastic-free drives, and climate resilience across coastal Maharashtra.", avatar: "GH", since: "2019", colorCard: "90,120,99"  },
+    { name: "Asha Jyoti Trust",          city: "Delhi NCR",              focus: "Education & Literacy",   volunteers: 315, needs: 51, rating: 4.8, verified: true, badge: "Most Active",  badgeColor: "#3B7D6E", desc: "Bridging education gaps in slum communities through peer-tutoring and digital literacy.", avatar: "AJ", since: "2016", colorCard: "59,125,110" },
+    { name: "Prayas Welfare Society",    city: "Pune, Maharashtra",      focus: "Health & Nutrition",     volunteers: 190, needs: 28, rating: 4.7, verified: true, badge: "New",           badgeColor: "#6B8F71", desc: "Mobile health clinics and nutrition camps reaching 12 rural talukas every month.", avatar: "PW", since: "2021", colorCard: "74,103,65"  },
+    { name: "Udaan Skill Center",        city: "Bengaluru, Karnataka",   focus: "Skill Development",      volunteers: 167, needs: 19, rating: 4.8, verified: true, badge: "High Impact",  badgeColor: "#4A6741", desc: "Vocational training for marginalised youth — from coding bootcamps to carpentry.", avatar: "US", since: "2020", colorCard: "45,94,78"   },
+    { name: "Sevalaya Trust",            city: "Chennai, Tamil Nadu",    focus: "Women Empowerment",      volunteers: 280, needs: 42, rating: 4.9, verified: true, badge: "Top Rated",    badgeColor: "#5A7863", desc: "Self-help groups, legal aid clinics, and micro-finance for women entrepreneurs.", avatar: "ST", since: "2017", colorCard: "107,143,113"},
+    { name: "Jal Shakti NGO",            city: "Jaipur, Rajasthan",      focus: "Water & Sanitation",     volunteers: 142, needs: 23, rating: 4.6, verified: true, badge: "Urgent Needs", badgeColor: "#C4853E", desc: "Rainwater harvesting, borewell restoration, and open defecation free village campaigns.", avatar: "JS", since: "2018", colorCard: "28,53,45"   },
 ]
 
 const STEPS = [
-    { id: 0, label: "Choose role",  desc: "Who are you?"       },
-    { id: 1, label: "Your details", desc: "Basic information"  },
-    { id: 2, label: "Skills",       desc: "What can you do?"   },
-    { id: 3, label: "Confirm",      desc: "Review and finish"  },
+    { id: 0, label: "Choose Role",  desc: "Who are you?"      },
+    { id: 1, label: "Your Details", desc: "Basic information" },
+    { id: 2, label: "Skills",       desc: "What can you do?"  },
+    { id: 3, label: "Confirm",      desc: "Review & finish"   },
+]
+
+const NGO_STEPS = [
+    { id: 0, label: "Basic Info",    desc: "About your NGO"     },
+    { id: 1, label: "Focus Areas",   desc: "What you work on"   },
+    { id: 2, label: "Documents",     desc: "Verification"       },
+    { id: 3, label: "Done",          desc: "Submitted!"         },
 ]
 
 const SKILLS_LIST = [
@@ -193,29 +67,1065 @@ const SKILLS_LIST = [
     "Translation","Photography","Legal Aid","Finance",
 ]
 
+const NGO_FOCUS = [
+    "Education","Health","Environment","Women Empowerment",
+    "Child Welfare","Skill Development","Water & Sanitation",
+    "Disaster Relief","Animal Welfare","Senior Citizens",
+]
+
 const DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"]
 
-const PARTICLES = Array.from({ length: 20 }, (_, i) => ({
+const PARTICLES = Array.from({ length: 22 }, (_, i) => ({
     id: i, x: Math.random()*100, y: Math.random()*100,
-    size: Math.random()*3+2, dur: Math.random()*8+6, delay: Math.random()*4,
+    size: Math.random()*3+1.5, dur: Math.random()*9+5, delay: Math.random()*4,
 }))
 
-/* ─── FLOATING PARTICLES ─────────────────────────────────────────────────── */
-const BgParticles = () => (
+const NODES = [
+    { x:18, y:22, label:"Field Report", emoji:"📋" },
+    { x:50, y:12, label:"AI Scoring",   emoji:"⚡" },
+    { x:82, y:26, label:"Heatmap",      emoji:"🗺️" },
+    { x:22, y:60, label:"Volunteer",    emoji:"🙋" },
+    { x:56, y:52, label:"Match",        emoji:"🎯" },
+    { x:82, y:66, label:"Task Done",    emoji:"✅" },
+    { x:40, y:82, label:"Impact",       emoji:"💚" },
+]
+const EDGES = [[0,1],[1,2],[1,4],[3,4],[4,5],[4,6],[2,5]]
+
+const NODE_DESCS = [
+    "Community members report needs via SMS, app, or field surveys",
+    "Gemini AI scores urgency on 8 factors in under 2 seconds",
+    "Geospatial heatmaps show coordinators where to focus",
+    "Matched volunteer receives push notification instantly",
+    "6-factor algorithm finds the perfect volunteer",
+    "Task completed, proof captured, coordinator notified",
+    "Donor gets real-time update. Loop closed.",
+]
+
+/* ─── SUN/MOON TOGGLE ────────────────────────────────────────────────────── */
+const DayNightToggle = ({ dark, onToggle, small }) => {
+    const size = small ? 44 : 56
+    const ballSize = small ? 18 : 24
+    return (
+        <button
+            onClick={onToggle}
+            title={dark ? "Switch to light mode" : "Switch to dark mode"}
+            style={{
+                width: size, height: size/2, borderRadius: size/4, border:"none", cursor:"pointer",
+                position:"relative", overflow:"hidden", padding:0,
+                background: dark
+                    ? "linear-gradient(135deg, #0a0f1a 0%, #1a2a4a 100%)"
+                    : "linear-gradient(135deg, #87ceeb 0%, #64b0e0 100%)",
+                transition: "background 0.5s ease",
+                flexShrink:0,
+            }}
+            aria-label="Toggle dark mode">
+            {/* Stars (dark mode) */}
+            <AnimatePresence>
+                {dark && [
+                    { cx:"12%", cy:"30%", r:1.2 }, { cx:"30%", cy:"15%", r:0.9 },
+                    { cx:"55%", cy:"25%", r:1.1 }, { cx:"70%", cy:"10%", r:0.8 },
+                    { cx:"85%", cy:"35%", r:1.0 },
+                ].map((s, i) => (
+                    <motion.div key={i}
+                                initial={{ opacity:0, scale:0 }} animate={{ opacity:1, scale:1 }}
+                                exit={{ opacity:0, scale:0 }} transition={{ delay: i*0.05 }}
+                                style={{ position:"absolute", left:s.cx, top:s.cy,
+                                    width: s.r*2*2, height: s.r*2*2, borderRadius:"50%",
+                                    background:"#fff", transform:"translate(-50%,-50%)" }} />
+                ))}
+            </AnimatePresence>
+            {/* Cloud (light mode) */}
+            <AnimatePresence>
+                {!dark && (
+                    <motion.div initial={{ opacity:0, x:10 }} animate={{ opacity:0.9, x:0 }} exit={{ opacity:0, x:10 }}
+                                style={{ position:"absolute", right:"22%", top:"10%",
+                                    width:"30%", height:"60%", borderRadius:99,
+                                    background:"rgba(255,255,255,0.8)", filter:"blur(1px)" }} />
+                )}
+            </AnimatePresence>
+            {/* Orb */}
+            <motion.div
+                animate={{ left: dark ? `calc(100% - ${ballSize + 4}px)` : "4px" }}
+                transition={{ type:"spring", stiffness:300, damping:28 }}
+                style={{
+                    position:"absolute", top: (size/2 - ballSize)/2,
+                    width: ballSize, height: ballSize, borderRadius:"50%",
+                    background: dark
+                        ? "linear-gradient(135deg, #e8e0d0 0%, #c8c0a8 100%)"
+                        : "linear-gradient(135deg, #ffd700 0%, #ff8c00 100%)",
+                    boxShadow: dark
+                        ? "0 0 8px rgba(200,190,160,0.5)"
+                        : "0 0 12px rgba(255,180,0,0.7)",
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                }}>
+                {/* Moon spots */}
+                {dark && <>
+                    <div style={{ position:"absolute", width:4, height:4, borderRadius:"50%", background:"rgba(0,0,0,0.15)", top:"20%", left:"30%" }} />
+                    <div style={{ position:"absolute", width:2.5, height:2.5, borderRadius:"50%", background:"rgba(0,0,0,0.1)", bottom:"25%", right:"25%" }} />
+                </>}
+            </motion.div>
+        </button>
+    )
+}
+
+/* ─── GRADIENT BORDER BUTTON ─────────────────────────────────────────────── */
+const GradientBtn = ({ children, onClick, style, className, dark, small, outline }) => {
+    const [hovered, setHovered] = useState(false)
+    const grad = dark
+        ? "linear-gradient(90deg, #78b450, #3ec9b0)"
+        : "linear-gradient(90deg, #2d5a2d, #5A7863)"
+    const innerBg = outline
+        ? "transparent"
+        : (dark ? "#0a0f08" : "#1C352D")
+    const textCol = outline
+        ? (dark ? "#78b450" : "#1C352D")
+        : (dark ? "#edf5e0" : "#EBF4DD")
+    return (
+        <div style={{ position:"relative", display:"inline-flex", ...style }}
+             onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}>
+            {hovered && (
+                <div style={{ position:"absolute", inset:0, borderRadius:"0.9em",
+                    background: grad, filter:"blur(10px)", opacity:0.55, zIndex:0, transition:"opacity 0.3s" }} />
+            )}
+            <div style={{ padding:3, background: grad, borderRadius:"0.9em", position:"relative", zIndex:1 }}>
+                <motion.button
+                    whileHover={{ scale:1.02 }} whileTap={{ scale:0.96 }}
+                    onClick={onClick} className={className}
+                    style={{
+                        background: innerBg, color: textCol,
+                        border: outline ? `1.5px solid ${dark ? "#78b450" : "#1C352D"}` : "none",
+                        borderRadius:"0.5em",
+                        padding: small ? "7px 16px" : "11px 24px",
+                        fontSize: small ? 12 : 14, fontWeight:800,
+                        cursor:"pointer", display:"flex", alignItems:"center",
+                        gap:7, whiteSpace:"nowrap",
+                    }}>
+                    {children}
+                </motion.button>
+            </div>
+        </div>
+    )
+}
+
+/* ─── BG PARTICLES ───────────────────────────────────────────────────────── */
+const BgParticles = ({ dark }) => (
     <>
         {PARTICLES.map(p => (
             <motion.div key={p.id} className="absolute rounded-full pointer-events-none"
                         style={{ left:`${p.x}%`, top:`${p.y}%`, width:p.size, height:p.size,
-                            background:"#5A7863", opacity:0.08 }}
-                        animate={{ y:[0,-35,0], opacity:[0.04,0.18,0.04] }}
-                        transition={{ duration:p.dur, delay:p.delay, repeat:Infinity, ease:"easeInOut" }}
-            />
+                            background: dark ? "#78b450" : "#5A7863", opacity:0.07 }}
+                        animate={{ y:[0,-35,0], opacity:[0.03,0.15,0.03] }}
+                        transition={{ duration:p.dur, delay:p.delay, repeat:Infinity, ease:"easeInOut" }} />
         ))}
     </>
 )
 
+/* ─── ANIMATED GRAPH ─────────────────────────────────────────────────────── */
+const AnimatedGraph = () => {
+    const [active, setActive] = useState(0)
+    useEffect(() => {
+        const t = setInterval(() => setActive(p => (p+1)%NODES.length), 1400)
+        return () => clearInterval(t)
+    }, [])
+    return (
+        <div>
+            <div className="relative w-full" style={{ height:180 }}>
+                <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    {EDGES.map(([a,b],i) => (
+                        <motion.line key={i}
+                                     x1={`${NODES[a].x}%`} y1={`${NODES[a].y}%`}
+                                     x2={`${NODES[b].x}%`} y2={`${NODES[b].y}%`}
+                                     stroke="#5A7863" strokeWidth="0.45" strokeOpacity="0.45" strokeDasharray="2 2"
+                                     initial={{ pathLength:0 }} animate={{ pathLength:1 }}
+                                     transition={{ delay:i*0.18, duration:0.9 }} />
+                    ))}
+                    {NODES.map((node,i) => (
+                        <g key={i}>
+                            <motion.circle cx={`${node.x}%`} cy={`${node.y}%`}
+                                           fill={i===active ? "#90AB8B" : "#3B4953"}
+                                           stroke={i===active ? "#EBF4DD" : "#5A7863"} strokeWidth="0.5"
+                                           animate={{ r: i===active ? 3.2 : 2, opacity: i===active ? 1 : 0.55 }}
+                                           transition={{ duration:0.4 }} />
+                            {i===active && (<>
+                                <motion.circle cx={`${node.x}%`} cy={`${node.y}%`}
+                                               r="4" fill="none" stroke="#90AB8B" strokeWidth="0.35"
+                                               initial={{ r:3, opacity:1 }} animate={{ r:8, opacity:0 }}
+                                               transition={{ duration:1.2, repeat:Infinity }} />
+                                <motion.circle cx={`${node.x}%`} cy={`${node.y}%`}
+                                               r="4" fill="none" stroke="#5A7863" strokeWidth="0.2"
+                                               initial={{ r:3, opacity:0.6 }} animate={{ r:11, opacity:0 }}
+                                               transition={{ duration:1.8, repeat:Infinity, delay:0.3 }} />
+                            </>)}
+                        </g>
+                    ))}
+                    {/* Signal dot travelling along edge */}
+                    {active < NODES.length-1 && (
+                        <motion.circle r="0.8" fill="#EBF4DD"
+                                       initial={{ cx:`${NODES[active].x}%`, cy:`${NODES[active].y}%` }}
+                                       animate={{ cx:`${NODES[(active+1)%NODES.length].x}%`, cy:`${NODES[(active+1)%NODES.length].y}%` }}
+                                       transition={{ duration:1.2, ease:"easeInOut" }} />
+                    )}
+                </svg>
+                {NODES.map((node,i) => (
+                    <div key={i} style={{ position:"absolute", left:`${node.x}%`, top:`${node.y}%`,
+                        transform:"translate(-50%, -230%)", pointerEvents:"none" }}>
+                        <motion.span animate={{ opacity: i===active ? 1 : 0.3 }} transition={{ duration:0.3 }}
+                                     style={{ display:"inline-flex", alignItems:"center", gap:3,
+                                         padding:"2px 7px", borderRadius:5, fontSize:8, fontWeight:700, whiteSpace:"nowrap",
+                                         background: i===active ? "#5A7863" : "rgba(255,255,255,0.08)",
+                                         color: i===active ? "#EBF4DD" : "#90AB8B" }}>
+                            <span>{node.emoji}</span> {node.label}
+                        </motion.span>
+                    </div>
+                ))}
+            </div>
+            {/* Active node description */}
+            <AnimatePresence mode="wait">
+                <motion.div key={active}
+                            initial={{ opacity:0, y:6 }} animate={{ opacity:1, y:0 }} exit={{ opacity:0, y:-6 }}
+                            transition={{ duration:0.3 }}
+                            style={{ marginTop:8, padding:"8px 12px", borderRadius:10,
+                                background:"rgba(90,120,99,0.2)", border:"1px solid rgba(90,120,99,0.25)" }}>
+                    <p style={{ fontSize:10, color:"#90AB8B", margin:0, lineHeight:1.5 }}>
+                        <span style={{ color:"#EBF4DD", fontWeight:700, marginRight:4 }}>{NODES[active].emoji} {NODES[active].label}:</span>
+                        {NODE_DESCS[active]}
+                    </p>
+                </motion.div>
+            </AnimatePresence>
+        </div>
+    )
+}
+
+/* ─── STAT CARD WITH TOOLTIP ─────────────────────────────────────────────── */
+const StatCard = ({ stat, dark }) => {
+    const [show, setShow] = useState(false)
+    return (
+        <div style={{ position:"relative" }}
+             onMouseEnter={() => setShow(true)} onMouseLeave={() => setShow(false)}>
+            <motion.div
+                whileHover={{ y:-4, boxShadow: dark
+                        ? "0 12px 30px rgba(0,0,0,0.4)"
+                        : "0 12px 30px rgba(28,53,45,0.18)" }}
+                style={{
+                    background: dark ? "rgba(28,42,24,0.9)" : "rgba(255,255,255,0.88)",
+                    border: `1.5px solid ${dark ? "rgba(120,180,80,0.15)" : "rgba(90,120,99,0.15)"}`,
+                    borderRadius:16, padding:"14px 16px",
+                    display:"flex", alignItems:"center", gap:12, cursor:"default",
+                    transition:"background 0.2s",
+                }}>
+                <div style={{
+                    width:34, height:34, borderRadius:10, flexShrink:0,
+                    display:"flex", alignItems:"center", justifyContent:"center",
+                    background: dark ? "rgba(120,180,80,0.15)" : "#EBF4DD",
+                    color: dark ? "#78b450" : "#5A7863",
+                }}>
+                    {stat.icon}
+                </div>
+                <div>
+                    <p style={{ fontWeight:900, fontSize:17, margin:0,
+                        color: dark ? "#edf5e0" : "#1C352D" }}>{stat.value}</p>
+                    <p style={{ fontSize:10, fontWeight:600, margin:0,
+                        color: dark ? "#7a9b6a" : "#90AB8B" }}>{stat.label}</p>
+                </div>
+            </motion.div>
+            <AnimatePresence>
+                {show && (
+                    <motion.div initial={{ opacity:0, y:6, scale:0.95 }}
+                                animate={{ opacity:1, y:0, scale:1 }} exit={{ opacity:0, y:6, scale:0.95 }}
+                                transition={{ duration:0.18 }}
+                                style={{ position:"absolute", bottom:"110%", left:"50%", transform:"translateX(-50%)",
+                                    zIndex:99, minWidth:180,
+                                    background: dark ? "#1c2a18" : "#1C352D",
+                                    border: `1px solid ${dark ? "rgba(120,180,80,0.2)" : "rgba(90,120,99,0.3)"}`,
+                                    borderRadius:12, padding:"12px 14px",
+                                    boxShadow:"0 12px 32px rgba(0,0,0,0.25)" }}>
+                        <p style={{ fontSize:10, color:"#90AB8B", margin:"0 0 6px",
+                            fontWeight:800, textTransform:"uppercase", letterSpacing:1 }}>Breakdown</p>
+                        {stat.tooltip.split("\n").map((line,i) => (
+                            <p key={i} style={{ fontSize:11, color:"#EBF4DD", margin:"2px 0", fontWeight:600 }}>{line}</p>
+                        ))}
+                        <div style={{ marginTop:8, paddingTop:6,
+                            borderTop:"1px solid rgba(90,120,99,0.25)",
+                            display:"flex", alignItems:"center", gap:5 }}>
+                            <TrendingUp size={10} color="#5A7863" />
+                            <span style={{ fontSize:10, color:"#5A7863", fontWeight:700 }}>{stat.growth}</span>
+                        </div>
+                        {/* Arrow */}
+                        <div style={{ position:"absolute", bottom:-6, left:"50%", transform:"translateX(-50%)",
+                            width:10, height:10, background: dark ? "#1c2a18" : "#1C352D",
+                            rotate:"45deg", borderRight:"1px solid rgba(90,120,99,0.2)",
+                            borderBottom:"1px solid rgba(90,120,99,0.2)" }} />
+                    </motion.div>
+                )}
+            </AnimatePresence>
+        </div>
+    )
+}
+
+/* ─── DARK NOTIFICATION CARD ─────────────────────────────────────────────── */
+const NotifCard = ({ children, color = "#4a9fce" }) => {
+    const [hovered, setHovered] = useState(false)
+    return (
+        <motion.div initial={{ opacity:0, y:-10 }} animate={{ opacity:1, y:0 }}
+                    exit={{ opacity:0, y:-10 }}
+                    onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)}
+                    style={{
+                        background:"#18181b", borderRadius:12, overflow:"hidden",
+                        border: hovered ? `1px solid ${color}55` : "1px solid rgba(255,255,255,0.08)",
+                        boxShadow: hovered ? `0 0 0 1px ${color}30, inset 0 0 20px ${color}08` : "none",
+                        display:"flex", alignItems:"stretch",
+                        transition:"all 0.25s",
+                    }}>
+            <div style={{ width:4, background:`linear-gradient(180deg, ${color}, ${color}80)`, flexShrink:0 }} />
+            <div style={{ padding:"10px 14px", flex:1 }}>
+                {children}
+            </div>
+        </motion.div>
+    )
+}
+
+/* ─── INLINE INPUT ───────────────────────────────────────────────────────── */
+const Input = ({ label, type="text", placeholder, value, onChange, icon, dark }) => (
+    <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+        {label && <label style={{ fontSize:12, fontWeight:700,
+            color: dark ? "#7a9b6a" : "#3B4953" }}>{label}</label>}
+        <div style={{ position:"relative" }}>
+            {icon && (
+                <div style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)",
+                    color: dark ? "#4a6b3a" : "#90AB8B", pointerEvents:"none", display:"flex" }}>
+                    {icon}
+                </div>
+            )}
+            <input type={type} value={value} onChange={onChange} placeholder={placeholder}
+                   style={{
+                       width:"100%", borderRadius:11, padding:"10px 14px",
+                       paddingLeft: icon ? 40 : 14, fontSize:14, outline:"none",
+                       boxSizing:"border-box",
+                       background: dark ? "rgba(28,42,24,0.7)" : "#f8faf6",
+                       border: `1.5px solid ${dark ? "rgba(120,180,80,0.15)" : "#d4e4cc"}`,
+                       color: dark ? "#edf5e0" : "#1C352D", transition:"all 0.2s",
+                   }}
+                   onFocus={e => {
+                       e.target.style.borderColor = dark ? "#78b450" : "#5A7863"
+                       e.target.style.boxShadow = dark
+                           ? "0 0 0 3px rgba(120,180,80,0.1)"
+                           : "0 0 0 3px rgba(90,120,99,0.12)"
+                   }}
+                   onBlur={e => {
+                       e.target.style.borderColor = dark ? "rgba(120,180,80,0.15)" : "#d4e4cc"
+                       e.target.style.boxShadow = "none"
+                   }} />
+        </div>
+    </div>
+)
+
+/* ─── STEP BAR ───────────────────────────────────────────────────────────── */
+const StepBar = ({ current, steps, dark }) => (
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:0, marginBottom:24 }}>
+        {steps.map((s, i) => (
+            <div key={s.id} style={{ display:"flex", alignItems:"center" }}>
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:4, minWidth:64 }}>
+                    <motion.div animate={{
+                        background: i < current
+                            ? (dark ? "#78b450" : "#1C352D")
+                            : i === current
+                                ? (dark ? "#4a6b3a" : "#5A7863")
+                                : (dark ? "#1c2a18" : "#e8f0e0"),
+                        scale: i === current ? 1.15 : 1,
+                    }}
+                                style={{ width:32, height:32, borderRadius:"50%",
+                                    border:`2px solid ${i <= current ? (dark ? "#78b450" : "#5A7863") : (dark ? "rgba(120,180,80,0.15)" : "#d4e4cc")}`,
+                                    display:"flex", alignItems:"center", justifyContent:"center",
+                                    fontWeight:900, fontSize:12,
+                                    color: i <= current ? "#EBF4DD" : (dark ? "#4a6b3a" : "#90AB8B") }}>
+                        {i < current ? <Check size={13} /> : i + 1}
+                    </motion.div>
+                    <span style={{ fontSize:9, fontWeight:700, whiteSpace:"nowrap",
+                        color: i <= current ? (dark ? "#edf5e0" : "#1C352D") : (dark ? "#4a6b3a" : "#90AB8B") }}>
+                        {s.label}
+                    </span>
+                </div>
+                {i < steps.length-1 && (
+                    <motion.div style={{ height:2, width:28, marginBottom:14 }}
+                                animate={{ background: i < current
+                                        ? (dark ? "#78b450" : "#5A7863")
+                                        : (dark ? "rgba(120,180,80,0.1)" : "#e8f0e0") }} />
+                )}
+            </div>
+        ))}
+    </div>
+)
+
+/* ─── SLIDING PILL TAB ───────────────────────────────────────────────────── */
+const PillTabs = ({ tabs, active, onSelect, dark }) => {
+    const idx = tabs.indexOf(active)
+    return (
+        <div style={{ position:"relative", display:"flex",
+            background: dark ? "rgba(28,42,24,0.7)" : "#f0f4ec",
+            borderRadius:10, padding:3,
+            border: `1px solid ${dark ? "rgba(120,180,80,0.12)" : "#d4e4cc"}` }}>
+            <motion.div animate={{ x: idx * (100 / tabs.length) + "%" }}
+                        style={{ position:"absolute", top:3, left:3,
+                            width:`calc(${100/tabs.length}% - 3px)`, height:"calc(100% - 6px)",
+                            background: dark ? "#1C352D" : "#1C352D",
+                            borderRadius:7,
+                            boxShadow:"0 2px 8px rgba(0,0,0,0.18)" }}
+                        transition={{ type:"spring", stiffness:400, damping:30 }} />
+            {tabs.map(tab => (
+                <button key={tab} onClick={() => onSelect(tab)}
+                        style={{ flex:1, padding:"8px 12px", fontSize:13, fontWeight:800,
+                            background:"transparent", border:"none", cursor:"pointer",
+                            color: active === tab ? "#EBF4DD" : (dark ? "#7a9b6a" : "#90AB8B"),
+                            position:"relative", zIndex:1, transition:"color 0.2s",
+                            borderRadius:7, textTransform:"capitalize" }}>
+                    {tab}
+                </button>
+            ))}
+        </div>
+    )
+}
+
+/* ─── NGO REGISTER MODAL ─────────────────────────────────────────────────── */
+const NgoRegisterModal = ({ onClose }) => {
+    const { dark } = useTheme()
+    const [step, setStep] = useState(0)
+    const [loading, setLoading] = useState(false)
+    const [form, setForm] = useState({
+        name:"", email:"", phone:"", city:"", website:"",
+        regNumber:"", focus:[], description:""
+    })
+    const s = k => e => setForm(p => ({...p, [k]: e.target.value}))
+    const toggleFocus = f => setForm(p => ({
+        ...p, focus: p.focus.includes(f) ? p.focus.filter(x=>x!==f) : [...p.focus, f]
+    }))
+
+    const next = () => {
+        if (step < 2) { setStep(s => s+1); return }
+        setLoading(true)
+        setTimeout(() => { setLoading(false); setStep(3) }, 1600)
+    }
+
+    const cardBg = dark ? "#111a0e" : "#fff"
+    const cardBorder = dark ? "rgba(120,180,80,0.12)" : "rgba(90,120,99,0.15)"
+    const labelStyle = { fontSize:12, fontWeight:700, color: dark ? "#7a9b6a" : "#3B4953", marginBottom:4, display:"block" }
+    const inputStyle = {
+        width:"100%", borderRadius:10, padding:"10px 13px", fontSize:13,
+        outline:"none", boxSizing:"border-box",
+        background: dark ? "rgba(28,42,24,0.7)" : "#f8faf6",
+        border:`1.5px solid ${dark ? "rgba(120,180,80,0.12)" : "#d4e4cc"}`,
+        color: dark ? "#edf5e0" : "#1C352D",
+    }
+
+    return (
+        <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+                    style={{ position:"fixed", inset:0, zIndex:200, display:"flex",
+                        alignItems:"center", justifyContent:"center", padding:16,
+                        background:"rgba(10,15,8,0.7)", backdropFilter:"blur(10px)" }}
+                    onClick={onClose}>
+            <motion.div initial={{ scale:0.9, y:20 }} animate={{ scale:1, y:0 }}
+                        exit={{ scale:0.9, y:20 }} transition={{ type:"spring", stiffness:260, damping:22 }}
+                        onClick={e => e.stopPropagation()}
+                        style={{ width:"100%", maxWidth:500, maxHeight:"90vh",
+                            background: cardBg, border:`1.5px solid ${cardBorder}`,
+                            borderRadius:24, overflow:"hidden", display:"flex", flexDirection:"column",
+                            boxShadow:"0 40px 100px rgba(0,0,0,0.3)" }}>
+                {/* Header */}
+                <div style={{ padding:"20px 24px 16px", borderBottom:`1px solid ${cardBorder}`,
+                    display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+                    <div>
+                        <p style={{ fontWeight:900, fontSize:18, margin:0,
+                            color: dark ? "#edf5e0" : "#1C352D" }}>Register Your NGO</p>
+                        <p style={{ fontSize:12, color: dark ? "#7a9b6a" : "#90AB8B", margin:"2px 0 0" }}>
+                            Verified within 48 hours · Free forever
+                        </p>
+                    </div>
+                    <button onClick={onClose} style={{ width:32, height:32, borderRadius:8,
+                        border:`1px solid ${cardBorder}`, background:"transparent", cursor:"pointer",
+                        display:"flex", alignItems:"center", justifyContent:"center",
+                        color: dark ? "#7a9b6a" : "#90AB8B" }}>
+                        <X size={15} />
+                    </button>
+                </div>
+
+                {step < 3 && (
+                    <div style={{ padding:"16px 24px 0" }}>
+                        <StepBar current={step} steps={NGO_STEPS.slice(0,3)} dark={dark} />
+                    </div>
+                )}
+
+                {/* Body */}
+                <div style={{ flex:1, overflowY:"auto", padding:"8px 24px 16px" }}>
+                    <AnimatePresence mode="wait">
+                        <motion.div key={step}
+                                    initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }}
+                                    exit={{ opacity:0, x:-20 }} transition={{ duration:0.22 }}>
+
+                            {step === 0 && (
+                                <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                                        {[{k:"name",l:"NGO Name",p:"Green Horizon Foundation"},{k:"email",l:"Email",p:"contact@ngo.in"}].map(f => (
+                                            <div key={f.k}>
+                                                <label style={labelStyle}>{f.l}</label>
+                                                <input value={form[f.k]} onChange={s(f.k)} placeholder={f.p} style={inputStyle}
+                                                       onFocus={e=>{e.target.style.borderColor=dark?"#78b450":"#5A7863";e.target.style.boxShadow=dark?"0 0 0 3px rgba(120,180,80,0.1)":"0 0 0 3px rgba(90,120,99,0.12)"}}
+                                                       onBlur={e=>{e.target.style.borderColor=dark?"rgba(120,180,80,0.12)":"#d4e4cc";e.target.style.boxShadow="none"}} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                                        {[{k:"phone",l:"Phone",p:"+91 98765 00001"},{k:"city",l:"City / State",p:"Pune, Maharashtra"}].map(f => (
+                                            <div key={f.k}>
+                                                <label style={labelStyle}>{f.l}</label>
+                                                <input value={form[f.k]} onChange={s(f.k)} placeholder={f.p} style={inputStyle}
+                                                       onFocus={e=>{e.target.style.borderColor=dark?"#78b450":"#5A7863";e.target.style.boxShadow=dark?"0 0 0 3px rgba(120,180,80,0.1)":"0 0 0 3px rgba(90,120,99,0.12)"}}
+                                                       onBlur={e=>{e.target.style.borderColor=dark?"rgba(120,180,80,0.12)":"#d4e4cc";e.target.style.boxShadow="none"}} />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Website (optional)</label>
+                                        <input value={form.website} onChange={s("website")} placeholder="https://yourwebsite.org" style={inputStyle}
+                                               onFocus={e=>{e.target.style.borderColor=dark?"#78b450":"#5A7863";e.target.style.boxShadow=dark?"0 0 0 3px rgba(120,180,80,0.1)":"0 0 0 3px rgba(90,120,99,0.12)"}}
+                                               onBlur={e=>{e.target.style.borderColor=dark?"rgba(120,180,80,0.12)":"#d4e4cc";e.target.style.boxShadow="none"}} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {step === 1 && (
+                                <div>
+                                    <p style={{ fontSize:13, fontWeight:800, color: dark ? "#edf5e0" : "#1C352D", marginBottom:4 }}>Focus Areas</p>
+                                    <p style={{ fontSize:11, color:"#90AB8B", marginBottom:12 }}>Select all that apply</p>
+                                    <div style={{ display:"flex", flexWrap:"wrap", gap:7, marginBottom:14 }}>
+                                        {NGO_FOCUS.map(f => (
+                                            <motion.button key={f} whileTap={{ scale:0.94 }} onClick={() => toggleFocus(f)}
+                                                           style={{ padding:"7px 13px", borderRadius:9, fontSize:11, fontWeight:700,
+                                                               border:"1.5px solid", cursor:"pointer", transition:"all 0.15s",
+                                                               background: form.focus.includes(f) ? (dark ? "#78b450" : "#1C352D") : (dark ? "rgba(28,42,24,0.7)" : "#f8faf6"),
+                                                               borderColor: form.focus.includes(f) ? (dark ? "#78b450" : "#1C352D") : (dark ? "rgba(120,180,80,0.12)" : "#d4e4cc"),
+                                                               color: form.focus.includes(f) ? "#EBF4DD" : (dark ? "#7a9b6a" : "#5A7863") }}>
+                                                {f}
+                                            </motion.button>
+                                        ))}
+                                    </div>
+                                    <div>
+                                        <label style={labelStyle}>Brief Description</label>
+                                        <textarea value={form.description} onChange={s("description")}
+                                                  placeholder="Tell us about your NGO's mission and impact..." rows={3}
+                                                  style={{ ...inputStyle, resize:"none", lineHeight:1.5 }}
+                                                  onFocus={e=>{e.target.style.borderColor=dark?"#78b450":"#5A7863";e.target.style.boxShadow=dark?"0 0 0 3px rgba(120,180,80,0.1)":"0 0 0 3px rgba(90,120,99,0.12)"}}
+                                                  onBlur={e=>{e.target.style.borderColor=dark?"rgba(120,180,80,0.12)":"#d4e4cc";e.target.style.boxShadow="none"}} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {step === 2 && (
+                                <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+                                    <p style={{ fontSize:13, fontWeight:800, color: dark ? "#edf5e0" : "#1C352D", margin:0 }}>Verification Documents</p>
+                                    <p style={{ fontSize:11, color:"#90AB8B", margin:0 }}>Activates your account within 48 hours</p>
+                                    <div>
+                                        <label style={labelStyle}>Registration Number (12A / 80G / FCRA)</label>
+                                        <input value={form.regNumber} onChange={s("regNumber")} placeholder="AAABCD1234E" style={inputStyle}
+                                               onFocus={e=>{e.target.style.borderColor=dark?"#78b450":"#5A7863";e.target.style.boxShadow=dark?"0 0 0 3px rgba(120,180,80,0.1)":"0 0 0 3px rgba(90,120,99,0.12)"}}
+                                               onBlur={e=>{e.target.style.borderColor=dark?"rgba(120,180,80,0.12)":"#d4e4cc";e.target.style.boxShadow="none"}} />
+                                    </div>
+                                    {["Registration Certificate", "Pan Card / Tax Document"].map(doc => (
+                                        <div key={doc} style={{ border:`1.5px dashed ${dark ? "rgba(120,180,80,0.2)" : "#d4e4cc"}`,
+                                            borderRadius:11, padding:14,
+                                            display:"flex", alignItems:"center", gap:10, cursor:"pointer",
+                                            background: dark ? "rgba(28,42,24,0.4)" : "#fafcf8", transition:"all 0.2s" }}
+                                             onMouseEnter={e=>e.currentTarget.style.borderColor=dark?"#78b450":"#5A7863"}
+                                             onMouseLeave={e=>e.currentTarget.style.borderColor=dark?"rgba(120,180,80,0.2)":"#d4e4cc"}>
+                                            <div style={{ width:34, height:34, borderRadius:8,
+                                                background: dark ? "rgba(120,180,80,0.1)" : "#EBF4DD",
+                                                display:"flex", alignItems:"center", justifyContent:"center" }}>
+                                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={dark?"#78b450":"#5A7863"} strokeWidth="2">
+                                                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
+                                                </svg>
+                                            </div>
+                                            <div>
+                                                <p style={{ fontSize:12, fontWeight:700, margin:0,
+                                                    color: dark ? "#edf5e0" : "#1C352D" }}>{doc}</p>
+                                                <p style={{ fontSize:10, color:"#90AB8B", margin:0 }}>PDF or image · Max 5MB</p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <div style={{ padding:"10px 13px", borderRadius:10,
+                                        background: dark ? "rgba(120,180,80,0.08)" : "#EBF4DD",
+                                        border:`1px solid ${dark ? "rgba(120,180,80,0.15)" : "#d4e4cc"}`,
+                                        display:"flex", gap:8, alignItems:"flex-start" }}>
+                                        <Shield size={13} style={{ color:"#5A7863", marginTop:2, flexShrink:0 }} />
+                                        <p style={{ fontSize:11, color: dark ? "#7a9b6a" : "#3B5C38", margin:0, lineHeight:1.5 }}>
+                                            Your documents are encrypted and only used for verification purposes.
+                                        </p>
+                                    </div>
+                                </div>
+                            )}
+
+                            {step === 3 && (
+                                <div style={{ textAlign:"center", padding:"20px 0" }}>
+                                    <motion.div initial={{ scale:0, rotate:-180 }} animate={{ scale:1, rotate:0 }}
+                                                transition={{ type:"spring", stiffness:200, damping:15 }}
+                                                style={{ width:64, height:64, borderRadius:20,
+                                                    background: dark ? "#78b450" : "#1C352D",
+                                                    display:"flex", alignItems:"center", justifyContent:"center",
+                                                    margin:"0 auto 16px" }}>
+                                        <Check size={28} color="#EBF4DD" />
+                                    </motion.div>
+                                    <p style={{ fontSize:20, fontWeight:900, color: dark ? "#edf5e0" : "#1C352D", marginBottom:8 }}>
+                                        Application Submitted! 🎉
+                                    </p>
+                                    <p style={{ fontSize:13, color:"#90AB8B", marginBottom:18, lineHeight:1.6 }}>
+                                        <strong style={{ color: dark ? "#edf5e0" : "#1C352D" }}>{form.name || "Your NGO"}</strong> is under review.
+                                        Check <strong style={{ color: dark ? "#edf5e0" : "#1C352D" }}>{form.email || "your email"}</strong> for updates within <strong style={{ color: dark ? "#edf5e0" : "#1C352D" }}>48 hours</strong>.
+                                    </p>
+                                    {[{icon:"✓",text:"Application received"},{icon:"⏳",text:"Under verification (48hrs)"},{icon:"🚀",text:"Dashboard access granted"}].map(i => (
+                                        <div key={i.text} style={{ display:"flex", alignItems:"center", gap:10, marginBottom:6,
+                                            padding:"10px 14px", borderRadius:10,
+                                            background: dark ? "rgba(28,42,24,0.7)" : "#f8faf6",
+                                            border:`1px solid ${dark ? "rgba(120,180,80,0.1)" : "#e8f0e0"}`, textAlign:"left" }}>
+                                            <span style={{ fontSize:14 }}>{i.icon}</span>
+                                            <span style={{ fontSize:12, fontWeight:700, color: dark ? "#7a9b6a" : "#3B5C38" }}>{i.text}</span>
+                                        </div>
+                                    ))}
+                                    <button onClick={onClose} style={{ marginTop:18, padding:"11px 30px",
+                                        borderRadius:12, background: dark ? "#78b450" : "#1C352D",
+                                        color:"#EBF4DD", fontWeight:900, fontSize:13, border:"none", cursor:"pointer" }}>
+                                        Back to CivicPulse
+                                    </button>
+                                </div>
+                            )}
+                        </motion.div>
+                    </AnimatePresence>
+                </div>
+
+                {step < 3 && (
+                    <div style={{ padding:"14px 24px", borderTop:`1px solid ${cardBorder}`,
+                        display:"flex", gap:10, background: dark ? "rgba(10,15,8,0.5)" : "#fafcf8" }}>
+                        {step > 0 && (
+                            <button onClick={() => setStep(s => s-1)}
+                                    style={{ padding:"10px 18px", borderRadius:10,
+                                        border:`1.5px solid ${dark ? "rgba(120,180,80,0.2)" : "#d4e4cc"}`,
+                                        color: dark ? "#7a9b6a" : "#3B4953", fontWeight:700, fontSize:13,
+                                        background:"transparent", cursor:"pointer" }}>
+                                Back
+                            </button>
+                        )}
+                        <GradientBtn onClick={next} dark={dark} style={{ flex:1 }}>
+                            {loading
+                                ? <svg className="animate-spin" width="16" height="16" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="white" strokeWidth="4"/><path className="opacity-75" fill="white" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+                                : step === 2 ? <><Check size={14}/>  Submit Application</> : <>Continue <ArrowRight size={14}/></>}
+                        </GradientBtn>
+                    </div>
+                )}
+            </motion.div>
+        </motion.div>
+    )
+}
+
+/* ─── AUTH PANEL ─────────────────────────────────────────────────────────── */
+const AuthPanel = ({ mode, onSwitchMode }) => {
+    const navigate = useNavigate()
+    const { dark } = useTheme()
+    const [email,    setEmail]    = useState("")
+    const [password, setPassword] = useState("")
+    const [showPass, setShowPass] = useState(false)
+    const [loading,  setLoading]  = useState(false)
+    const [success,  setSuccess]  = useState(false)
+    const [error,    setError]    = useState("")
+    const [loginRole, setLoginRole] = useState("NGO Coordinator")
+
+    const [step, setStep]   = useState(0)
+    const [role, setRole]   = useState(null)
+    const [form, setForm]   = useState({ name:"", email:"", password:"", org:"", phone:"", city:"", skills:[], days:[], time:"Morning" })
+    const set = k => e => setForm(p => ({...p, [k]: e.target.value}))
+    const toggleSkill = s => setForm(p => ({ ...p, skills: p.skills.includes(s) ? p.skills.filter(x=>x!==s) : [...p.skills,s] }))
+    const toggleDay = d => setForm(p => ({ ...p, days: p.days.includes(d) ? p.days.filter(x=>x!==d) : [...p.days,d] }))
+
+    const handleLogin = () => {
+        if (!email || !password) { setError("Please fill in all fields"); return }
+        setLoading(true); setError("")
+        setTimeout(() => {
+            setLoading(false); setSuccess(true)
+            setTimeout(() => navigate(loginRole === "Volunteer" ? "/home" : "/dashboard"), 1500)
+        }, 1600)
+    }
+
+    const handleSignupNext = () => {
+        if (step === 0 && !role) return
+        if (step < STEPS.length-1) { setStep(s=>s+1); return }
+        setLoading(true)
+        setTimeout(() => {
+            setLoading(false)
+            navigate(role === "ngo" ? "/dashboard" : "/home")
+        }, 1800)
+    }
+
+    const cardBg    = dark ? "#111a0e" : "#ffffff"
+    const cardBdr   = dark ? "rgba(120,180,80,0.12)" : "rgba(90,120,99,0.2)"
+    const textMain  = dark ? "#edf5e0" : "#1C352D"
+    const textMuted = dark ? "#7a9b6a" : "#90AB8B"
+    const divBg     = dark ? "#0a0f08" : "#f8faf6"
+    const borderCol = dark ? "rgba(120,180,80,0.1)" : "#e8f0e0"
+
+    return (
+        <motion.div initial={{ opacity:0, y:20, scale:0.97 }} animate={{ opacity:1, y:0, scale:1 }}
+                    exit={{ opacity:0, y:20, scale:0.97 }} transition={{ duration:0.35 }}
+                    style={{ borderRadius:24, overflow:"hidden", width:"100%", maxWidth:460, margin:"0 auto",
+                        background: cardBg, border:`1.5px solid ${cardBdr}`,
+                        boxShadow:"0 32px 80px rgba(0,0,0,0.22)", backdropFilter:"blur(20px)" }}>
+
+            {/* Tab switcher */}
+            <div style={{ padding:"4px 4px 0", borderBottom:`1.5px solid ${borderCol}`, display:"flex" }}>
+                {["login","signup"].map(m => (
+                    <button key={m} onClick={() => { onSwitchMode(m); setStep(0); setError("") }}
+                            style={{ flex:1, padding:"14px 12px", fontSize:13, fontWeight:900, textTransform:"capitalize",
+                                background: mode === m ? cardBg : (dark ? "rgba(28,42,24,0.5)" : "#f8faf6"),
+                                color: mode === m ? textMain : textMuted,
+                                borderBottom: mode === m ? `2.5px solid ${dark ? "#78b450" : "#5A7863"}` : "2.5px solid transparent",
+                                border:"none", cursor:"pointer", transition:"all 0.2s" }}>
+                        {m === "login" ? "Sign In" : "Create Account"}
+                    </button>
+                ))}
+            </div>
+
+            <div style={{ padding:28 }}>
+                <AnimatePresence mode="wait">
+                    {mode === "login" ? (
+                        <motion.div key="login" initial={{ opacity:0, x:-20 }} animate={{ opacity:1, x:0 }}
+                                    exit={{ opacity:0, x:20 }} transition={{ duration:0.22 }}>
+
+                            <div style={{ marginBottom:20 }}>
+                                <h2 style={{ fontWeight:900, fontSize:22, margin:0, color:textMain }}>Welcome back</h2>
+                                <p style={{ fontSize:13, margin:"5px 0 0", color:textMuted }}>Sign in to your CivicPulse account</p>
+                            </div>
+
+                            {/* Role tab */}
+                            <div style={{ marginBottom:18 }}>
+                                <PillTabs tabs={["NGO Coordinator","Volunteer"]}
+                                          active={loginRole} onSelect={setLoginRole} dark={dark} />
+                            </div>
+
+                            {/* Error */}
+                            <AnimatePresence>
+                                {error && (
+                                    <div style={{ marginBottom:14 }}>
+                                        <NotifCard color="#e05a3a">
+                                            <p style={{ fontSize:12, fontWeight:700, color:"#e05a3a", margin:0 }}>{error}</p>
+                                        </NotifCard>
+                                    </div>
+                                )}
+                            </AnimatePresence>
+
+                            <div style={{ display:"flex", flexDirection:"column", gap:12, marginBottom:18 }}>
+                                <Input label="Email" type="email" placeholder="you@example.com"
+                                       value={email} onChange={e=>setEmail(e.target.value)}
+                                       icon={<Mail size={15}/>} dark={dark} />
+                                <div style={{ display:"flex", flexDirection:"column", gap:5 }}>
+                                    <label style={{ fontSize:12, fontWeight:700, color: dark ? "#7a9b6a" : "#3B4953" }}>Password</label>
+                                    <div style={{ position:"relative" }}>
+                                        <div style={{ position:"absolute", left:12, top:"50%", transform:"translateY(-50%)",
+                                            color: dark ? "#4a6b3a" : "#90AB8B", display:"flex" }}>
+                                            <Lock size={15}/>
+                                        </div>
+                                        <input type={showPass ? "text" : "password"} value={password}
+                                               onChange={e=>setPassword(e.target.value)} placeholder="••••••••"
+                                               style={{ width:"100%", borderRadius:11, padding:"10px 42px 10px 40px",
+                                                   fontSize:14, outline:"none", boxSizing:"border-box",
+                                                   background: dark ? "rgba(28,42,24,0.7)" : "#f8faf6",
+                                                   border:`1.5px solid ${dark ? "rgba(120,180,80,0.15)" : "#d4e4cc"}`,
+                                                   color: dark ? "#edf5e0" : "#1C352D", transition:"all 0.2s" }}
+                                               onFocus={e=>{e.target.style.borderColor=dark?"#78b450":"#5A7863";e.target.style.boxShadow=dark?"0 0 0 3px rgba(120,180,80,0.1)":"0 0 0 3px rgba(90,120,99,0.12)"}}
+                                               onBlur={e=>{e.target.style.borderColor=dark?"rgba(120,180,80,0.15)":"#d4e4cc";e.target.style.boxShadow="none"}} />
+                                        <motion.button type="button" onClick={() => setShowPass(p=>!p)}
+                                                       whileTap={{ scale:0.9 }} animate={{ rotate: showPass ? 180 : 0 }}
+                                                       style={{ position:"absolute", right:12, top:"50%", transform:"translateY(-50%)",
+                                                           background:"transparent", border:"none", cursor:"pointer",
+                                                           color: dark ? "#7a9b6a" : "#90AB8B", display:"flex", padding:2 }}>
+                                            {showPass ? <EyeOff size={15}/> : <Eye size={15}/>}
+                                        </motion.button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{ textAlign:"right", marginBottom:18 }}>
+                                <button style={{ fontSize:12, fontWeight:700, color: dark ? "#78b450" : "#5A7863",
+                                    background:"none", border:"none", cursor:"pointer" }}>
+                                    Forgot password?
+                                </button>
+                            </div>
+
+                            <GradientBtn onClick={handleLogin} dark={dark} style={{ width:"100%", marginBottom:14 }}>
+                                {success
+                                    ? <><motion.div initial={{ scale:0 }} animate={{ scale:1 }} transition={{ type:"spring" }}><Check size={15}/></motion.div> Redirecting...</>
+                                    : loading
+                                        ? <svg className="animate-spin" width="16" height="16" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="white" strokeWidth="4"/><path className="opacity-75" fill="white" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+                                        : <>Sign In <ArrowRight size={14}/></>}
+                            </GradientBtn>
+
+                            <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:14 }}>
+                                <div style={{ flex:1, height:1, background:borderCol }} />
+                                <span style={{ fontSize:11, color:textMuted, fontWeight:600 }}>or</span>
+                                <div style={{ flex:1, height:1, background:borderCol }} />
+                            </div>
+
+                            {/* Google */}
+                            <motion.button whileHover={{ y:-2 }} whileTap={{ scale:0.97 }}
+                                           style={{ width:"100%", padding:"11px 16px", borderRadius:12, cursor:"pointer",
+                                               background: dark ? "rgba(28,42,24,0.5)" : "#fff",
+                                               border:`1.5px solid ${dark ? "rgba(120,180,80,0.12)" : "#d4e4cc"}`,
+                                               color:textMain, fontWeight:700, fontSize:13,
+                                               display:"flex", alignItems:"center", justifyContent:"center", gap:8,
+                                               boxShadow:"0 1px 4px rgba(0,0,0,0.06)" }}>
+                                <svg width="16" height="16" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+                                Continue with Google
+                            </motion.button>
+
+                            <p style={{ textAlign:"center", fontSize:12, marginTop:16, color:textMuted }}>
+                                New?{" "}
+                                <button onClick={() => onSwitchMode("signup")}
+                                        style={{ fontWeight:900, color: dark ? "#78b450" : "#1C352D",
+                                            background:"none", border:"none", cursor:"pointer" }}>
+                                    Create account →
+                                </button>
+                            </p>
+                        </motion.div>
+                    ) : (
+                        <motion.div key="signup" initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }}
+                                    exit={{ opacity:0, x:-20 }} transition={{ duration:0.22 }}>
+
+                            <StepBar current={step} steps={STEPS} dark={dark} />
+
+                            <AnimatePresence mode="wait">
+                                <motion.div key={step}
+                                            initial={{ opacity:0, x:16 }} animate={{ opacity:1, x:0 }}
+                                            exit={{ opacity:0, x:-16 }} transition={{ duration:0.2 }}>
+
+                                    {/* Step 0 — Role */}
+                                    {step === 0 && (
+                                        <div>
+                                            <h3 style={{ fontWeight:900, fontSize:18, margin:"0 0 6px", color:textMain }}>
+                                                Join CivicPulse — Who are you?
+                                            </h3>
+                                            <p style={{ fontSize:12, color:textMuted, marginBottom:16 }}>
+                                                Choose your role to get started
+                                            </p>
+                                            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                                                {[
+                                                    { r:"ngo", icon:<Building2 size={22}/>, title:"NGO Coordinator", desc:"Manage needs, assign volunteers" },
+                                                    { r:"vol", icon:<User size={22}/>,      title:"Volunteer",        desc:"Get matched to tasks that fit you" },
+                                                ].map(opt => (
+                                                    <motion.button key={opt.r} whileTap={{ scale:0.97 }}
+                                                                   onClick={() => setRole(opt.r)}
+                                                                   style={{ padding:"18px 14px", borderRadius:14, cursor:"pointer",
+                                                                       display:"flex", flexDirection:"column", alignItems:"center",
+                                                                       gap:10, textAlign:"center", transition:"all 0.2s",
+                                                                       background: role === opt.r
+                                                                           ? (dark ? "rgba(120,180,80,0.12)" : "#EBF4DD")
+                                                                           : (dark ? "rgba(28,42,24,0.5)" : "#f8faf6"),
+                                                                       border: role === opt.r
+                                                                           ? `2px solid ${dark ? "#78b450" : "#5A7863"}`
+                                                                           : `2px solid ${dark ? "rgba(120,180,80,0.12)" : "#d4e4cc"}`,
+                                                                       boxShadow: role === opt.r ? "0 0 0 3px rgba(90,120,99,0.12)" : "none" }}>
+                                                        <div style={{ width:42, height:42, borderRadius:12,
+                                                            display:"flex", alignItems:"center", justifyContent:"center",
+                                                            background: role === opt.r ? (dark ? "#78b450" : "#1C352D") : (dark ? "rgba(28,42,24,0.7)" : "#e8f0e0"),
+                                                            color: role === opt.r ? "#EBF4DD" : (dark ? "#7a9b6a" : "#5A7863") }}>
+                                                            {opt.icon}
+                                                        </div>
+                                                        <div>
+                                                            <p style={{ fontWeight:900, fontSize:13, margin:0, color:textMain }}>{opt.title}</p>
+                                                            <p style={{ fontSize:10, color:textMuted, margin:"3px 0 0" }}>{opt.desc}</p>
+                                                        </div>
+                                                        {role === opt.r && (
+                                                            <motion.div initial={{ scale:0 }} animate={{ scale:1 }}
+                                                                        style={{ width:20, height:20, borderRadius:"50%",
+                                                                            background: dark ? "#78b450" : "#1C352D",
+                                                                            display:"flex", alignItems:"center", justifyContent:"center" }}>
+                                                                <Check size={11} color="#EBF4DD"/>
+                                                            </motion.div>
+                                                        )}
+                                                    </motion.button>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Step 1 — Details */}
+                                    {step === 1 && (
+                                        <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+                                            <h3 style={{ fontWeight:900, fontSize:17, margin:"0 0 4px", color:textMain }}>Your Details</h3>
+                                            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                                                <Input label="Full Name" placeholder="Priya Sharma" value={form.name} onChange={set("name")} dark={dark} />
+                                                <Input label="Email" type="email" placeholder="priya@email.in" value={form.email} onChange={set("email")} dark={dark} />
+                                            </div>
+                                            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
+                                                <Input label="Password" type="password" placeholder="••••••••" value={form.password} onChange={set("password")} dark={dark} />
+                                                <Input label="City" placeholder="Mumbai" value={form.city} onChange={set("city")} dark={dark} />
+                                            </div>
+                                            {role === "ngo"
+                                                ? <Input label="Organisation Name" placeholder="Green Horizon Foundation" value={form.org} onChange={set("org")} dark={dark} />
+                                                : <Input label="Phone" placeholder="+91 98765 00001" value={form.phone} onChange={set("phone")} dark={dark} />}
+                                            {/* Password strength */}
+                                            {form.password && (
+                                                <div>
+                                                    <div style={{ display:"flex", gap:3, marginTop:4 }}>
+                                                        {[0,1,2,3].map(i => (
+                                                            <div key={i} style={{ flex:1, height:3, borderRadius:3, transition:"background 0.3s",
+                                                                background: i < Math.min(Math.floor(form.password.length/3), 4)
+                                                                    ? ["#e05a3a","#e8a020","#2dc9a0","#78b450"][Math.min(Math.floor(form.password.length/3)-1, 3)]
+                                                                    : (dark ? "rgba(120,180,80,0.1)" : "#e8f0e0") }} />
+                                                        ))}
+                                                    </div>
+                                                    <p style={{ fontSize:10, color:textMuted, marginTop:4 }}>
+                                                        {["","Weak","Fair","Good","Strong"][Math.min(Math.floor(form.password.length/3), 4)]} password
+                                                    </p>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {/* Step 2 — Skills */}
+                                    {step === 2 && (
+                                        <div>
+                                            <h3 style={{ fontWeight:900, fontSize:17, margin:"0 0 4px", color:textMain }}>Skills & Availability</h3>
+                                            <p style={{ fontSize:12, color:textMuted, marginBottom:12 }}>
+                                                Select your skills and when you're free
+                                            </p>
+                                            <p style={{ fontSize:11, fontWeight:700, color:textMuted, marginBottom:6, textTransform:"uppercase", letterSpacing:0.8 }}>Skills</p>
+                                            <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
+                                                {SKILLS_LIST.map(skill => (
+                                                    <motion.button key={skill} whileTap={{ scale:0.93 }}
+                                                                   onClick={() => toggleSkill(skill)}
+                                                                   style={{ padding:"6px 12px", borderRadius:8, fontSize:11, fontWeight:700,
+                                                                       border:"1.5px solid", cursor:"pointer", transition:"all 0.15s",
+                                                                       background: form.skills.includes(skill) ? (dark ? "#78b450" : "#1C352D") : (dark ? "rgba(28,42,24,0.7)" : "#f8faf6"),
+                                                                       borderColor: form.skills.includes(skill) ? (dark ? "#78b450" : "#1C352D") : (dark ? "rgba(120,180,80,0.12)" : "#d4e4cc"),
+                                                                       color: form.skills.includes(skill) ? "#EBF4DD" : (dark ? "#7a9b6a" : "#5A7863") }}>
+                                                        {skill}
+                                                    </motion.button>
+                                                ))}
+                                            </div>
+                                            <p style={{ fontSize:11, fontWeight:700, color:textMuted, marginBottom:6, textTransform:"uppercase", letterSpacing:0.8 }}>Available Days</p>
+                                            <div style={{ display:"flex", gap:5, flexWrap:"wrap", marginBottom:14 }}>
+                                                {DAYS.map(d => (
+                                                    <motion.button key={d} whileTap={{ scale:0.9 }}
+                                                                   onClick={() => toggleDay(d)}
+                                                                   style={{ padding:"7px 10px", borderRadius:8, fontSize:11, fontWeight:800,
+                                                                       border:"1.5px solid", cursor:"pointer", transition:"all 0.15s",
+                                                                       background: form.days.includes(d) ? (dark ? "#78b450" : "#1C352D") : (dark ? "rgba(28,42,24,0.7)" : "#f8faf6"),
+                                                                       borderColor: form.days.includes(d) ? (dark ? "#78b450" : "#1C352D") : (dark ? "rgba(120,180,80,0.12)" : "#d4e4cc"),
+                                                                       color: form.days.includes(d) ? "#EBF4DD" : (dark ? "#7a9b6a" : "#5A7863") }}>
+                                                        {d}
+                                                    </motion.button>
+                                                ))}
+                                            </div>
+                                            <p style={{ fontSize:11, fontWeight:700, color:textMuted, marginBottom:6, textTransform:"uppercase", letterSpacing:0.8 }}>Preferred Time</p>
+                                            <PillTabs tabs={["Morning","Afternoon","Evening"]}
+                                                      active={form.time} onSelect={v => setForm(p=>({...p,time:v}))} dark={dark} />
+                                        </div>
+                                    )}
+
+                                    {/* Step 3 — Confirm */}
+                                    {step === 3 && (
+                                        <div style={{ textAlign:"center" }}>
+                                            <motion.div initial={{ scale:0, rotate:-180 }} animate={{ scale:1, rotate:0 }}
+                                                        transition={{ type:"spring", stiffness:200, damping:15 }}
+                                                        style={{ width:56, height:56, borderRadius:16, margin:"0 auto 14px",
+                                                            background: dark ? "#78b450" : "#1C352D",
+                                                            display:"flex", alignItems:"center", justifyContent:"center" }}>
+                                                <Check size={24} color="#EBF4DD"/>
+                                            </motion.div>
+                                            <h3 style={{ fontWeight:900, fontSize:18, margin:"0 0 4px", color:textMain }}>
+                                                You're all set!
+                                            </h3>
+                                            <p style={{ fontSize:12, color:textMuted, marginBottom:14 }}>Review your details below</p>
+                                            <div style={{ padding:14, borderRadius:14, textAlign:"left", marginBottom:14,
+                                                background: dark ? "rgba(28,42,24,0.6)" : "#f8faf6",
+                                                border:`1px solid ${dark ? "rgba(120,180,80,0.1)" : "#e8f0e0"}` }}>
+                                                {[
+                                                    ["Role", role === "ngo" ? "NGO Coordinator" : "Volunteer"],
+                                                    ["Name", form.name || "—"],
+                                                    ["Email", form.email || "—"],
+                                                    ["Top Skills", form.skills.slice(0,3).join(", ") || "—"],
+                                                ].map(([k,v]) => (
+                                                    <div key={k} style={{ display:"flex", justifyContent:"space-between",
+                                                        padding:"6px 0", borderBottom:`1px solid ${dark ? "rgba(120,180,80,0.08)" : "#f0f4ec"}` }}>
+                                                        <span style={{ fontSize:11, color:textMuted, fontWeight:700 }}>{k}</span>
+                                                        <span style={{ fontSize:11, color:textMain, fontWeight:800 }}>{v}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <p style={{ fontSize:10, color:textMuted, marginBottom:2 }}>
+                                                By creating an account you agree to our{" "}
+                                                <a href="#" style={{ color: dark ? "#78b450" : "#5A7863", fontWeight:700 }}>Terms of Service</a>
+                                                {" "}and{" "}
+                                                <a href="#" style={{ color: dark ? "#78b450" : "#5A7863", fontWeight:700 }}>Privacy Policy</a>
+                                            </p>
+                                        </div>
+                                    )}
+                                </motion.div>
+                            </AnimatePresence>
+
+                            {/* Nav buttons */}
+                            <div style={{ display:"flex", gap:8, marginTop:18 }}>
+                                {step > 0 && (
+                                    <button onClick={() => setStep(s=>s-1)}
+                                            style={{ padding:"10px 18px", borderRadius:10, fontSize:13, fontWeight:800,
+                                                border:`1.5px solid ${dark ? "rgba(120,180,80,0.2)" : "#d4e4cc"}`,
+                                                color: dark ? "#7a9b6a" : "#3B4953",
+                                                background:"transparent", cursor:"pointer" }}>
+                                        Back
+                                    </button>
+                                )}
+                                <GradientBtn onClick={handleSignupNext} dark={dark}
+                                             style={{ flex:1 }}
+                                             className={(step===0 && !role) || loading ? "opacity-40 pointer-events-none" : ""}>
+                                    {loading
+                                        ? <svg className="animate-spin" width="16" height="16" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="white" strokeWidth="4"/><path className="opacity-75" fill="white" d="M4 12a8 8 0 018-8v8H4z"/></svg>
+                                        : step === STEPS.length-1
+                                            ? <><Check size={14}/> Create Account</>
+                                            : <>Continue <ArrowRight size={14}/></>}
+                                </GradientBtn>
+                            </div>
+
+                            <p style={{ textAlign:"center", fontSize:12, marginTop:14, color:textMuted }}>
+                                Already have an account?{" "}
+                                <button onClick={() => onSwitchMode("login")}
+                                        style={{ fontWeight:900, color: dark ? "#78b450" : "#1C352D",
+                                            background:"none", border:"none", cursor:"pointer" }}>
+                                    Sign in →
+                                </button>
+                            </p>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+            </div>
+        </motion.div>
+    )
+}
+
+/* ─── AUTH MODAL ─────────────────────────────────────────────────────────── */
+const AuthModal = ({ mode, onClose, onSwitch }) => (
+    <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
+                style={{ position:"fixed", inset:0, zIndex:100,
+                    display:"flex", alignItems:"center", justifyContent:"center", padding:16,
+                    background:"rgba(10,20,10,0.65)", backdropFilter:"blur(10px)" }}
+                onClick={onClose}>
+        <div onClick={e => e.stopPropagation()} style={{ width:"100%", maxWidth:460 }}>
+            <button onClick={onClose}
+                    style={{ display:"flex", alignItems:"center", gap:5, marginLeft:"auto", marginBottom:12,
+                        fontSize:13, fontWeight:700, color:"#EBF4DD",
+                        background:"none", border:"none", cursor:"pointer" }}>
+                <X size={15}/> Close
+            </button>
+            <AuthPanel mode={mode} onSwitchMode={onSwitch} />
+        </div>
+    </motion.div>
+)
+
 /* ─── NAVBAR ─────────────────────────────────────────────────────────────── */
 const Navbar = ({ onAuthClick, authMode, onNgoRegister }) => {
+    const { dark, toggle } = useTheme()
     const [scrolled, setScrolled] = useState(false)
     const [mobileOpen, setMobileOpen] = useState(false)
     const { scrollY } = useScroll()
@@ -228,115 +1138,107 @@ const Navbar = ({ onAuthClick, authMode, onNgoRegister }) => {
     const scrollTo = (href) => {
         setMobileOpen(false)
         const el = document.querySelector(href)
-        if (el) el.scrollIntoView({ behavior: "smooth" })
+        if (el) el.scrollIntoView({ behavior:"smooth" })
     }
 
+    const navBg = dark
+        ? scrolled ? "rgba(10,15,8,0.97)" : "rgba(10,15,8,0.85)"
+        : scrolled ? "rgba(255,255,255,0.97)" : "rgba(255,255,255,0.85)"
+
+    const borderCol = dark
+        ? scrolled ? "rgba(120,180,80,0.15)" : "transparent"
+        : scrolled ? "rgba(90,120,99,0.15)" : "transparent"
+
+    const textCol = dark ? "#edf5e0" : "#1C352D"
+    const mutedCol = dark ? "#7a9b6a" : "#90AB8B"
+
     return (
-        <motion.nav
-            className="fixed top-0 left-0 right-0 z-[999]"
-            style={{
-                background: scrolled ? "rgba(255,255,255,0.97)" : "rgba(255,255,255,0.85)",
-                backdropFilter: "blur(20px)",
-                borderBottom: scrolled ? "1px solid rgba(90,120,99,0.15)" : "1px solid transparent",
-                boxShadow: scrolled ? "0 2px 30px rgba(28,53,45,0.08)" : "none",
-                transition: "all 0.3s ease",
-            }}
-        >
-            <div className="max-w-7xl mx-auto px-6 py-3.5 flex items-center justify-between">
+        <motion.nav style={{ position:"fixed", top:0, left:0, right:0, zIndex:999,
+            background:navBg, backdropFilter:"blur(20px)",
+            borderBottom:`1px solid ${borderCol}`,
+            boxShadow: scrolled ? "0 2px 30px rgba(0,0,0,0.1)" : "none",
+            transition:"all 0.3s ease" }}>
+            <div style={{ maxWidth:1280, margin:"0 auto", padding:"12px 24px",
+                display:"flex", alignItems:"center", justifyContent:"space-between" }}>
                 {/* Logo */}
-                <motion.div className="flex items-center gap-3 cursor-pointer"
-                            onClick={() => scrollTo("#home")}
-                            whileHover={{ scale: 1.02 }}>
-                    <motion.div
-                        animate={{ boxShadow:["0 0 0px #5A786300","0 0 18px #5A786355","0 0 0px #5A786300"] }}
-                        transition={{ duration:3, repeat:Infinity }}
-                        className="w-9 h-9 rounded-xl flex items-center justify-center"
-                        style={{ background:"#1C352D" }}>
-                        <Zap size={16} color="#EBF4DD" />
+                <motion.div style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }}
+                            onClick={() => scrollTo("#home")} whileHover={{ scale:1.02 }}>
+                    <motion.div animate={{ boxShadow:["0 0 0px #5A786300","0 0 18px #5A786355","0 0 0px #5A786300"] }}
+                                transition={{ duration:3, repeat:Infinity }}
+                                style={{ width:36, height:36, borderRadius:10, background:"#1C352D",
+                                    display:"flex", alignItems:"center", justifyContent:"center" }}>
+                        <Zap size={16} color="#EBF4DD"/>
                     </motion.div>
                     <div>
-                        <span className="font-black text-lg tracking-tight" style={{ color:"#1C352D" }}>CivicPulse</span>
-                        <p className="text-[9px] tracking-widest uppercase font-semibold leading-none" style={{ color:"#90AB8B" }}>by CivicPlus</p>
+                        <span style={{ fontWeight:900, fontSize:17, color:textCol, letterSpacing:-0.5 }}>CivicPulse</span>
+                        <p style={{ fontSize:8, letterSpacing:3, textTransform:"uppercase", fontWeight:700,
+                            color:mutedCol, margin:0, lineHeight:1 }}>by CivicPlus</p>
                     </div>
                 </motion.div>
 
-                {/* Desktop Links */}
-                <div className="hidden md:flex items-center gap-8">
+                {/* Desktop Nav */}
+                <div style={{ display:"flex", alignItems:"center", gap:28 }} className="hidden md:flex">
                     {NAV_LINKS.map(link => (
-                        <button key={link.label}
-                                onClick={() => scrollTo(link.href)}
-                                className="text-sm font-semibold transition-all duration-200 hover:opacity-100"
-                                style={{ color:"#3B4953", opacity:0.75 }}
-                                onMouseEnter={e => { e.currentTarget.style.color="#1C352D"; e.currentTarget.style.opacity="1" }}
-                                onMouseLeave={e => { e.currentTarget.style.color="#3B4953"; e.currentTarget.style.opacity="0.75" }}>
+                        <button key={link.label} onClick={() => scrollTo(link.href)}
+                                style={{ fontSize:13, fontWeight:700, color:mutedCol, opacity:0.85,
+                                    background:"none", border:"none", cursor:"pointer", transition:"all 0.2s" }}
+                                onMouseEnter={e=>{e.currentTarget.style.color=textCol;e.currentTarget.style.opacity="1"}}
+                                onMouseLeave={e=>{e.currentTarget.style.color=mutedCol;e.currentTarget.style.opacity="0.85"}}>
                             {link.label}
                         </button>
                     ))}
-                    <button
-                        onClick={onNgoRegister}
-                        className="text-sm font-semibold transition-all duration-200 flex items-center gap-1"
-                        style={{ color:"#5A7863", opacity:1 }}
-                        onMouseEnter={e => e.currentTarget.style.color="#1C352D"}
-                        onMouseLeave={e => e.currentTarget.style.color="#5A7863"}>
-                        <Building2 size={13} /> Register NGO
+                    <button onClick={onNgoRegister}
+                            style={{ fontSize:13, fontWeight:700, color: dark ? "#78b450" : "#5A7863",
+                                display:"flex", alignItems:"center", gap:5,
+                                background:"none", border:"none", cursor:"pointer", transition:"color 0.2s" }}
+                            onMouseEnter={e=>e.currentTarget.style.color=textCol}
+                            onMouseLeave={e=>e.currentTarget.style.color=dark?"#78b450":"#5A7863"}>
+                        <Building2 size={13}/> Register NGO
                     </button>
                 </div>
 
-                {/* CTA */}
-                <div className="hidden md:flex items-center gap-3">
-                    <motion.button
-                        whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }}
-                        onClick={() => onAuthClick("login")}
-                        className="px-5 py-2 rounded-xl text-sm font-bold transition-all"
-                        style={{
-                            background: authMode === "login" ? "#1C352D" : "transparent",
-                            color: authMode === "login" ? "#EBF4DD" : "#1C352D",
-                            border: "1.5px solid #1C352D"
-                        }}>
-                        Sign In
-                    </motion.button>
-                    <motion.button
-                        whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }}
-                        onClick={() => onAuthClick("signup")}
-                        className="px-5 py-2 rounded-xl text-sm font-bold flex items-center gap-1.5"
-                        style={{ background:"#5A7863", color:"#EBF4DD" }}>
-                        Join Free <ArrowRight size={13} />
-                    </motion.button>
-                </div>
+                {/* Right side */}
+                <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                    <DayNightToggle dark={dark} onToggle={toggle} small />
 
-                {/* Mobile toggle */}
-                <button className="md:hidden" onClick={() => setMobileOpen(p => !p)}
-                        style={{ color:"#1C352D" }}>
-                    {mobileOpen ? <X size={22} /> : <Menu size={22} />}
-                </button>
+                    <div className="hidden md:flex" style={{ gap:8, display:"flex", alignItems:"center" }}>
+                        <GradientBtn onClick={() => onAuthClick("login")} dark={dark} outline small>
+                            Sign In
+                        </GradientBtn>
+                        <GradientBtn onClick={() => onAuthClick("signup")} dark={dark} small>
+                            Join Free <Zap size={12}/>
+                        </GradientBtn>
+                    </div>
+
+                    {/* Mobile menu button */}
+                    <button onClick={() => setMobileOpen(p=>!p)} className="flex md:hidden"
+                            style={{ width:34, height:34, borderRadius:8, background:"transparent",
+                                border:`1px solid ${dark?"rgba(120,180,80,0.2)":"#d4e4cc"}`,
+                                color:textCol, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
+                        {mobileOpen ? <X size={16}/> : <Menu size={16}/>}
+                    </button>
+                </div>
             </div>
 
             {/* Mobile menu */}
             <AnimatePresence>
                 {mobileOpen && (
-                    <motion.div
-                        initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:"auto" }}
-                        exit={{ opacity:0, height:0 }}
-                        className="md:hidden overflow-hidden"
-                        style={{ background:"rgba(255,255,255,0.99)", borderTop:"1px solid #e8f0e0" }}>
-                        <div className="px-6 py-4 flex flex-col gap-4">
+                    <motion.div initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:"auto" }}
+                                exit={{ opacity:0, height:0 }}
+                                style={{ borderTop:`1px solid ${dark?"rgba(120,180,80,0.12)":"#e8f0e0"}`,
+                                    background: dark ? "#0a0f08" : "#fff", overflow:"hidden" }}>
+                        <div style={{ padding:20, display:"flex", flexDirection:"column", gap:14 }}>
                             {NAV_LINKS.map(l => (
                                 <button key={l.label} onClick={() => scrollTo(l.href)}
-                                        className="text-sm font-semibold text-left" style={{ color:"#3B4953" }}>
+                                        style={{ textAlign:"left", fontSize:14, fontWeight:700, color:textCol,
+                                            background:"none", border:"none", cursor:"pointer", padding:0 }}>
                                     {l.label}
                                 </button>
                             ))}
-                            <button onClick={() => { onNgoRegister(); setMobileOpen(false) }}
-                                    className="text-sm font-semibold text-left flex items-center gap-1.5" style={{ color:"#5A7863" }}>
-                                <Building2 size={13} /> Register NGO
-                            </button>
-                            <div className="flex gap-3 pt-2">
-                                <button onClick={() => { onAuthClick("login"); setMobileOpen(false) }}
-                                        className="flex-1 py-2.5 rounded-xl text-sm font-bold border"
-                                        style={{ borderColor:"#1C352D", color:"#1C352D" }}>Sign In</button>
-                                <button onClick={() => { onAuthClick("signup"); setMobileOpen(false) }}
-                                        className="flex-1 py-2.5 rounded-xl text-sm font-bold"
-                                        style={{ background:"#1C352D", color:"#EBF4DD" }}>Join Free</button>
+                            <div style={{ display:"flex", gap:8, paddingTop:8,
+                                borderTop:`1px solid ${dark?"rgba(120,180,80,0.1)":"#e8f0e0"}` }}>
+                                <GradientBtn onClick={() => { onAuthClick("login"); setMobileOpen(false) }} dark={dark} outline small>Sign In</GradientBtn>
+                                <GradientBtn onClick={() => { onAuthClick("signup"); setMobileOpen(false) }} dark={dark} small>Join Free</GradientBtn>
                             </div>
                         </div>
                     </motion.div>
@@ -346,785 +1248,92 @@ const Navbar = ({ onAuthClick, authMode, onNgoRegister }) => {
     )
 }
 
-/* ─── NGO REGISTRATION MODAL ─────────────────────────────────────────────── */
-const NGO_STEPS = ["Basic Info", "Focus Areas", "Documents", "Done"]
-const NGO_FOCUS = ["Education","Health","Environment","Women Empowerment","Skill Dev","Nutrition","Water & Sanitation","Disaster Relief","Child Welfare","Elder Care","Animal Welfare","Legal Aid"]
-
-const NgoRegisterModal = ({ onClose }) => {
-    const [step, setStep] = useState(0)
-    const [loading, setLoading] = useState(false)
-    const [done, setDone] = useState(false)
-    const [form, setForm] = useState({
-        name:"", email:"", phone:"", city:"", website:"",
-        regNumber:"", yearFounded:"", focus:[], description:"",
-    })
-    const s = k => e => setForm(p => ({...p, [k]: e.target.value}))
-    const toggleFocus = f => setForm(p => ({
-        ...p, focus: p.focus.includes(f) ? p.focus.filter(x=>x!==f) : [...p.focus, f]
-    }))
-
-    const next = () => {
-        if (step < NGO_STEPS.length - 2) { setStep(s => s+1); return }
-        setLoading(true)
-        setTimeout(() => { setLoading(false); setDone(true); setStep(3) }, 2000)
-    }
-
-    const inputStyle = {
-        width:"100%", borderRadius:10, padding:"10px 14px",
-        fontSize:13, outline:"none", boxSizing:"border-box",
-        background:"#f8faf6", border:"1.5px solid #d4e4cc", color:"#1C352D",
-    }
-    const labelStyle = { fontSize:12, fontWeight:600, color:"#5A7863", marginBottom:4, display:"block" }
-
-    return (
-        <motion.div
-            initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
-            className="fixed inset-0 z-[200] flex items-center justify-center p-4"
-            style={{ background:"rgba(28,53,45,0.7)", backdropFilter:"blur(10px)" }}
-            onClick={onClose}>
-            <motion.div
-                initial={{ scale:0.92, y:30 }} animate={{ scale:1, y:0 }}
-                exit={{ scale:0.92, y:30 }} transition={{ type:"spring", stiffness:280, damping:28 }}
-                onClick={e => e.stopPropagation()}
-                style={{
-                    width:"100%", maxWidth:520, background:"#fff",
-                    borderRadius:28, overflow:"hidden",
-                    boxShadow:"0 40px 120px rgba(28,53,45,0.25)",
-                    border:"1.5px solid rgba(90,120,99,0.2)",
-                }}>
-
-                {/* Header */}
-                <div style={{ background:"#1C352D", padding:"20px 24px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                    <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                        <div style={{ width:36, height:36, borderRadius:10, background:"rgba(90,120,99,0.4)",
-                            display:"flex", alignItems:"center", justifyContent:"center" }}>
-                            <Building2 size={18} color="#EBF4DD" />
-                        </div>
-                        <div>
-                            <p style={{ color:"#EBF4DD", fontWeight:800, fontSize:15, margin:0 }}>Register Your NGO</p>
-                            <p style={{ color:"#90AB8B", fontSize:11, margin:0 }}>Free · Verified in 48hrs</p>
-                        </div>
-                    </div>
-                    <button onClick={onClose} style={{ color:"#90AB8B", background:"none", border:"none", cursor:"pointer", padding:4 }}>
-                        <X size={18} />
-                    </button>
-                </div>
-
-                {/* Step bar */}
-                <div style={{ display:"flex", background:"#f8faf6", borderBottom:"1px solid #e8f0e0" }}>
-                    {NGO_STEPS.map((s, i) => (
-                        <div key={s} style={{
-                            flex:1, padding:"10px 4px", textAlign:"center", fontSize:11, fontWeight:700,
-                            color: i === step ? "#1C352D" : i < step ? "#5A7863" : "#90AB8B",
-                            borderBottom: i === step ? "2.5px solid #5A7863" : "2.5px solid transparent",
-                            transition:"all 0.2s",
-                        }}>{i < step ? "✓ " : ""}{s}</div>
-                    ))}
-                </div>
-
-                {/* Body */}
-                <div style={{ padding:24, maxHeight:"55vh", overflowY:"auto" }}>
-                    <AnimatePresence mode="wait">
-                        <motion.div key={step}
-                                    initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }}
-                                    exit={{ opacity:0, x:-20 }} transition={{ duration:0.2 }}>
-
-                            {/* Step 0: Basic Info */}
-                            {step === 0 && (
-                                <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-                                    <p style={{ fontSize:14, fontWeight:800, color:"#1C352D", margin:0 }}>Basic Information</p>
-                                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
-                                        <div style={{ gridColumn:"1/-1" }}>
-                                            <label style={labelStyle}>Organization Name *</label>
-                                            <input value={form.name} onChange={s("name")} placeholder="Green Future Foundation"
-                                                   style={inputStyle}
-                                                   onFocus={e => { e.target.style.borderColor="#5A7863"; e.target.style.boxShadow="0 0 0 3px rgba(90,120,99,0.12)" }}
-                                                   onBlur={e => { e.target.style.borderColor="#d4e4cc"; e.target.style.boxShadow="none" }} />
-                                        </div>
-                                        <div>
-                                            <label style={labelStyle}>Email *</label>
-                                            <input value={form.email} onChange={s("email")} type="email" placeholder="contact@ngo.org"
-                                                   style={inputStyle}
-                                                   onFocus={e => { e.target.style.borderColor="#5A7863"; e.target.style.boxShadow="0 0 0 3px rgba(90,120,99,0.12)" }}
-                                                   onBlur={e => { e.target.style.borderColor="#d4e4cc"; e.target.style.boxShadow="none" }} />
-                                        </div>
-                                        <div>
-                                            <label style={labelStyle}>Phone *</label>
-                                            <input value={form.phone} onChange={s("phone")} placeholder="+91 98765 00001"
-                                                   style={inputStyle}
-                                                   onFocus={e => { e.target.style.borderColor="#5A7863"; e.target.style.boxShadow="0 0 0 3px rgba(90,120,99,0.12)" }}
-                                                   onBlur={e => { e.target.style.borderColor="#d4e4cc"; e.target.style.boxShadow="none" }} />
-                                        </div>
-                                        <div>
-                                            <label style={labelStyle}>City *</label>
-                                            <input value={form.city} onChange={s("city")} placeholder="Mumbai"
-                                                   style={inputStyle}
-                                                   onFocus={e => { e.target.style.borderColor="#5A7863"; e.target.style.boxShadow="0 0 0 3px rgba(90,120,99,0.12)" }}
-                                                   onBlur={e => { e.target.style.borderColor="#d4e4cc"; e.target.style.boxShadow="none" }} />
-                                        </div>
-                                        <div>
-                                            <label style={labelStyle}>Year Founded</label>
-                                            <input value={form.yearFounded} onChange={s("yearFounded")} placeholder="2018"
-                                                   style={inputStyle}
-                                                   onFocus={e => { e.target.style.borderColor="#5A7863"; e.target.style.boxShadow="0 0 0 3px rgba(90,120,99,0.12)" }}
-                                                   onBlur={e => { e.target.style.borderColor="#d4e4cc"; e.target.style.boxShadow="none" }} />
-                                        </div>
-                                        <div style={{ gridColumn:"1/-1" }}>
-                                            <label style={labelStyle}>Website (optional)</label>
-                                            <input value={form.website} onChange={s("website")} placeholder="https://yourngo.org"
-                                                   style={inputStyle}
-                                                   onFocus={e => { e.target.style.borderColor="#5A7863"; e.target.style.boxShadow="0 0 0 3px rgba(90,120,99,0.12)" }}
-                                                   onBlur={e => { e.target.style.borderColor="#d4e4cc"; e.target.style.boxShadow="none" }} />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Step 1: Focus Areas */}
-                            {step === 1 && (
-                                <div>
-                                    <p style={{ fontSize:14, fontWeight:800, color:"#1C352D", marginBottom:6 }}>Focus Areas</p>
-                                    <p style={{ fontSize:12, color:"#90AB8B", marginBottom:14 }}>Select all that apply — this helps us match the right volunteers</p>
-                                    <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:16 }}>
-                                        {NGO_FOCUS.map(f => (
-                                            <motion.button key={f} whileTap={{ scale:0.94 }}
-                                                           onClick={() => toggleFocus(f)}
-                                                           style={{
-                                                               padding:"8px 14px", borderRadius:10, fontSize:12, fontWeight:600,
-                                                               border:"1.5px solid", cursor:"pointer", transition:"all 0.15s",
-                                                               background: form.focus.includes(f) ? "#1C352D" : "#f8faf6",
-                                                               borderColor: form.focus.includes(f) ? "#1C352D" : "#d4e4cc",
-                                                               color: form.focus.includes(f) ? "#EBF4DD" : "#5A7863",
-                                                           }}>{f}</motion.button>
-                                        ))}
-                                    </div>
-                                    <div>
-                                        <label style={labelStyle}>Brief Description</label>
-                                        <textarea value={form.description} onChange={s("description")}
-                                                  placeholder="Tell us about your NGO's mission and impact..."
-                                                  rows={3} style={{ ...inputStyle, resize:"none", lineHeight:1.5 }}
-                                                  onFocus={e => { e.target.style.borderColor="#5A7863"; e.target.style.boxShadow="0 0 0 3px rgba(90,120,99,0.12)" }}
-                                                  onBlur={e => { e.target.style.borderColor="#d4e4cc"; e.target.style.boxShadow="none" }} />
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Step 2: Documents */}
-                            {step === 2 && (
-                                <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
-                                    <p style={{ fontSize:14, fontWeight:800, color:"#1C352D", margin:0 }}>Verification Documents</p>
-                                    <p style={{ fontSize:12, color:"#90AB8B", margin:0 }}>These help us verify your NGO within 48 hours</p>
-                                    {[
-                                        { label:"Registration Number (12A / 80G / FCRA)", key:"regNumber", placeholder:"AAABCD1234E" },
-                                    ].map(f => (
-                                        <div key={f.key}>
-                                            <label style={labelStyle}>{f.label}</label>
-                                            <input value={form[f.key]} onChange={s(f.key)} placeholder={f.placeholder}
-                                                   style={inputStyle}
-                                                   onFocus={e => { e.target.style.borderColor="#5A7863"; e.target.style.boxShadow="0 0 0 3px rgba(90,120,99,0.12)" }}
-                                                   onBlur={e => { e.target.style.borderColor="#d4e4cc"; e.target.style.boxShadow="none" }} />
-                                        </div>
-                                    ))}
-                                    {/* Upload placeholders */}
-                                    {["Registration Certificate", "Pan Card / Tax Document"].map(doc => (
-                                        <div key={doc} style={{
-                                            border:"1.5px dashed #d4e4cc", borderRadius:12, padding:"16px",
-                                            display:"flex", alignItems:"center", gap:12, cursor:"pointer",
-                                            background:"#fafcf8", transition:"all 0.2s",
-                                        }}
-                                             onMouseEnter={e => e.currentTarget.style.borderColor="#5A7863"}
-                                             onMouseLeave={e => e.currentTarget.style.borderColor="#d4e4cc"}>
-                                            <div style={{ width:36, height:36, borderRadius:8, background:"#EBF4DD",
-                                                display:"flex", alignItems:"center", justifyContent:"center" }}>
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#5A7863" strokeWidth="2">
-                                                    <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/>
-                                                </svg>
-                                            </div>
-                                            <div>
-                                                <p style={{ fontSize:13, fontWeight:700, color:"#1C352D", margin:0 }}>{doc}</p>
-                                                <p style={{ fontSize:11, color:"#90AB8B", margin:0 }}>PDF or image · Max 5MB</p>
-                                            </div>
-                                        </div>
-                                    ))}
-                                    <div style={{ padding:"12px 14px", borderRadius:10, background:"#EBF4DD",
-                                        border:"1px solid #d4e4cc", display:"flex", gap:8, alignItems:"flex-start" }}>
-                                        <Shield size={14} style={{ color:"#5A7863", marginTop:2, flexShrink:0 }} />
-                                        <p style={{ fontSize:11, color:"#3B5C38", margin:0, lineHeight:1.5 }}>
-                                            Your documents are encrypted and only used for verification. They are never shared publicly.
-                                        </p>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Step 3: Done */}
-                            {step === 3 && (
-                                <div style={{ textAlign:"center", padding:"20px 0" }}>
-                                    <motion.div
-                                        initial={{ scale:0, rotate:-180 }} animate={{ scale:1, rotate:0 }}
-                                        transition={{ type:"spring", stiffness:200, damping:15 }}
-                                        style={{ width:64, height:64, borderRadius:20, background:"#1C352D",
-                                            display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px" }}>
-                                        <Check size={28} color="#EBF4DD" />
-                                    </motion.div>
-                                    <p style={{ fontSize:20, fontWeight:800, color:"#1C352D", marginBottom:8 }}>
-                                        Application Submitted! 🎉
-                                    </p>
-                                    <p style={{ fontSize:13, color:"#5A7863", marginBottom:20, lineHeight:1.6 }}>
-                                        <strong>{form.name || "Your NGO"}</strong> has been submitted for verification.
-                                        Our team will review and activate your account within <strong>48 hours</strong>.
-                                        Check <strong>{form.email || "your email"}</strong> for updates.
-                                    </p>
-                                    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                                        {[
-                                            { icon:"✓", text:"Application received" },
-                                            { icon:"⏳", text:"Under verification (48hrs)" },
-                                            { icon:"🚀", text:"Access granted to dashboard" },
-                                        ].map(i => (
-                                            <div key={i.text} style={{ display:"flex", alignItems:"center", gap:10,
-                                                padding:"10px 14px", borderRadius:10, background:"#f8faf6",
-                                                border:"1px solid #e8f0e0", textAlign:"left" }}>
-                                                <span style={{ fontSize:14 }}>{i.icon}</span>
-                                                <span style={{ fontSize:12, fontWeight:600, color:"#3B5C38" }}>{i.text}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <button onClick={onClose}
-                                            style={{ marginTop:20, padding:"12px 32px", borderRadius:14, background:"#1C352D",
-                                                color:"#EBF4DD", fontWeight:800, fontSize:13, border:"none", cursor:"pointer",
-                                                boxShadow:"0 4px 16px rgba(28,53,45,0.25)" }}>
-                                        Back to CivicPulse
-                                    </button>
-                                </div>
-                            )}
-                        </motion.div>
-                    </AnimatePresence>
-                </div>
-
-                {/* Footer buttons */}
-                {step < 3 && (
-                    <div style={{ padding:"16px 24px", borderTop:"1px solid #e8f0e0",
-                        display:"flex", gap:10, background:"#fafcf8" }}>
-                        {step > 0 && (
-                            <button onClick={() => setStep(s => s-1)}
-                                    style={{ padding:"10px 20px", borderRadius:12, border:"1.5px solid #d4e4cc",
-                                        color:"#3B4953", fontWeight:700, fontSize:13, background:"#fff", cursor:"pointer" }}>
-                                Back
-                            </button>
-                        )}
-                        <motion.button whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }}
-                                       onClick={next} disabled={loading}
-                                       style={{ flex:1, padding:"11px 20px", borderRadius:12, background:"#1C352D",
-                                           color:"#EBF4DD", fontWeight:800, fontSize:13, border:"none", cursor:"pointer",
-                                           display:"flex", alignItems:"center", justifyContent:"center", gap:6,
-                                           boxShadow:"0 4px 16px rgba(28,53,45,0.2)", opacity: loading ? 0.7 : 1 }}>
-                            {loading
-                                ? <svg className="animate-spin" width="16" height="16" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="white" strokeWidth="4"/><path className="opacity-75" fill="white" d="M4 12a8 8 0 018-8v8H4z"/></svg>
-                                : step === 2 ? <><Check size={14}/> Submit Application</> : <>Continue <ArrowRight size={14}/></>}
-                        </motion.button>
-                    </div>
-                )}
-            </motion.div>
-        </motion.div>
-    )
-}
-
-
-const StepBar = ({ current }) => (
-    <div className="flex items-center justify-center gap-0 mb-6">
-        {STEPS.map((s, i) => (
-            <div key={s.id} className="flex items-center">
-                <motion.div className="flex flex-col items-center gap-1" style={{ minWidth:64 }}>
-                    <motion.div
-                        animate={{
-                            background: i < current ? "#1C352D" : i === current ? "#5A7863" : "#e8f0e0",
-                            scale: i === current ? 1.15 : 1,
-                        }}
-                        className="w-8 h-8 rounded-full border-2 flex items-center justify-center font-black text-xs"
-                        style={{ borderColor: i <= current ? "#5A7863" : "#d4e4cc",
-                            color: i <= current ? "#EBF4DD" : "#90AB8B" }}>
-                        {i < current ? <Check size={13} /> : i + 1}
-                    </motion.div>
-                    <span className="text-[9px] font-semibold whitespace-nowrap hidden sm:block"
-                          style={{ color: i <= current ? "#1C352D" : "#90AB8B" }}>{s.label}</span>
-                </motion.div>
-                {i < STEPS.length - 1 && (
-                    <motion.div className="h-0.5 w-8 mb-4 -mx-1"
-                                animate={{ background: i < current ? "#5A7863" : "#e8f0e0" }} />
-                )}
-            </div>
-        ))}
-    </div>
-)
-
-/* ─── AUTH PANEL (Login + Signup combined) ──────────────────────────────── */
-const AuthPanel = ({ mode, onSwitchMode }) => {
-    const navigate = useNavigate()
-    // Login state
-    const [email,    setEmail]    = useState("")
-    const [password, setPassword] = useState("")
-    const [showPass, setShowPass] = useState(false)
-    const [loading,  setLoading]  = useState(false)
-    const [error,    setError]    = useState("")
-
-    // Signup state
-    const [step,  setStep]  = useState(0)
-    const [role,  setRole]  = useState(null)
-    const [form,  setForm]  = useState({
-        name:"", email:"", password:"", org:"", phone:"", city:"",
-        skills:[], days:[],
-    })
-    const set = k => e => setForm(p => ({...p, [k]: e.target.value}))
-    const toggleSkill = s => setForm(p => ({
-        ...p, skills: p.skills.includes(s) ? p.skills.filter(x=>x!==s) : [...p.skills,s]
-    }))
-    const toggleDay = d => setForm(p => ({
-        ...p, days: p.days.includes(d) ? p.days.filter(x=>x!==d) : [...p.days,d]
-    }))
-
-    const handleLogin = () => {
-        if (!email || !password) { setError("Please fill in all fields"); return }
-        setLoading(true); setError("")
-        // Simulate login — in real app check user role from API response
-        // Defaulting to NGO dashboard; swap logic with actual auth
-        setTimeout(() => {
-            setLoading(false)
-            navigate("/dashboard")
-        }, 1600)
-    }
-
-    const handleSignupNext = () => {
-        if (step === 0 && !role) return
-        if (step < STEPS.length - 1) { setStep(s => s+1); return }
-        setLoading(true)
-        setTimeout(() => {
-            setLoading(false)
-            // Role-based redirect after successful signup
-            if (role === "ngo") navigate("/dashboard")
-            else navigate("/volunteer-home")
-        }, 1800)
-    }
-
-    return (
-        <motion.div
-            initial={{ opacity:0, y:20, scale:0.97 }}
-            animate={{ opacity:1, y:0, scale:1 }}
-            exit={{ opacity:0, y:20, scale:0.97 }}
-            transition={{ duration:0.4, ease:"easeOut" }}
-            className="rounded-3xl overflow-hidden w-full max-w-[460px] mx-auto"
-            style={{
-                background:"rgba(255,255,255,0.97)",
-                border:"1.5px solid rgba(90,120,99,0.2)",
-                boxShadow:"0 32px 100px rgba(28,53,45,0.18)",
-                backdropFilter:"blur(20px)",
-            }}>
-
-            {/* Tab switcher */}
-            <div className="flex" style={{ borderBottom:"1.5px solid #e8f0e0" }}>
-                {["login","signup"].map(m => (
-                    <button key={m}
-                            onClick={() => { onSwitchMode(m); setStep(0); setError("") }}
-                            className="flex-1 py-4 text-sm font-black capitalize transition-all"
-                            style={{
-                                background: mode === m ? "#fff" : "#f8faf6",
-                                color: mode === m ? "#1C352D" : "#90AB8B",
-                                borderBottom: mode === m ? "2.5px solid #5A7863" : "none",
-                            }}>
-                        {m === "login" ? "Sign In" : "Create Account"}
-                    </button>
-                ))}
-            </div>
-
-            <div className="p-7">
-                <AnimatePresence mode="wait">
-                    {mode === "login" ? (
-                        <motion.div key="login"
-                                    initial={{ opacity:0, x:-20 }} animate={{ opacity:1, x:0 }}
-                                    exit={{ opacity:0, x:20 }} transition={{ duration:0.25 }}>
-
-                            <div className="mb-6">
-                                <h2 className="font-black text-2xl" style={{ color:"#1C352D" }}>Welcome back</h2>
-                                <p className="text-sm mt-1" style={{ color:"#90AB8B" }}>
-                                    Sign in to manage your community needs
-                                </p>
-                            </div>
-
-                            {error && (
-                                <motion.div initial={{ opacity:0 }} animate={{ opacity:1 }}
-                                            className="rounded-xl px-4 py-3 text-sm mb-4 flex items-center gap-2"
-                                            style={{ background:"#fef2f2", color:"#dc2626", border:"1px solid #fecaca" }}>
-                                    <AlertCircle size={14} /> {error}
-                                </motion.div>
-                            )}
-
-                            <div className="space-y-4">
-                                <Input label="Email address" type="email" placeholder="you@organization.org"
-                                       value={email} onChange={e => setEmail(e.target.value)} icon={<Mail size={15} />} />
-
-                                <div className="flex flex-col gap-1.5">
-                                    <div className="flex items-center justify-between">
-                                        <label className="text-sm font-semibold" style={{ color:"#3B4953" }}>Password</label>
-                                        <button className="text-xs font-semibold" style={{ color:"#5A7863" }}>Forgot?</button>
-                                    </div>
-                                    <div className="relative">
-                                        <div className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color:"#90AB8B" }}>
-                                            <Lock size={15} />
-                                        </div>
-                                        <input type={showPass ? "text" : "password"} value={password}
-                                               onChange={e => setPassword(e.target.value)} placeholder="••••••••"
-                                               className="w-full rounded-xl px-4 py-3 pl-10 pr-10 text-sm outline-none transition-all"
-                                               style={{ background:"#f8faf6", border:"1.5px solid #d4e4cc", color:"#1C352D" }}
-                                               onFocus={e => e.target.style.borderColor="#5A7863"}
-                                               onBlur={e => e.target.style.borderColor="#d4e4cc"} />
-                                        <button type="button" onClick={() => setShowPass(p=>!p)}
-                                                className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color:"#90AB8B" }}>
-                                            {showPass ? <EyeOff size={15}/> : <Eye size={15}/>}
-                                        </button>
-                                    </div>
-                                </div>
-
-                                <motion.button whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }}
-                                               onClick={handleLogin} disabled={loading}
-                                               className="w-full rounded-2xl py-3.5 text-sm font-black flex items-center justify-center gap-2 disabled:opacity-60"
-                                               style={{ background:"#1C352D", color:"#EBF4DD", boxShadow:"0 4px 20px rgba(28,53,45,0.3)" }}>
-                                    {loading
-                                        ? <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
-                                        : <>Sign in <ArrowRight size={15}/></>}
-                                </motion.button>
-
-                                <div className="flex items-center gap-3">
-                                    <div className="flex-1 h-px" style={{ background:"#e8f0e0" }} />
-                                    <span className="text-xs" style={{ color:"#90AB8B" }}>or</span>
-                                    <div className="flex-1 h-px" style={{ background:"#e8f0e0" }} />
-                                </div>
-
-                                <motion.button whileHover={{ scale:1.01 }} whileTap={{ scale:0.98 }}
-                                               className="w-full rounded-2xl py-3 text-sm font-semibold flex items-center justify-center gap-2 transition-all"
-                                               style={{ background:"#fff", border:"1.5px solid #d4e4cc", color:"#3B4953" }}>
-                                    <svg width="16" height="16" viewBox="0 0 24 24">
-                                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
-                                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
-                                    </svg>
-                                    Continue with Google
-                                </motion.button>
-                            </div>
-
-                            <p className="text-center text-sm mt-5" style={{ color:"#90AB8B" }}>
-                                New?{" "}
-                                <button className="font-black" style={{ color:"#1C352D" }}
-                                        onClick={() => onSwitchMode("signup")}>
-                                    Create account →
-                                </button>
-                            </p>
-                        </motion.div>
-
-                    ) : (
-                        <motion.div key="signup"
-                                    initial={{ opacity:0, x:20 }} animate={{ opacity:1, x:0 }}
-                                    exit={{ opacity:0, x:-20 }} transition={{ duration:0.25 }}>
-
-                            <div className="mb-5">
-                                <h2 className="font-black text-2xl" style={{ color:"#1C352D" }}>Join CivicPulse</h2>
-                                <p className="text-sm mt-1" style={{ color:"#90AB8B" }}>
-                                    {STEPS[step].desc}
-                                </p>
-                            </div>
-
-                            <StepBar current={step} />
-
-                            <AnimatePresence mode="wait">
-                                <motion.div key={step}
-                                            initial={{ opacity:0, x:30 }} animate={{ opacity:1, x:0 }}
-                                            exit={{ opacity:0, x:-30 }} transition={{ duration:0.2 }}>
-
-                                    {/* Step 0: Role */}
-                                    {step === 0 && (
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {[
-                                                { key:"ngo", icon:<Building2 size={22}/>, title:"NGO Coordinator",
-                                                    desc:"Manage needs, assign volunteers & track impact." },
-                                                { key:"volunteer", icon:<User size={22}/>, title:"Volunteer",
-                                                    desc:"Get matched to tasks that fit your skills & schedule." },
-                                            ].map(r => (
-                                                <motion.button key={r.key} whileTap={{ scale:0.97 }}
-                                                               onClick={() => setRole(r.key)}
-                                                               className="text-left rounded-2xl p-4 border-2 transition-all"
-                                                               style={{
-                                                                   background: role===r.key ? "#EBF4DD" : "#f8faf6",
-                                                                   borderColor: role===r.key ? "#5A7863" : "#d4e4cc",
-                                                                   boxShadow: role===r.key ? "0 6px 24px rgba(90,120,99,0.2)" : "none",
-                                                               }}>
-                                                    <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-3"
-                                                         style={{ background: role===r.key ? "#5A7863" : "#e8f0e0",
-                                                             color: role===r.key ? "#EBF4DD" : "#5A7863" }}>
-                                                        {r.icon}
-                                                    </div>
-                                                    <p className="font-black text-sm mb-1" style={{ color:"#1C352D" }}>{r.title}</p>
-                                                    <p className="text-xs leading-relaxed" style={{ color:"#5A7863" }}>{r.desc}</p>
-                                                </motion.button>
-                                            ))}
-                                        </div>
-                                    )}
-
-                                    {/* Step 1: Details */}
-                                    {step === 1 && (
-                                        <div className="grid grid-cols-2 gap-3">
-                                            <div className="col-span-2">
-                                                <Input label={role==="ngo" ? "Organization name" : "Full name"}
-                                                       placeholder={role==="ngo" ? "Green Future NGO" : "Alex Johnson"}
-                                                       value={form.name} onChange={set("name")}
-                                                       icon={role==="ngo" ? <Building2 size={14}/> : <User size={14}/>} />
-                                            </div>
-                                            <div className="col-span-2">
-                                                <Input label="Email" type="email" placeholder="you@org.org"
-                                                       value={form.email} onChange={set("email")} icon={<Mail size={14}/>} />
-                                            </div>
-                                            <Input label="Password" type="password" placeholder="••••••••"
-                                                   value={form.password} onChange={set("password")} icon={<Lock size={14}/>} />
-                                            <Input label="City" placeholder="Mumbai"
-                                                   value={form.city} onChange={set("city")} icon={<MapPin size={14}/>} />
-                                        </div>
-                                    )}
-
-                                    {/* Step 2: Skills */}
-                                    {step === 2 && (
-                                        <div>
-                                            <p className="text-xs font-bold mb-2" style={{ color:"#1C352D" }}>Skills</p>
-                                            <div className="flex flex-wrap gap-2 mb-4">
-                                                {SKILLS_LIST.map(s => (
-                                                    <motion.button key={s} whileTap={{ scale:0.93 }}
-                                                                   onClick={() => toggleSkill(s)}
-                                                                   className="px-3 py-1.5 rounded-xl text-xs font-semibold border-2 transition-all"
-                                                                   style={{
-                                                                       background: form.skills.includes(s) ? "#1C352D" : "#f8faf6",
-                                                                       borderColor: form.skills.includes(s) ? "#1C352D" : "#d4e4cc",
-                                                                       color: form.skills.includes(s) ? "#EBF4DD" : "#5A7863",
-                                                                   }}>{s}</motion.button>
-                                                ))}
-                                            </div>
-                                            <p className="text-xs font-bold mb-2" style={{ color:"#1C352D" }}>Available days</p>
-                                            <div className="flex gap-1.5 flex-wrap">
-                                                {DAYS.map(d => (
-                                                    <motion.button key={d} whileTap={{ scale:0.93 }}
-                                                                   onClick={() => toggleDay(d)}
-                                                                   className="w-12 py-2 rounded-xl text-xs font-bold border-2 transition-all"
-                                                                   style={{
-                                                                       background: form.days.includes(d) ? "#5A7863" : "#f8faf6",
-                                                                       borderColor: form.days.includes(d) ? "#5A7863" : "#d4e4cc",
-                                                                       color: form.days.includes(d) ? "#EBF4DD" : "#90AB8B",
-                                                                   }}>{d}</motion.button>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Step 3: Confirm */}
-                                    {step === 3 && (
-                                        <div className="text-center">
-                                            <motion.div
-                                                initial={{ scale:0, rotate:-180 }} animate={{ scale:1, rotate:0 }}
-                                                transition={{ type:"spring", stiffness:200, damping:15 }}
-                                                className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                                                style={{ background:"#1C352D" }}>
-                                                <Check size={26} color="#EBF4DD" />
-                                            </motion.div>
-                                            <h3 className="font-black text-lg mb-1" style={{ color:"#1C352D" }}>You're all set!</h3>
-                                            <div className="rounded-2xl p-4 text-left mt-4 space-y-2"
-                                                 style={{ background:"#f8faf6", border:"1.5px solid #e8f0e0" }}>
-                                                {[
-                                                    ["Role", role==="ngo" ? "NGO Coordinator" : "Volunteer"],
-                                                    ["Name", form.name||"—"],
-                                                    ["Email", form.email||"—"],
-                                                    ["Skills", form.skills.length ? form.skills.slice(0,3).join(", ")+"…" : "—"],
-                                                ].map(([k,v]) => (
-                                                    <div key={k} className="flex justify-between text-xs">
-                                                        <span className="font-semibold" style={{ color:"#90AB8B" }}>{k}</span>
-                                                        <span className="font-bold" style={{ color:"#1C352D" }}>{v}</span>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </motion.div>
-                            </AnimatePresence>
-
-                            {/* Nav buttons */}
-                            <div className="flex gap-2 mt-5">
-                                {step > 0 && (
-                                    <button onClick={() => setStep(s=>s-1)}
-                                            className="px-4 py-2.5 rounded-xl text-sm font-black border"
-                                            style={{ borderColor:"#d4e4cc", color:"#3B4953" }}>
-                                        Back
-                                    </button>
-                                )}
-                                <motion.button whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }}
-                                               onClick={handleSignupNext}
-                                               disabled={(step===0 && !role) || loading}
-                                               className="flex-1 py-2.5 rounded-xl text-sm font-black flex items-center justify-center gap-2 disabled:opacity-40"
-                                               style={{ background:"#1C352D", color:"#EBF4DD" }}>
-                                    {loading
-                                        ? <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/></svg>
-                                        : step === STEPS.length-1
-                                            ? <><Check size={14}/> Create account</>
-                                            : <>Continue <ArrowRight size={14}/></>}
-                                </motion.button>
-                            </div>
-
-                            <p className="text-center text-xs mt-4" style={{ color:"#90AB8B" }}>
-                                Already have an account?{" "}
-                                <button className="font-black" style={{ color:"#1C352D" }}
-                                        onClick={() => onSwitchMode("login")}>
-                                    Sign in →
-                                </button>
-                            </p>
-                        </motion.div>
-                    )}
-                </AnimatePresence>
-            </div>
-        </motion.div>
-    )
-}
-
-/* ─── ANIMATED GRAPH (Hero decoration) ─────────────────────────────────── */
-const NODES = [
-    { x:18, y:22, label:"Field Report" }, { x:50, y:15, label:"AI Scoring" },
-    { x:82, y:28, label:"Heatmap"      }, { x:25, y:58, label:"Volunteer"  },
-    { x:58, y:52, label:"Match"        }, { x:80, y:65, label:"Task Done"  },
-    { x:40, y:80, label:"Impact"       },
-]
-const EDGES = [[0,1],[1,2],[1,4],[3,4],[4,5],[4,6],[2,5]]
-
-const AnimatedGraph = () => {
-    const [active, setActive] = useState(0)
-    useEffect(() => {
-        const t = setInterval(() => setActive(p => (p+1)%NODES.length), 1300)
-        return () => clearInterval(t)
-    }, [])
-    return (
-        <div className="relative w-full h-48">
-            <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
-                {EDGES.map(([a,b],i) => (
-                    <motion.line key={i}
-                                 x1={`${NODES[a].x}%`} y1={`${NODES[a].y}%`}
-                                 x2={`${NODES[b].x}%`} y2={`${NODES[b].y}%`}
-                                 stroke="#5A7863" strokeWidth="0.4" strokeOpacity="0.5" strokeDasharray="2 2"
-                                 initial={{ pathLength:0 }} animate={{ pathLength:1 }}
-                                 transition={{ delay:i*0.2, duration:1 }} />
-                ))}
-                {NODES.map((node,i) => (
-                    <g key={i}>
-                        <motion.circle cx={`${node.x}%`} cy={`${node.y}%`} r="1.8"
-                                       fill={i===active ? "#90AB8B" : "#3B4953"}
-                                       stroke={i===active ? "#EBF4DD" : "#5A7863"} strokeWidth="0.5"
-                                       animate={{ r: i===active ? 2.8 : 1.8, opacity: i===active ? 1 : 0.6 }}
-                                       transition={{ duration:0.4 }} />
-                        {i===active && (
-                            <motion.circle cx={`${node.x}%`} cy={`${node.y}%`}
-                                           r="4" fill="none" stroke="#90AB8B" strokeWidth="0.3"
-                                           initial={{ r:2, opacity:1 }} animate={{ r:7, opacity:0 }}
-                                           transition={{ duration:1, repeat:Infinity }} />
-                        )}
-                    </g>
-                ))}
-            </svg>
-            {NODES.map((node,i) => (
-                <motion.div key={i} className="absolute text-[8px] font-semibold pointer-events-none"
-                            style={{ left:`${node.x}%`, top:`${node.y}%`, transform:"translate(-50%,-220%)" }}
-                            animate={{ opacity: i===active ? 1 : 0.3 }} transition={{ duration:0.3 }}>
-          <span className={`px-1.5 py-0.5 rounded-md whitespace-nowrap ${
-              i===active ? "bg-moss-500 text-sage-50" : "bg-white/10 text-moss-300"}`}
-                style={{
-                    background: i===active ? "#5A7863" : "rgba(255,255,255,0.1)",
-                    color: i===active ? "#EBF4DD" : "#90AB8B"
-                }}>
-            {node.label}
-          </span>
-                </motion.div>
-            ))}
-        </div>
-    )
-}
-
 /* ─── HERO SECTION ───────────────────────────────────────────────────────── */
 const HeroSection = ({ onAuthClick }) => {
+    const { dark } = useTheme()
     const { scrollY } = useScroll()
-    const y = useTransform(scrollY, [0, 500], [0, -80])
+    const yPan = useTransform(scrollY, [0,500], [0,-80])
+    const rightBg = dark ? "#0a0f08" : "#f0f4ec"
 
     return (
-        <section id="home" className="min-h-screen relative flex overflow-hidden" style={{ background:"#f0f4ec" }}>
-            <BgParticles />
+        <section id="home" style={{ minHeight:"100vh", display:"flex", overflow:"hidden",
+            background:rightBg, position:"relative" }}>
+            <BgParticles dark={dark} />
 
-            {/* Left: Dark panel */}
-            <motion.div
-                className="hidden lg:flex w-[52%] flex-col relative overflow-hidden"
-                style={{ y, background:"#1C352D" }}>
-
+            {/* LEFT — dark panel (always dark) */}
+            <motion.div style={{ y:yPan, background:"#1C352D", width:"52%",
+                display:"flex", flexDirection:"column", position:"relative", overflow:"hidden" }}
+                        className="hidden lg:flex">
                 {/* Orbs */}
-                <div className="absolute w-96 h-96 rounded-full pointer-events-none"
-                     style={{ background:"radial-gradient(circle, #5A7863 0%, transparent 70%)",
-                         opacity:0.2, top:"-100px", left:"-80px", filter:"blur(60px)" }} />
-                <div className="absolute w-72 h-72 rounded-full pointer-events-none"
-                     style={{ background:"radial-gradient(circle, #90AB8B 0%, transparent 70%)",
-                         opacity:0.15, bottom:"0", right:"-60px", filter:"blur(60px)" }} />
+                <div style={{ position:"absolute", width:400, height:400, borderRadius:"50%", pointerEvents:"none",
+                    background:"radial-gradient(circle, #5A7863 0%, transparent 70%)",
+                    opacity:0.18, top:-120, left:-100, filter:"blur(70px)" }} />
+                <div style={{ position:"absolute", width:300, height:300, borderRadius:"50%", pointerEvents:"none",
+                    background:"radial-gradient(circle, #90AB8B 0%, transparent 70%)",
+                    opacity:0.12, bottom:0, right:-80, filter:"blur(70px)" }} />
+                {/* Dot grid */}
+                <div style={{ position:"absolute", inset:0, pointerEvents:"none",
+                    backgroundImage:"radial-gradient(circle, rgba(90,120,99,0.18) 1px, transparent 1px)",
+                    backgroundSize:"26px 26px" }} />
 
-                <div className="relative z-10 flex flex-col h-full p-12 gap-8 pt-28">
+                <div style={{ position:"relative", zIndex:10, display:"flex", flexDirection:"column",
+                    height:"100%", padding:"48px 48px 40px", gap:24, paddingTop:112 }}>
                     {/* Logo */}
-                    <div className="flex items-center gap-3">
-                        <motion.div
-                            animate={{ boxShadow:["0 0 0px #5A786300","0 0 24px #5A786366","0 0 0px #5A786300"] }}
-                            transition={{ duration:3, repeat:Infinity }}
-                            className="w-10 h-10 rounded-2xl flex items-center justify-center"
-                            style={{ background:"#5f887f" }}>
-                            <Zap size={20} color="#EBF4DD" />
+                    <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+                        <motion.div animate={{ boxShadow:["0 0 0px #5A786300","0 0 24px #5A786366","0 0 0px #5A786300"] }}
+                                    transition={{ duration:3, repeat:Infinity }}
+                                    style={{ width:44, height:44, borderRadius:14, background:"#5f887f",
+                                        display:"flex", alignItems:"center", justifyContent:"center" }}>
+                            <Zap size={20} color="#EBF4DD"/>
                         </motion.div>
                         <div>
-                            <span className="font-black text-xl" style={{ color:"#EBF4DD" }}>CivicPulse</span>
-                            <p className="text-[10px] font-medium tracking-widest uppercase mt-0.5" style={{ color:"#90AB8B" }}>
-                                by CivicPlus
-                            </p>
+                            <span style={{ fontWeight:900, fontSize:20, color:"#EBF4DD" }}>CivicPulse</span>
+                            <p style={{ fontSize:9, letterSpacing:3, textTransform:"uppercase",
+                                color:"#90AB8B", margin:0, fontWeight:700 }}>by CivicPlus</p>
                         </div>
                     </div>
 
-                    {/* Graph */}
+                    {/* Graph box */}
                     <motion.div initial={{ opacity:0, scale:0.9 }} animate={{ opacity:1, scale:1 }}
                                 transition={{ delay:0.3, duration:0.7 }}
-                                className="rounded-3xl border p-4"
-                                style={{ background:"rgb(236 243 237)", borderColor:"rgb(220 230 222)" }}>
-                        <p className="text-[10px] font-bold tracking-widest uppercase mb-3" style={{ color:"#0b3511" }}>
-                            Live coordination network
+                                style={{ borderRadius:20, border:"1px solid rgba(90,120,99,0.3)",
+                                    padding:"16px", background:"rgba(236,243,237,0.06)",
+                                    backdropFilter:"blur(8px)" }}>
+                        <p style={{ fontSize:9, fontWeight:800, letterSpacing:3, textTransform:"uppercase",
+                            color:"#90AB8B", marginBottom:12 }}>
+                            🟢 Live Coordination Network
                         </p>
                         <AnimatedGraph />
                     </motion.div>
 
-                    {/* Hero text */}
+                    {/* Tagline */}
                     <motion.div initial={{ opacity:0, y:20 }} animate={{ opacity:1, y:0 }}
                                 transition={{ delay:0.4 }}>
-                        <h2 className="font-black text-3xl leading-tight mb-3" style={{ color:"#EBF4DD" }}>
-                            Turning scattered data<br />into community action
+                        <h2 style={{ fontWeight:900, fontSize:26, lineHeight:1.3, marginBottom:8, color:"#EBF4DD" }}>
+                            Turning scattered data<br/>into community action
                         </h2>
-                        <p className="text-sm leading-relaxed" style={{ color:"#90AB8B" }}>
+                        <p style={{ fontSize:13, lineHeight:1.6, color:"#90AB8B", margin:0 }}>
                             The only platform that closes the full loop — from paper survey to volunteer deployed to donor notified.
                         </p>
                     </motion.div>
 
                     {/* Feature pills */}
-                    <div className="flex flex-col gap-2 mt-auto">
+                    <div style={{ display:"flex", flexDirection:"column", gap:8, marginTop:"auto" }}>
                         {[
-                            { icon:"⚡", t:"AI Urgency Scoring", d:"Every need scored in real-time", delay:0.5 },
-                            { icon:"🎯", t:"Smart Volunteer Match", d:"6-factor algorithm, zero manual calls", delay:0.65 },
-                            { icon:"📊", t:"Live Impact Dashboard", d:"Donors see their contribution in real-time", delay:0.8 },
+                            { icon:"⚡", t:"AI Urgency Scoring",    d:"Every need scored in real-time",         delay:0.5 },
+                            { icon:"🎯", t:"Smart Volunteer Match",  d:"6-factor algorithm, zero manual calls",  delay:0.65 },
+                            { icon:"📊", t:"Live Impact Dashboard",  d:"Donors see contributions in real-time",  delay:0.8 },
                         ].map(f => (
-                            <motion.div key={f.t}
-                                        initial={{ opacity:0, x:-20 }} animate={{ opacity:1, x:0 }}
+                            <motion.div key={f.t} initial={{ opacity:0, x:-20 }} animate={{ opacity:1, x:0 }}
                                         transition={{ delay:f.delay }}
-                                        className="flex items-center gap-3 rounded-xl p-3 border"
-                                        style={{ background:"rgba(255,255,255,0.06)", borderColor:"rgba(255,255,255,0.1)" }}>
-                                <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 text-base"
-                                     style={{ background:"rgba(90,120,99,0.3)" }}>{f.icon}</div>
+                                        style={{ display:"flex", alignItems:"center", gap:12, borderRadius:12, padding:"10px 13px",
+                                            background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.09)" }}>
+                                <div style={{ width:32, height:32, borderRadius:9, fontSize:14, flexShrink:0,
+                                    display:"flex", alignItems:"center", justifyContent:"center",
+                                    background:"rgba(90,120,99,0.28)" }}>{f.icon}</div>
                                 <div>
-                                    <p className="text-white text-xs font-bold">{f.t}</p>
-                                    <p className="text-xs mt-0.5" style={{ color:"#90AB8B" }}>{f.d}</p>
+                                    <p style={{ fontSize:12, fontWeight:800, color:"#EBF4DD", margin:0 }}>{f.t}</p>
+                                    <p style={{ fontSize:10, color:"#90AB8B", margin:0 }}>{f.d}</p>
                                 </div>
                             </motion.div>
                         ))}
@@ -1132,71 +1341,65 @@ const HeroSection = ({ onAuthClick }) => {
                 </div>
             </motion.div>
 
-            {/* Right: Auth + CTA */}
-            <div className="flex-1 flex flex-col items-center justify-center p-6 lg:p-12 relative z-10 pt-24">
-                <div className="absolute inset-0 pointer-events-none"
-                     style={{ backgroundImage:`radial-gradient(circle, #5A786315 1px, transparent 1px)`, backgroundSize:"28px 28px" }} />
+            {/* RIGHT — CTA panel */}
+            <div style={{ flex:1, display:"flex", flexDirection:"column",
+                alignItems:"center", justifyContent:"center",
+                padding:"24px 24px 24px", paddingTop:100, position:"relative", zIndex:10 }}>
+                <div style={{ position:"absolute", inset:0, pointerEvents:"none",
+                    backgroundImage:`radial-gradient(circle, ${dark?"rgba(120,180,80,0.1)":"rgba(90,120,99,0.1)"} 1px, transparent 1px)`,
+                    backgroundSize:"28px 28px" }} />
 
                 <motion.div initial={{ opacity:0, y:30 }} animate={{ opacity:1, y:0 }}
                             transition={{ duration:0.7 }}
-                            className="w-full max-w-[460px] relative z-10">
+                            style={{ width:"100%", maxWidth:460, position:"relative", zIndex:10 }}>
 
                     {/* Mobile logo */}
-                    <div className="flex items-center gap-3 mb-8 lg:hidden">
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background:"#1C352D" }}>
-                            <Zap size={16} color="#EBF4DD" />
+                    <div className="flex lg:hidden" style={{ alignItems:"center", gap:10, marginBottom:28 }}>
+                        <div style={{ width:34, height:34, borderRadius:9, background:"#1C352D",
+                            display:"flex", alignItems:"center", justifyContent:"center" }}>
+                            <Zap size={15} color="#EBF4DD"/>
                         </div>
-                        <span className="font-black text-xl" style={{ color:"#1C352D" }}>CivicPulse</span>
+                        <span style={{ fontWeight:900, fontSize:18, color: dark ? "#edf5e0" : "#1C352D" }}>CivicPulse</span>
                     </div>
 
                     {/* Badge */}
                     <motion.div initial={{ opacity:0, scale:0.8 }} animate={{ opacity:1, scale:1 }}
                                 transition={{ delay:0.2 }}
-                                className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-bold tracking-wider uppercase mb-4"
-                                style={{ background:"#EBF4DD", color:"#3B4953" }}>
-                        <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background:"#5A7863" }} />
+                                style={{ display:"inline-flex", alignItems:"center", gap:7, padding:"6px 14px",
+                                    borderRadius:99, fontSize:10, fontWeight:800, letterSpacing:1.5,
+                                    textTransform:"uppercase", marginBottom:16,
+                                    background: dark ? "rgba(120,180,80,0.12)" : "#EBF4DD",
+                                    color: dark ? "#78b450" : "#3B4953",
+                                    border: `1px solid ${dark?"rgba(120,180,80,0.2)":"rgba(90,120,99,0.2)"}` }}>
+                        <span style={{ width:6, height:6, borderRadius:"50%", background:"#5A7863", animation:"pulse 2s infinite" }} />
                         Community Platform · India
                     </motion.div>
 
-                    <h1 className="font-black text-4xl lg:text-5xl leading-tight mb-3" style={{ color:"#1C352D" }}>
-                        Make real<br />community impact
+                    <h1 style={{ fontWeight:900, fontSize:42, lineHeight:1.15, marginBottom:12,
+                        color: dark ? "#edf5e0" : "#1C352D", letterSpacing:-1 }}>
+                        Make real<br/>community impact
                     </h1>
-                    <p className="text-sm mb-8 leading-relaxed" style={{ color:"#5A7863" }}>
+                    <p style={{ fontSize:14, marginBottom:28, lineHeight:1.65, color: dark ? "#7a9b6a" : "#5A7863" }}>
                         Join 2,400+ volunteers and 180+ NGOs already using CivicPulse to coordinate relief, track needs, and close the loop.
                     </p>
 
-                    {/* Auth buttons → show panel below */}
-                    <div className="flex gap-3 mb-8">
-                        <motion.button whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }}
-                                       onClick={() => onAuthClick("login")}
-                                       className="flex-1 py-3.5 rounded-2xl text-sm font-black flex items-center justify-center gap-2"
-                                       style={{ background:"#1C352D", color:"#EBF4DD", boxShadow:"0 4px 20px rgba(28,53,45,0.3)" }}>
-                            Sign In <ArrowRight size={14} />
-                        </motion.button>
-                        <motion.button whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }}
-                                       onClick={() => onAuthClick("signup")}
-                                       className="flex-1 py-3.5 rounded-2xl text-sm font-black flex items-center justify-center gap-2"
-                                       style={{ background:"rgba(90,120,99,0.15)", color:"#1C352D", border:"1.5px solid #d4e4cc" }}>
-                            Join Free <Zap size={14} />
-                        </motion.button>
+                    {/* Buttons */}
+                    <div style={{ display:"flex", gap:12, marginBottom:28, flexWrap:"wrap" }}>
+                        <GradientBtn onClick={() => onAuthClick("login")} dark={dark} style={{ flex:1 }}>
+                            Sign In <ArrowRight size={14}/>
+                        </GradientBtn>
+                        <GradientBtn onClick={() => onAuthClick("signup")} dark={dark} outline style={{ flex:1 }}>
+                            Join Free <Zap size={14}/>
+                        </GradientBtn>
                     </div>
 
-                    {/* Stats mini row */}
-                    <div className="grid grid-cols-2 gap-3">
+                    {/* Stat cards */}
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10 }}>
                         {STATS.map((s, i) => (
                             <motion.div key={s.label}
                                         initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }}
-                                        transition={{ delay:0.5 + i*0.1 }}
-                                        className="rounded-2xl p-4 flex items-center gap-3"
-                                        style={{ background:"rgba(255,255,255,0.85)", border:"1.5px solid rgba(90,120,99,0.15)" }}>
-                                <div className="w-8 h-8 rounded-xl flex items-center justify-center shrink-0"
-                                     style={{ background:"#EBF4DD", color:"#5A7863" }}>
-                                    {s.icon}
-                                </div>
-                                <div>
-                                    <p className="font-black text-base" style={{ color:"#1C352D" }}>{s.value}</p>
-                                    <p className="text-[10px] font-semibold" style={{ color:"#90AB8B" }}>{s.label}</p>
-                                </div>
+                                        transition={{ delay:0.5 + i*0.1 }}>
+                                <StatCard stat={s} dark={dark} />
                             </motion.div>
                         ))}
                     </div>
@@ -1206,76 +1409,60 @@ const HeroSection = ({ onAuthClick }) => {
     )
 }
 
-/* ─── AUTH MODAL (overlay) ───────────────────────────────────────────────── */
-const AuthModal = ({ mode, onClose, onSwitch }) => (
-    <motion.div
-        initial={{ opacity:0 }} animate={{ opacity:1 }} exit={{ opacity:0 }}
-        className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-        style={{ background:"rgba(28,53,45,0.6)", backdropFilter:"blur(8px)" }}
-        onClick={onClose}>
-        <div onClick={e => e.stopPropagation()} className="w-full max-w-[460px]">
-            <button onClick={onClose}
-                    className="ml-auto mb-4 flex items-center gap-1.5 text-sm font-semibold"
-                    style={{ color:"#EBF4DD" }}>
-                <X size={16} /> Close
-            </button>
-            <AuthPanel mode={mode} onSwitchMode={onSwitch} />
-        </div>
-    </motion.div>
-)
-
 /* ─── ABOUT SECTION ─────────────────────────────────────────────────────── */
 const AboutSection = () => {
+    const { dark } = useTheme()
     const ref = useRef(null)
     const { scrollYProgress } = useScroll({ target:ref, offset:["start end","end start"] })
-    const y = useTransform(scrollYProgress, [0,1], [40, -40])
+    const y = useTransform(scrollYProgress, [0,1], [40,-40])
 
     return (
-        <section id="about" ref={ref}
-                 className="py-32 relative overflow-hidden"
-                 style={{ background:"#1C352D" }}>
+        <section id="about" ref={ref} style={{ padding:"112px 0", position:"relative", overflow:"hidden", background:"#1C352D" }}>
+            <div style={{ position:"absolute", inset:0, pointerEvents:"none",
+                backgroundImage:"radial-gradient(circle, rgba(90,120,99,0.14) 1px, transparent 1px)",
+                backgroundSize:"32px 32px" }} />
+            <motion.div style={{ position:"absolute", width:600, height:600, borderRadius:"50%", pointerEvents:"none",
+                background:"radial-gradient(circle, #5A7863 0%, transparent 70%)",
+                opacity:0.07, filter:"blur(90px)", top:-200, right:-200, y }} />
 
-            <div className="absolute inset-0 pointer-events-none"
-                 style={{ backgroundImage:`radial-gradient(circle, rgba(90,120,99,0.15) 1px, transparent 1px)`, backgroundSize:"32px 32px" }} />
-            <motion.div className="absolute w-[600px] h-[600px] rounded-full pointer-events-none"
-                        style={{ background:"radial-gradient(circle, #5A7863 0%, transparent 70%)",
-                            opacity:0.08, filter:"blur(80px)", top:"-200px", right:"-200px", y }} />
-
-            <div className="max-w-7xl mx-auto px-6 relative z-10">
+            <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 24px", position:"relative", zIndex:10 }}>
                 {/* Header */}
                 <motion.div initial={{ opacity:0, y:30 }} whileInView={{ opacity:1, y:0 }}
                             viewport={{ once:true }} transition={{ duration:0.6 }}
-                            className="text-center mb-20">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-6"
-                         style={{ background:"rgba(90,120,99,0.2)", color:"#90AB8B", border:"1px solid rgba(90,120,99,0.3)" }}>
-                        <Zap size={11} /> What is CivicPulse
+                            style={{ textAlign:"center", marginBottom:72 }}>
+                    <div style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"8px 18px",
+                        borderRadius:99, fontSize:10, fontWeight:800, letterSpacing:2,
+                        textTransform:"uppercase", marginBottom:20,
+                        background:"rgba(90,120,99,0.18)", color:"#90AB8B",
+                        border:"1px solid rgba(90,120,99,0.3)" }}>
+                        <Zap size={11}/> What is CivicPulse
                     </div>
-                    <h2 className="font-black text-4xl lg:text-5xl leading-tight mb-6" style={{ color:"#EBF4DD" }}>
-                        One platform.<br />Entire relief loop closed.
+                    <h2 style={{ fontWeight:900, fontSize:46, lineHeight:1.15, marginBottom:20, color:"#EBF4DD", letterSpacing:-1 }}>
+                        One platform.<br/>Entire relief loop closed.
                     </h2>
-                    <p className="text-lg max-w-2xl mx-auto leading-relaxed" style={{ color:"#90AB8B" }}>
-                        CivicPulse is an AI-powered coordination engine that connects community needs, NGO coordinators, volunteers, and donors on a single transparent platform — so no need goes unmet.
+                    <p style={{ fontSize:17, maxWidth:600, margin:"0 auto", lineHeight:1.7, color:"#90AB8B" }}>
+                        CivicPulse is an AI-powered coordination engine connecting community needs, NGO coordinators, volunteers, and donors on a single transparent platform.
                     </p>
                 </motion.div>
 
                 {/* Feature grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                    {FEATURES.map((f, i) => (
+                <div style={{ display:"grid", gridTemplateColumns:"repeat(3, 1fr)", gap:18 }} className="grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                    {FEATURES.map((f,i) => (
                         <motion.div key={f.title}
                                     initial={{ opacity:0, y:30 }} whileInView={{ opacity:1, y:0 }}
                                     viewport={{ once:true }} transition={{ delay:i*0.1, duration:0.5 }}
-                                    whileHover={{ y:-4, transition:{ duration:0.2 } }}
-                                    className="rounded-2xl p-6 group cursor-default"
-                                    style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.08)",
-                                        transition:"background 0.2s" }}
-                                    onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.08)"}
-                                    onMouseLeave={e => e.currentTarget.style.background="rgba(255,255,255,0.05)"}>
-                            <div className="w-11 h-11 rounded-xl flex items-center justify-center mb-4"
-                                 style={{ background:`${f.color}30`, color:f.color }}>
+                                    whileHover={{ y:-5, transition:{ duration:0.2 } }}
+                                    style={{ borderRadius:20, padding:24, cursor:"default", transition:"background 0.2s",
+                                        background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.07)" }}
+                                    onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,0.08)"}
+                                    onMouseLeave={e=>e.currentTarget.style.background="rgba(255,255,255,0.04)"}>
+                            <div style={{ width:44, height:44, borderRadius:12, display:"flex",
+                                alignItems:"center", justifyContent:"center", marginBottom:16,
+                                background:`${f.color}28`, color:f.color }}>
                                 {f.icon}
                             </div>
-                            <h3 className="font-black text-base mb-2" style={{ color:"#EBF4DD" }}>{f.title}</h3>
-                            <p className="text-sm leading-relaxed" style={{ color:"#7A9B83" }}>{f.desc}</p>
+                            <h3 style={{ fontWeight:900, fontSize:15, marginBottom:8, color:"#EBF4DD" }}>{f.title}</h3>
+                            <p style={{ fontSize:13, lineHeight:1.65, color:"#7A9B83", margin:0 }}>{f.desc}</p>
                         </motion.div>
                     ))}
                 </div>
@@ -1283,20 +1470,21 @@ const AboutSection = () => {
                 {/* Bottom CTA */}
                 <motion.div initial={{ opacity:0, y:20 }} whileInView={{ opacity:1, y:0 }}
                             viewport={{ once:true }} transition={{ delay:0.4 }}
-                            className="mt-16 rounded-3xl p-10 text-center"
-                            style={{ background:"rgba(90,120,99,0.12)", border:"1px solid rgba(90,120,99,0.25)" }}>
-                    <p className="font-black text-2xl mb-3" style={{ color:"#EBF4DD" }}>
+                            style={{ marginTop:64, borderRadius:24, padding:"40px", textAlign:"center",
+                                background:"rgba(90,120,99,0.1)", border:"1px solid rgba(90,120,99,0.22)" }}>
+                    <p style={{ fontWeight:900, fontSize:24, marginBottom:12, color:"#EBF4DD" }}>
                         Built for India's civic ecosystem
                     </p>
-                    <p className="text-sm mb-6 max-w-lg mx-auto" style={{ color:"#90AB8B" }}>
+                    <p style={{ fontSize:14, marginBottom:24, maxWidth:520, margin:"0 auto 24px", color:"#90AB8B" }}>
                         From coastal disaster response to urban slum nutrition drives — CivicPulse scales with every kind of community need.
                     </p>
-                    <div className="flex items-center justify-center gap-4 flex-wrap">
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:10, flexWrap:"wrap" }}>
                         {["NGO Coordinators","Field Volunteers","Donors & Funders","Government Bodies"].map(tag => (
-                            <span key={tag} className="px-4 py-1.5 rounded-full text-xs font-bold"
-                                  style={{ background:"rgba(90,120,99,0.25)", color:"#90AB8B", border:"1px solid rgba(90,120,99,0.3)" }}>
-                {tag}
-              </span>
+                            <span key={tag} style={{ padding:"7px 16px", borderRadius:99, fontSize:11, fontWeight:700,
+                                background:"rgba(90,120,99,0.22)", color:"#90AB8B",
+                                border:"1px solid rgba(90,120,99,0.3)" }}>
+                                {tag}
+                            </span>
                         ))}
                     </div>
                 </motion.div>
@@ -1305,141 +1493,157 @@ const AboutSection = () => {
     )
 }
 
-/* ─── NGO CARDS SECTION ─────────────────────────────────────────────────── */
+/* ─── 3D NGO CAROUSEL ────────────────────────────────────────────────────── */
 const NGOSection = ({ onNgoRegister }) => {
-    const [isPaused, setIsPaused] = useState(false)
+    const { dark } = useTheme()
+    const sectionBg = dark ? "#0a0f08" : "#f0f4ec"
+    const quantity = NGOS.length
+    const cardW = 220, cardH = 310
+    const translateZ = (cardW + cardH) / 2 + 100
+
+    const carouselStyle = `
+        @keyframes rotateCarousel {
+            from { transform: perspective(1200px) rotateX(-12deg) rotateY(0deg); }
+            to   { transform: perspective(1200px) rotateX(-12deg) rotateY(-360deg); }
+        }
+        .ngo-ring {
+            animation: rotateCarousel 32s linear infinite;
+            transform-style: preserve-3d;
+            position: relative;
+            width: ${cardW}px;
+            height: ${cardH}px;
+            margin: 0 auto;
+        }
+        .ngo-ring:hover { animation-play-state: paused; }
+        .ngo-card-3d {
+            position: absolute;
+            width: ${cardW}px;
+            height: ${cardH}px;
+            border-radius: 20px;
+            overflow: hidden;
+            top: 0; left: 0;
+            backface-visibility: hidden;
+        }
+    `
 
     return (
-        <section id="ngos" className="py-32 relative overflow-hidden" style={{ background:"#f0f4ec" }}>
-            <BgParticles />
+        <section id="ngos" style={{ padding:"96px 0", position:"relative", overflow:"hidden", background:sectionBg }}>
+            <style>{carouselStyle}</style>
+            <BgParticles dark={dark} />
 
-            <div className="max-w-7xl mx-auto px-6 relative z-10">
+            <div style={{ maxWidth:1280, margin:"0 auto", padding:"0 24px", position:"relative", zIndex:10 }}>
                 <motion.div initial={{ opacity:0, y:30 }} whileInView={{ opacity:1, y:0 }}
-                            viewport={{ once:true }} className="text-center mb-16">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-6"
-                         style={{ background:"#EBF4DD", color:"#5A7863", border:"1px solid #d4e4cc" }}>
-                        <Building2 size={11} /> Registered NGOs
+                            viewport={{ once:true }} style={{ textAlign:"center", marginBottom:64 }}>
+                    <div style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"7px 16px",
+                        borderRadius:99, fontSize:10, fontWeight:800, letterSpacing:2, textTransform:"uppercase", marginBottom:18,
+                        background: dark ? "rgba(120,180,80,0.1)" : "#EBF4DD",
+                        color: dark ? "#78b450" : "#5A7863",
+                        border: `1px solid ${dark?"rgba(120,180,80,0.2)":"#d4e4cc"}` }}>
+                        <Building2 size={11}/> Registered NGOs
                     </div>
-                    <h2 className="font-black text-4xl lg:text-5xl mb-4" style={{ color:"#1C352D" }}>
+                    <h2 style={{ fontWeight:900, fontSize:42, marginBottom:14, letterSpacing:-1,
+                        color: dark ? "#edf5e0" : "#1C352D" }}>
                         NGOs making change happen
                     </h2>
-                    <p className="text-lg max-w-xl mx-auto" style={{ color:"#5A7863" }}>
+                    <p style={{ fontSize:16, maxWidth:480, margin:"0 auto", color: dark ? "#7a9b6a" : "#5A7863", lineHeight:1.65 }}>
                         Verified organisations across India, actively coordinating real-world impact through CivicPulse.
                     </p>
                 </motion.div>
 
-                {/* Scrollable card strip */}
-                <div className="relative">
-                    {/* Fade edges */}
-                    <div className="absolute left-0 top-0 bottom-0 w-16 z-10 pointer-events-none"
-                         style={{ background:"linear-gradient(to right, #f0f4ec, transparent)" }} />
-                    <div className="absolute right-0 top-0 bottom-0 w-16 z-10 pointer-events-none"
-                         style={{ background:"linear-gradient(to left, #f0f4ec, transparent)" }} />
-
-                    <div className="overflow-x-auto pb-4 scroll-smooth"
-                         style={{ scrollbarWidth:"none", msOverflowStyle:"none" }}
-                         onMouseEnter={() => setIsPaused(true)}
-                         onMouseLeave={() => setIsPaused(false)}>
-                        <motion.div
-                            className="flex gap-5"
-                            style={{ width:"max-content" }}
-                            animate={isPaused ? {} : { x:[0, -((NGOS.length/2)*340)] }}
-                            transition={{ duration:30, repeat:Infinity, ease:"linear", repeatType:"loop" }}>
-                            {/* Duplicate for infinite scroll */}
-                            {[...NGOS, ...NGOS].map((ngo, i) => (
-                                <motion.div key={i}
-                                            initial={{ opacity:0, y:20 }} whileInView={{ opacity:1, y:0 }}
-                                            viewport={{ once:true }} transition={{ delay:(i%NGOS.length)*0.08 }}
-                                            whileHover={{ y:-6, transition:{ duration:0.2 } }}
-                                            className="rounded-3xl p-6 shrink-0 cursor-pointer group"
-                                            style={{
-                                                width:320,
-                                                background:"rgba(255,255,255,0.92)",
-                                                border:"1.5px solid rgba(90,120,99,0.15)",
-                                                boxShadow:"0 4px 24px rgba(28,53,45,0.06)",
-                                            }}
-                                            onMouseEnter={e => { e.currentTarget.style.borderColor="#5A7863"; e.currentTarget.style.boxShadow="0 12px 40px rgba(28,53,45,0.15)" }}
-                                            onMouseLeave={e => { e.currentTarget.style.borderColor="rgba(90,120,99,0.15)"; e.currentTarget.style.boxShadow="0 4px 24px rgba(28,53,45,0.06)" }}>
-
-                                    {/* Header */}
-                                    <div className="flex items-start justify-between mb-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm"
-                                                 style={{ background:"#1C352D", color:"#EBF4DD" }}>
-                                                {ngo.avatar}
+                {/* 3D Carousel */}
+                <div style={{ display:"flex", justifyContent:"center", marginBottom:24 }}>
+                    <div style={{ perspective:1200, perspectiveOrigin:"50% 50%", height:cardH + 80 }}>
+                        <div className="ngo-ring"
+                             style={{ marginTop:40, transformStyle:"preserve-3d" }}>
+                            {NGOS.map((ngo, idx) => {
+                                const angle = (360 / quantity) * idx
+                                const rgb = ngo.colorCard
+                                return (
+                                    <div key={ngo.name} className="ngo-card-3d"
+                                         style={{ transform:`rotateY(${angle}deg) translateZ(${translateZ}px)`,
+                                             background: `linear-gradient(160deg, rgb(${rgb}) 0%, rgba(${rgb},0.7) 100%)`,
+                                             border:`1px solid rgba(255,255,255,0.15)`,
+                                             boxShadow:`0 20px 60px rgba(0,0,0,0.35)` }}>
+                                        {/* Gradient strip */}
+                                        <div style={{ height:6,
+                                            background:"linear-gradient(90deg, rgba(255,255,255,0.4), rgba(255,255,255,0.1))" }} />
+                                        <div style={{ padding:16, display:"flex", flexDirection:"column", height:"calc(100% - 6px)" }}>
+                                            {/* Avatar */}
+                                            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:12 }}>
+                                                <div style={{ width:46, height:46, borderRadius:14,
+                                                    background:"rgba(255,255,255,0.2)", backdropFilter:"blur(8px)",
+                                                    display:"flex", alignItems:"center", justifyContent:"center",
+                                                    fontWeight:900, fontSize:16, color:"#fff",
+                                                    border:"1.5px solid rgba(255,255,255,0.3)" }}>
+                                                    {ngo.avatar}
+                                                </div>
+                                                {ngo.verified && (
+                                                    <div style={{ display:"flex", alignItems:"center", gap:4, padding:"4px 8px",
+                                                        borderRadius:8, fontSize:9, fontWeight:800,
+                                                        background:"rgba(255,255,255,0.2)", color:"#fff" }}>
+                                                        <Shield size={8}/> Verified
+                                                    </div>
+                                                )}
                                             </div>
-                                            <div>
-                                                <h3 className="font-black text-sm leading-tight" style={{ color:"#1C352D" }}>
-                                                    {ngo.name}
-                                                </h3>
-                                                <p className="text-xs flex items-center gap-1 mt-0.5" style={{ color:"#90AB8B" }}>
-                                                    <MapPin size={10} /> {ngo.city}
-                                                </p>
+
+                                            <p style={{ fontWeight:900, fontSize:13, color:"#fff", marginBottom:3, lineHeight:1.3 }}>{ngo.name}</p>
+                                            <p style={{ fontSize:10, color:"rgba(255,255,255,0.75)",
+                                                marginBottom:10, display:"flex", alignItems:"center", gap:3 }}>
+                                                <MapPin size={9}/> {ngo.city}
+                                            </p>
+
+                                            {/* Badge row */}
+                                            <div style={{ display:"flex", gap:5, marginBottom:8, flexWrap:"wrap" }}>
+                                                <span style={{ fontSize:9, fontWeight:800, padding:"3px 8px", borderRadius:6,
+                                                    background:"rgba(255,255,255,0.25)", color:"#fff" }}>{ngo.badge}</span>
+                                                <span style={{ fontSize:9, fontWeight:700, padding:"3px 8px", borderRadius:6,
+                                                    background:"rgba(255,255,255,0.15)", color:"rgba(255,255,255,0.9)" }}>{ngo.focus}</span>
                                             </div>
+
+                                            <p style={{ fontSize:10, color:"rgba(255,255,255,0.75)", lineHeight:1.5,
+                                                marginBottom:10, flex:1, overflow:"hidden",
+                                                display:"-webkit-box", WebkitLineClamp:3, WebkitBoxOrient:"vertical" }}>
+                                                {ngo.desc}
+                                            </p>
+
+                                            {/* Stats */}
+                                            <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:5, marginBottom:10 }}>
+                                                {[{l:"Volunteers",v:ngo.volunteers},{l:"Needs",v:ngo.needs},{l:"Rating",v:`${ngo.rating}★`}].map(s => (
+                                                    <div key={s.l} style={{ textAlign:"center", padding:"5px 4px", borderRadius:8,
+                                                        background:"rgba(255,255,255,0.15)" }}>
+                                                        <p style={{ fontWeight:900, fontSize:11, color:"#fff", margin:0 }}>{s.v}</p>
+                                                        <p style={{ fontSize:8, color:"rgba(255,255,255,0.7)", margin:0 }}>{s.l}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+
+                                            {/* CTA */}
+                                            <button style={{ width:"100%", padding:"8px", borderRadius:10, fontSize:11, fontWeight:800,
+                                                background:"rgba(255,255,255,0.22)", color:"#fff",
+                                                border:"1.5px solid rgba(255,255,255,0.3)", cursor:"pointer",
+                                                display:"flex", alignItems:"center", justifyContent:"center", gap:5 }}>
+                                                View NGO <ChevronRight size={11}/>
+                                            </button>
                                         </div>
-                                        {ngo.verified && (
-                                            <div className="flex items-center gap-1 px-2 py-1 rounded-lg text-[10px] font-bold"
-                                                 style={{ background:"#EBF4DD", color:"#3B5C38" }}>
-                                                <Shield size={9} /> Verified
-                                            </div>
-                                        )}
                                     </div>
-
-                                    {/* Badge + focus */}
-                                    <div className="flex items-center gap-2 mb-3">
-                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full"
-                          style={{ background:ngo.badgeColor, color:"#EBF4DD" }}>
-                      {ngo.badge}
-                    </span>
-                                        <span className="text-[10px] font-semibold px-2.5 py-1 rounded-full"
-                                              style={{ background:"#EBF4DD", color:"#5A7863" }}>
-                      {ngo.focus}
-                    </span>
-                                    </div>
-
-                                    {/* Description */}
-                                    <p className="text-xs leading-relaxed mb-4" style={{ color:"#5A7863" }}>
-                                        {ngo.desc}
-                                    </p>
-
-                                    {/* Stats row */}
-                                    <div className="grid grid-cols-3 gap-2 mb-4">
-                                        {[
-                                            { label:"Volunteers", value:ngo.volunteers },
-                                            { label:"Active Needs", value:ngo.needs },
-                                            { label:"Rating", value:`${ngo.rating}★` },
-                                        ].map(s => (
-                                            <div key={s.label} className="rounded-xl p-2 text-center"
-                                                 style={{ background:"#f8faf6", border:"1px solid #e8f0e0" }}>
-                                                <p className="font-black text-sm" style={{ color:"#1C352D" }}>{s.value}</p>
-                                                <p className="text-[9px] font-semibold" style={{ color:"#90AB8B" }}>{s.label}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-
-                                    {/* CTA */}
-                                    <motion.button whileTap={{ scale:0.97 }}
-                                                   className="w-full py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-1.5 transition-all group-hover:gap-2.5"
-                                                   style={{ background:"#1C352D", color:"#EBF4DD" }}>
-                                        View NGO <ChevronRight size={12} />
-                                    </motion.button>
-                                </motion.div>
-                            ))}
-                        </motion.div>
+                                )
+                            })}
+                        </div>
                     </div>
                 </div>
+
+                <p style={{ textAlign:"center", fontSize:11, color: dark ? "#4a6b3a" : "#90AB8B", marginBottom:32 }}>
+                    ↙ Hover the carousel to pause · {quantity} verified NGOs shown
+                </p>
 
                 {/* Register CTA */}
                 <motion.div initial={{ opacity:0, y:20 }} whileInView={{ opacity:1, y:0 }}
                             viewport={{ once:true }} transition={{ delay:0.3 }}
-                            className="mt-12 text-center">
-                    <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }}
-                                   onClick={onNgoRegister}
-                                   className="inline-flex items-center gap-2 px-8 py-4 rounded-2xl font-black text-sm"
-                                   style={{ background:"#1C352D", color:"#EBF4DD", boxShadow:"0 8px 30px rgba(28,53,45,0.2)" }}>
-                        <Building2 size={16} /> Register your NGO <ArrowRight size={14} />
-                    </motion.button>
-                    <p className="text-xs mt-3" style={{ color:"#90AB8B" }}>
+                            style={{ textAlign:"center" }}>
+                    <GradientBtn onClick={onNgoRegister} dark={dark} style={{ margin:"0 auto" }}>
+                        <Building2 size={16}/> Register your NGO <ArrowRight size={14}/>
+                    </GradientBtn>
+                    <p style={{ fontSize:11, marginTop:12, color: dark ? "#4a6b3a" : "#90AB8B" }}>
                         Free to register · Verified within 48 hours · Instant access to volunteer pool
                     </p>
                 </motion.div>
@@ -1448,9 +1652,10 @@ const NGOSection = ({ onNgoRegister }) => {
     )
 }
 
-/* ─── CONTACT SECTION ───────────────────────────────────────────────────── */
+/* ─── CONTACT SECTION ────────────────────────────────────────────────────── */
 const ContactSection = () => {
-    const [formState, setFormState] = useState({ name:"", email:"", message:"" })
+    const { dark } = useTheme()
+    const [formState, setFormState] = useState({ name:"", email:"", subject:"", message:"" })
     const [sent, setSent] = useState(false)
 
     const handleSubmit = () => {
@@ -1458,118 +1663,123 @@ const ContactSection = () => {
         setSent(true)
     }
 
+    const inputStyle = {
+        width:"100%", borderRadius:11, padding:"11px 14px", fontSize:13, outline:"none",
+        boxSizing:"border-box", resize:"none",
+        background:"rgba(255,255,255,0.07)", border:"1.5px solid rgba(255,255,255,0.11)",
+        color:"#EBF4DD", transition:"all 0.2s",
+    }
+    const labelStyle = { fontSize:11, fontWeight:800, color:"#90AB8B",
+        textTransform:"uppercase", letterSpacing:0.8, display:"block", marginBottom:5 }
+
     return (
-        <section id="contact" className="py-32 relative overflow-hidden"
-                 style={{ background:"linear-gradient(180deg, #1C352D 0%, #142820 100%)" }}>
+        <section id="contact" style={{ padding:"96px 0", position:"relative", overflow:"hidden",
+            background:"linear-gradient(180deg, #1C352D 0%, #142820 100%)" }}>
+            <div style={{ position:"absolute", inset:0, pointerEvents:"none",
+                backgroundImage:"radial-gradient(circle, rgba(90,120,99,0.09) 1px, transparent 1px)",
+                backgroundSize:"30px 30px" }} />
 
-            <div className="absolute inset-0 pointer-events-none"
-                 style={{ backgroundImage:`radial-gradient(circle, rgba(90,120,99,0.1) 1px, transparent 1px)`, backgroundSize:"30px 30px" }} />
-
-            <div className="max-w-6xl mx-auto px-6 relative z-10">
+            <div style={{ maxWidth:1100, margin:"0 auto", padding:"0 24px", position:"relative", zIndex:10 }}>
                 <motion.div initial={{ opacity:0, y:30 }} whileInView={{ opacity:1, y:0 }}
-                            viewport={{ once:true }} className="text-center mb-16">
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold tracking-widest uppercase mb-6"
-                         style={{ background:"rgba(90,120,99,0.2)", color:"#90AB8B", border:"1px solid rgba(90,120,99,0.3)" }}>
-                        <MessageSquare size={11} /> Get in touch
+                            viewport={{ once:true }} style={{ textAlign:"center", marginBottom:64 }}>
+                    <div style={{ display:"inline-flex", alignItems:"center", gap:8, padding:"7px 16px",
+                        borderRadius:99, fontSize:10, fontWeight:800, letterSpacing:2, textTransform:"uppercase", marginBottom:18,
+                        background:"rgba(90,120,99,0.18)", color:"#90AB8B",
+                        border:"1px solid rgba(90,120,99,0.28)" }}>
+                        <MessageSquare size={11}/> Get in touch
                     </div>
-                    <h2 className="font-black text-4xl lg:text-5xl mb-4" style={{ color:"#EBF4DD" }}>
-                        Let's build something<br />meaningful together
+                    <h2 style={{ fontWeight:900, fontSize:42, marginBottom:14, color:"#EBF4DD", letterSpacing:-1 }}>
+                        Let's build something<br/>meaningful together
                     </h2>
-                    <p className="text-lg max-w-xl mx-auto" style={{ color:"#90AB8B" }}>
+                    <p style={{ fontSize:16, maxWidth:480, margin:"0 auto", color:"#90AB8B", lineHeight:1.65 }}>
                         Partner with us, register your NGO, or just say hello — we're always around.
                     </p>
                 </motion.div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                <div style={{ display:"grid", gridTemplateColumns:"2fr 3fr", gap:32 }} className="grid-cols-1 lg:grid-cols-5">
                     {/* Info cards */}
                     <motion.div initial={{ opacity:0, x:-30 }} whileInView={{ opacity:1, x:0 }}
                                 viewport={{ once:true }} transition={{ duration:0.5 }}
-                                className="lg:col-span-2 flex flex-col gap-5">
+                                style={{ display:"flex", flexDirection:"column", gap:14 }}>
                         {[
-                            { icon:<MapPin size={18}/>, label:"Location", value:"Pune, Maharashtra, India" },
-                            { icon:<Mail size={18}/>, label:"Email", value:"hello@civicpulse.in" },
-                            { icon:<Phone size={18}/>, label:"Phone", value:"+91 98765 00001" },
-                            { icon:<Globe size={18}/>, label:"Website", value:"civicpulse.in" },
-                            { icon:<Clock size={18}/>, label:"Response time", value:"Within 24 hours" },
+                            { icon:<MapPin size={17}/>,    label:"Location",      value:"Pune, Maharashtra, India" },
+                            { icon:<Mail size={17}/>,      label:"Email",         value:"hello@civicpulse.in" },
+                            { icon:<Phone size={17}/>,     label:"Phone",         value:"+91 98765 00001" },
+                            { icon:<Globe size={17}/>,     label:"Website",       value:"civicpulse.in" },
+                            { icon:<Clock size={17}/>,     label:"Response time", value:"Within 24 hours" },
                         ].map(info => (
-                            <div key={info.label} className="flex items-center gap-4 rounded-2xl p-4"
-                                 style={{ background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.08)" }}>
-                                <div className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-                                     style={{ background:"rgba(90,120,99,0.25)", color:"#90AB8B" }}>
+                            <motion.div key={info.label} whileHover={{ x:4 }}
+                                        style={{ display:"flex", alignItems:"center", gap:14, borderRadius:16, padding:"14px 16px",
+                                            background:"rgba(255,255,255,0.05)", border:"1px solid rgba(255,255,255,0.08)" }}>
+                                <div style={{ width:38, height:38, borderRadius:10, flexShrink:0,
+                                    display:"flex", alignItems:"center", justifyContent:"center",
+                                    background:"rgba(90,120,99,0.22)", color:"#90AB8B" }}>
                                     {info.icon}
                                 </div>
                                 <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color:"#5A7863" }}>
-                                        {info.label}
-                                    </p>
-                                    <p className="text-sm font-semibold mt-0.5" style={{ color:"#EBF4DD" }}>{info.value}</p>
+                                    <p style={{ fontSize:9, fontWeight:800, textTransform:"uppercase",
+                                        letterSpacing:1.2, color:"#5A7863", margin:0 }}>{info.label}</p>
+                                    <p style={{ fontSize:13, fontWeight:700, color:"#EBF4DD", margin:"3px 0 0" }}>{info.value}</p>
                                 </div>
-                            </div>
+                            </motion.div>
                         ))}
                     </motion.div>
 
-                    {/* Contact form */}
+                    {/* Form */}
                     <motion.div initial={{ opacity:0, x:30 }} whileInView={{ opacity:1, x:0 }}
                                 viewport={{ once:true }} transition={{ duration:0.5, delay:0.1 }}
-                                className="lg:col-span-3 rounded-3xl p-8"
-                                style={{ background:"rgba(255,255,255,0.06)", border:"1.5px solid rgba(255,255,255,0.1)" }}>
-
+                                style={{ borderRadius:24, padding:32,
+                                    background:"rgba(255,255,255,0.05)", border:"1.5px solid rgba(255,255,255,0.1)" }}>
                         <AnimatePresence mode="wait">
                             {sent ? (
-                                <motion.div key="sent"
-                                            initial={{ opacity:0, scale:0.9 }} animate={{ opacity:1, scale:1 }}
-                                            className="flex flex-col items-center justify-center h-64 text-center">
-                                    <motion.div
-                                        initial={{ scale:0, rotate:-180 }} animate={{ scale:1, rotate:0 }}
-                                        transition={{ type:"spring", stiffness:200, damping:15 }}
-                                        className="w-16 h-16 rounded-3xl flex items-center justify-center mb-4"
-                                        style={{ background:"#5A7863" }}>
-                                        <Check size={28} color="#EBF4DD" />
+                                <motion.div key="sent" initial={{ opacity:0, scale:0.9 }} animate={{ opacity:1, scale:1 }}
+                                            style={{ display:"flex", flexDirection:"column", alignItems:"center",
+                                                justifyContent:"center", height:280, textAlign:"center" }}>
+                                    <motion.div initial={{ scale:0, rotate:-180 }} animate={{ scale:1, rotate:0 }}
+                                                transition={{ type:"spring", stiffness:200, damping:15 }}
+                                                style={{ width:64, height:64, borderRadius:20, background:"#5A7863",
+                                                    display:"flex", alignItems:"center", justifyContent:"center", marginBottom:18 }}>
+                                        <Check size={28} color="#EBF4DD"/>
                                     </motion.div>
-                                    <h3 className="font-black text-xl mb-2" style={{ color:"#EBF4DD" }}>Message sent!</h3>
-                                    <p className="text-sm" style={{ color:"#90AB8B" }}>We'll get back to you within 24 hours.</p>
-                                    <button onClick={() => { setSent(false); setFormState({name:"",email:"",message:""}) }}
-                                            className="mt-5 text-xs font-bold" style={{ color:"#5A7863" }}>
+                                    <h3 style={{ fontWeight:900, fontSize:22, marginBottom:8, color:"#EBF4DD" }}>Message sent!</h3>
+                                    <p style={{ fontSize:13, color:"#90AB8B", marginBottom:20 }}>
+                                        We'll get back to you within 24 hours.
+                                    </p>
+                                    <button onClick={() => { setSent(false); setFormState({name:"",email:"",subject:"",message:""}) }}
+                                            style={{ fontSize:12, fontWeight:800, color:"#5A7863",
+                                                background:"none", border:"none", cursor:"pointer" }}>
                                         Send another →
                                     </button>
                                 </motion.div>
                             ) : (
-                                <motion.div key="form" className="space-y-5">
-                                    <h3 className="font-black text-xl mb-1" style={{ color:"#EBF4DD" }}>Send us a message</h3>
-                                    <p className="text-sm mb-2" style={{ color:"#90AB8B" }}>
-                                        NGO registration, partnership, or general inquiry
-                                    </p>
-
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div className="flex flex-col gap-1.5">
-                                            <label className="text-xs font-bold" style={{ color:"#90AB8B" }}>Name</label>
+                                <motion.div key="form" style={{ display:"flex", flexDirection:"column", gap:16 }}>
+                                    <div>
+                                        <h3 style={{ fontWeight:900, fontSize:20, marginBottom:4, color:"#EBF4DD" }}>Send us a message</h3>
+                                        <p style={{ fontSize:13, color:"#90AB8B", margin:0 }}>NGO registration, partnership, or general inquiry</p>
+                                    </div>
+                                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                                        <div>
+                                            <label style={labelStyle}>Name</label>
                                             <input value={formState.name}
-                                                   onChange={e => setFormState(p=>({...p, name:e.target.value}))}
-                                                   placeholder="Your name"
-                                                   className="rounded-xl px-4 py-3 text-sm outline-none"
-                                                   style={{ background:"rgba(255,255,255,0.08)", border:"1.5px solid rgba(255,255,255,0.12)",
-                                                       color:"#EBF4DD" }}
-                                                   onFocus={e => e.target.style.borderColor="#5A7863"}
-                                                   onBlur={e => e.target.style.borderColor="rgba(255,255,255,0.12)"} />
+                                                   onChange={e=>setFormState(p=>({...p,name:e.target.value}))}
+                                                   placeholder="Your name" style={inputStyle}
+                                                   onFocus={e=>e.target.style.borderColor="#5A7863"}
+                                                   onBlur={e=>e.target.style.borderColor="rgba(255,255,255,0.11)"} />
                                         </div>
-                                        <div className="flex flex-col gap-1.5">
-                                            <label className="text-xs font-bold" style={{ color:"#90AB8B" }}>Email</label>
+                                        <div>
+                                            <label style={labelStyle}>Email</label>
                                             <input value={formState.email} type="email"
-                                                   onChange={e => setFormState(p=>({...p, email:e.target.value}))}
-                                                   placeholder="you@email.com"
-                                                   className="rounded-xl px-4 py-3 text-sm outline-none"
-                                                   style={{ background:"rgba(255,255,255,0.08)", border:"1.5px solid rgba(255,255,255,0.12)",
-                                                       color:"#EBF4DD" }}
-                                                   onFocus={e => e.target.style.borderColor="#5A7863"}
-                                                   onBlur={e => e.target.style.borderColor="rgba(255,255,255,0.12)"} />
+                                                   onChange={e=>setFormState(p=>({...p,email:e.target.value}))}
+                                                   placeholder="you@email.com" style={inputStyle}
+                                                   onFocus={e=>e.target.style.borderColor="#5A7863"}
+                                                   onBlur={e=>e.target.style.borderColor="rgba(255,255,255,0.11)"} />
                                         </div>
                                     </div>
-
-                                    <div className="flex flex-col gap-1.5">
-                                        <label className="text-xs font-bold" style={{ color:"#90AB8B" }}>Subject</label>
-                                        <select className="rounded-xl px-4 py-3 text-sm outline-none"
-                                                style={{ background:"rgba(255,255,255,0.08)", border:"1.5px solid rgba(255,255,255,0.12)",
-                                                    color:"#EBF4DD" }}>
+                                    <div>
+                                        <label style={labelStyle}>Subject</label>
+                                        <select value={formState.subject}
+                                                onChange={e=>setFormState(p=>({...p,subject:e.target.value}))}
+                                                style={{ ...inputStyle, cursor:"pointer" }}>
                                             <option value="" style={{ background:"#1C352D" }}>Choose a topic</option>
                                             <option value="ngo" style={{ background:"#1C352D" }}>NGO Registration</option>
                                             <option value="volunteer" style={{ background:"#1C352D" }}>Volunteer Inquiry</option>
@@ -1577,25 +1787,18 @@ const ContactSection = () => {
                                             <option value="other" style={{ background:"#1C352D" }}>Other</option>
                                         </select>
                                     </div>
-
-                                    <div className="flex flex-col gap-1.5">
-                                        <label className="text-xs font-bold" style={{ color:"#90AB8B" }}>Message</label>
+                                    <div>
+                                        <label style={labelStyle}>Message</label>
                                         <textarea rows={4} value={formState.message}
-                                                  onChange={e => setFormState(p=>({...p, message:e.target.value}))}
+                                                  onChange={e=>setFormState(p=>({...p,message:e.target.value}))}
                                                   placeholder="Tell us about your project, NGO, or inquiry..."
-                                                  className="rounded-xl px-4 py-3 text-sm outline-none resize-none"
-                                                  style={{ background:"rgba(255,255,255,0.08)", border:"1.5px solid rgba(255,255,255,0.12)",
-                                                      color:"#EBF4DD" }}
-                                                  onFocus={e => e.target.style.borderColor="#5A7863"}
-                                                  onBlur={e => e.target.style.borderColor="rgba(255,255,255,0.12)"} />
+                                                  style={inputStyle}
+                                                  onFocus={e=>e.target.style.borderColor="#5A7863"}
+                                                  onBlur={e=>e.target.style.borderColor="rgba(255,255,255,0.11)"} />
                                     </div>
-
-                                    <motion.button whileHover={{ scale:1.02 }} whileTap={{ scale:0.97 }}
-                                                   onClick={handleSubmit}
-                                                   className="w-full py-3.5 rounded-2xl text-sm font-black flex items-center justify-center gap-2"
-                                                   style={{ background:"#5A7863", color:"#EBF4DD" }}>
-                                        <Send size={14} /> Send Message
-                                    </motion.button>
+                                    <GradientBtn onClick={handleSubmit} dark={false} style={{ width:"100%" }}>
+                                        <Send size={14}/> Send Message
+                                    </GradientBtn>
                                 </motion.div>
                             )}
                         </AnimatePresence>
@@ -1607,121 +1810,126 @@ const ContactSection = () => {
 }
 
 /* ─── FOOTER ─────────────────────────────────────────────────────────────── */
-const Footer = () => (
-    <footer style={{ background:"#0D1F19" }}>
-        <div className="max-w-7xl mx-auto px-6 py-16">
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-10 mb-12">
-                {/* Brand */}
-                <div className="col-span-2">
-                    <div className="flex items-center gap-3 mb-4">
-                        <div className="w-9 h-9 rounded-xl flex items-center justify-center" style={{ background:"#5A7863" }}>
-                            <Zap size={16} color="#EBF4DD" />
+const Footer = () => {
+    const { dark } = useTheme()
+    return (
+        <footer style={{ background:"#0D1F19" }}>
+            <div style={{ maxWidth:1280, margin:"0 auto", padding:"64px 24px 32px" }}>
+                <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr 1fr 1fr", gap:40, marginBottom:48 }}>
+                    {/* Brand */}
+                    <div>
+                        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
+                            <div style={{ width:36, height:36, borderRadius:10, background:"#5A7863",
+                                display:"flex", alignItems:"center", justifyContent:"center" }}>
+                                <Zap size={15} color="#EBF4DD"/>
+                            </div>
+                            <div>
+                                <span style={{ fontWeight:900, fontSize:16, color:"#EBF4DD" }}>CivicPulse</span>
+                                <p style={{ fontSize:8, letterSpacing:3, textTransform:"uppercase",
+                                    color:"#5A7863", margin:0, fontWeight:700 }}>by CivicPlus</p>
+                            </div>
                         </div>
-                        <div>
-                            <span className="font-black text-lg" style={{ color:"#EBF4DD" }}>CivicPulse</span>
-                            <p className="text-[9px] tracking-widest uppercase font-semibold leading-none" style={{ color:"#5A7863" }}>by CivicPlus</p>
-                        </div>
-                    </div>
-                    <p className="text-sm leading-relaxed mb-5" style={{ color:"#5A7863" }}>
-                        AI-powered community coordination. Turning scattered civic data into real action — across India and beyond.
-                    </p>
-                    <div className="flex gap-3">
-                        {[
-                            { icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>, href:"#" },
-                            { icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 01-2.063-2.065 2.064 2.064 0 112.063 2.065zm1.782 13.019H3.555V9h3.564v11.452zM22.225 0H1.771C.792 0 0 .774 0 1.729v20.542C0 23.227.792 24 1.771 24h20.451C23.2 24 24 23.227 24 22.271V1.729C24 .774 23.2 0 22.222 0h.003z"/></svg>, href:"#" },
-                            { icon:<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>, href:"#" },
-                        ].map((s, i) => (
-                            <motion.a key={i} href={s.href} whileHover={{ scale:1.1, y:-2 }}
-                                      className="w-9 h-9 rounded-xl flex items-center justify-center transition-all"
-                                      style={{ background:"rgba(90,120,99,0.2)", color:"#90AB8B", border:"1px solid rgba(90,120,99,0.2)" }}
-                                      onMouseEnter={e => e.currentTarget.style.background="rgba(90,120,99,0.35)"}
-                                      onMouseLeave={e => e.currentTarget.style.background="rgba(90,120,99,0.2)"}>
-                                {s.icon}
-                            </motion.a>
-                        ))}
-                    </div>
-                </div>
-
-                {/* Links */}
-                {[
-                    {
-                        title:"Platform",
-                        links:["How it works","NGO Dashboard","Volunteer App","Donor Portal","AI Features"]
-                    },
-                    {
-                        title:"Company",
-                        links:["About Us","Blog","Press","Careers","Partners"]
-                    },
-                    {
-                        title:"Legal",
-                        links:["Privacy Policy","Terms of Service","Cookie Policy","Data Protection"]
-                    },
-                ].map(col => (
-                    <div key={col.title}>
-                        <p className="text-xs font-black uppercase tracking-widest mb-4" style={{ color:"#EBF4DD" }}>
-                            {col.title}
+                        <p style={{ fontSize:13, lineHeight:1.65, color:"#5A7863", marginBottom:20 }}>
+                            AI-powered community coordination. Turning scattered civic data into real action — across India and beyond.
                         </p>
-                        <ul className="space-y-2.5">
-                            {col.links.map(l => (
-                                <li key={l}>
-                                    <a href="#"
-                                       className="text-sm transition-colors"
-                                       style={{ color:"#5A7863" }}
-                                       onMouseEnter={e => e.currentTarget.style.color="#90AB8B"}
-                                       onMouseLeave={e => e.currentTarget.style.color="#5A7863"}>
-                                        {l}
-                                    </a>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                ))}
-            </div>
 
-            {/* Bottom bar */}
-            <div className="pt-8 flex flex-col md:flex-row items-center justify-between gap-4"
-                 style={{ borderTop:"1px solid rgba(90,120,99,0.2)" }}>
-                <p className="text-xs" style={{ color:"#3B5C38" }}>
-                    © 2025 CivicPulse by CivicPlus. Built for India's communities.
-                </p>
-                <div className="flex items-center gap-6">
-                    {["Privacy","Terms","Cookies"].map(l => (
-                        <a key={l} href="#" className="text-xs transition-colors"
-                           style={{ color:"#3B5C38" }}
-                           onMouseEnter={e => e.currentTarget.style.color="#5A7863"}
-                           onMouseLeave={e => e.currentTarget.style.color="#3B5C38"}>
-                            {l}
-                        </a>
+                        {/* Social links — layered reveal */}
+                        <div style={{ display:"flex", gap:8 }}>
+                            {[
+                                { icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.737-8.835L1.254 2.25H8.08l4.253 5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>, color:"#1da1f2", label:"Twitter" },
+                                { icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>, color:"#e1306c", label:"Instagram" },
+                                { icon:<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028 14.09 14.09 0 001.226-1.994.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03z"/></svg>, color:"#7289da", label:"Discord" },
+                            ].map((s, i) => {
+                                const [hov, setHov] = useState(false)
+                                return (
+                                    <motion.a key={i} href="#"
+                                              onMouseEnter={()=>setHov(true)} onMouseLeave={()=>setHov(false)}
+                                              whileHover={{ scale:1.1, y:-3 }}
+                                              style={{ width:34, height:34, borderRadius:10,
+                                                  display:"flex", alignItems:"center", justifyContent:"center",
+                                                  background: hov ? s.color+"30" : "rgba(90,120,99,0.15)",
+                                                  color: hov ? s.color : "#90AB8B",
+                                                  border:`1px solid ${hov ? s.color+"50" : "rgba(90,120,99,0.2)"}`,
+                                                  transition:"all 0.2s" }}>
+                                        {s.icon}
+                                    </motion.a>
+                                )
+                            })}
+                        </div>
+                    </div>
+
+                    {/* Link columns */}
+                    {[
+                        { title:"Platform", links:["How it works","NGO Dashboard","Volunteer App","Donor Portal","AI Features"] },
+                        { title:"Company",  links:["About Us","Blog","Press","Careers","Partners"] },
+                        { title:"Legal",    links:["Privacy Policy","Terms of Service","Cookie Policy","Data Protection"] },
+                    ].map(col => (
+                        <div key={col.title}>
+                            <p style={{ fontSize:10, fontWeight:900, textTransform:"uppercase",
+                                letterSpacing:2, color:"#EBF4DD", marginBottom:16 }}>{col.title}</p>
+                            <ul style={{ listStyle:"none", margin:0, padding:0, display:"flex", flexDirection:"column", gap:10 }}>
+                                {col.links.map(l => (
+                                    <li key={l}>
+                                        <a href="#" style={{ fontSize:13, color:"#5A7863", textDecoration:"none", transition:"color 0.2s" }}
+                                           onMouseEnter={e=>e.currentTarget.style.color="#90AB8B"}
+                                           onMouseLeave={e=>e.currentTarget.style.color="#5A7863"}>
+                                            {l}
+                                        </a>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
                     ))}
                 </div>
-                <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background:"#5A7863" }} />
-                    <span className="text-xs" style={{ color:"#3B5C38" }}>All systems operational</span>
+
+                {/* Bottom bar */}
+                <div style={{ paddingTop:24, display:"flex", flexDirection:"row",
+                    alignItems:"center", justifyContent:"space-between", gap:14, flexWrap:"wrap",
+                    borderTop:"1px solid rgba(90,120,99,0.18)" }}>
+                    <p style={{ fontSize:12, color:"#3B5C38", margin:0 }}>
+                        © 2025 CivicPulse by CivicPlus. Built for India's communities.
+                    </p>
+                    <div style={{ display:"flex", gap:20 }}>
+                        {["Privacy","Terms","Cookies"].map(l => (
+                            <a key={l} href="#" style={{ fontSize:12, color:"#3B5C38", textDecoration:"none", transition:"color 0.2s" }}
+                               onMouseEnter={e=>e.currentTarget.style.color="#5A7863"}
+                               onMouseLeave={e=>e.currentTarget.style.color="#3B5C38"}>
+                                {l}
+                            </a>
+                        ))}
+                    </div>
+                    <div style={{ display:"flex", alignItems:"center", gap:7 }}>
+                        <div style={{ width:7, height:7, borderRadius:"50%", background:"#5A7863", animation:"pulse 2s infinite" }} />
+                        <span style={{ fontSize:12, color:"#3B5C38" }}>All systems operational</span>
+                    </div>
                 </div>
             </div>
-        </div>
-    </footer>
-)
+        </footer>
+    )
+}
 
-/* ─── SCROLL-TO-TOP ─────────────────────────────────────────────────────── */
+/* ─── SCROLL TO TOP ──────────────────────────────────────────────────────── */
 const ScrollTop = () => {
+    const { dark } = useTheme()
     const { scrollYProgress } = useScroll()
     const [visible, setVisible] = useState(false)
     useEffect(() => {
         const unsub = scrollYProgress.on("change", v => setVisible(v > 0.2))
         return unsub
     }, [scrollYProgress])
-
     return (
         <AnimatePresence>
             {visible && (
-                <motion.button
-                    initial={{ opacity:0, scale:0.8 }} animate={{ opacity:1, scale:1 }}
-                    exit={{ opacity:0, scale:0.8 }}
-                    onClick={() => window.scrollTo({ top:0, behavior:"smooth" })}
-                    className="fixed bottom-8 right-8 z-50 w-11 h-11 rounded-2xl flex items-center justify-center"
-                    style={{ background:"#1C352D", color:"#EBF4DD", boxShadow:"0 8px 24px rgba(28,53,45,0.3)" }}
-                    whileHover={{ scale:1.1 }} whileTap={{ scale:0.95 }}>
+                <motion.button initial={{ opacity:0, scale:0.8 }} animate={{ opacity:1, scale:1 }}
+                               exit={{ opacity:0, scale:0.8 }}
+                               onClick={() => window.scrollTo({ top:0, behavior:"smooth" })}
+                               whileHover={{ scale:1.1 }} whileTap={{ scale:0.95 }}
+                               style={{ position:"fixed", bottom:32, right:32, zIndex:50,
+                                   width:42, height:42, borderRadius:12,
+                                   background: dark ? "#78b450" : "#1C352D", color:"#EBF4DD",
+                                   border:"none", cursor:"pointer", display:"flex",
+                                   alignItems:"center", justifyContent:"center",
+                                   boxShadow:"0 8px 24px rgba(0,0,0,0.25)" }}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                         <path d="M18 15l-6-6-6 6"/>
                     </svg>
@@ -1733,11 +1941,11 @@ const ScrollTop = () => {
 
 /* ─── ROOT COMPONENT ─────────────────────────────────────────────────────── */
 const LandingPage = () => {
-    const [authMode,  setAuthMode]  = useState(null) // null | "login" | "signup"
+    const [dark,      setDark]     = useState(false)
+    const [authMode,  setAuthMode]  = useState(null)
     const [ngoModal,  setNgoModal]  = useState(false)
     const location = useLocation()
 
-    // Auto-open modal when redirected from /login or /signup
     useEffect(() => {
         const state = location.state
         if (state?.openAuth) {
@@ -1746,35 +1954,34 @@ const LandingPage = () => {
         }
     }, [location.state])
 
-    const handleAuthClick  = (mode) => setAuthMode(mode)
-    const handleClose      = () => setAuthMode(null)
-    const handleSwitch     = (mode) => setAuthMode(mode)
-    const handleNgoOpen    = () => setNgoModal(true)
-    const handleNgoClose   = () => setNgoModal(false)
+    useEffect(() => {
+        document.body.style.background = dark ? "#0a0f08" : "#f0f4ec"
+        document.body.style.transition = "background 0.4s ease"
+    }, [dark])
+
+    const toggle = () => setDark(p => !p)
 
     return (
-        <div className="font-sans">
-            <Navbar onAuthClick={handleAuthClick} authMode={authMode} onNgoRegister={handleNgoOpen} />
+        <ThemeContext.Provider value={{ dark, toggle }}>
+            <div style={{ fontFamily:'"DM Sans", system-ui, sans-serif', transition:"background 0.4s" }}>
+                <Navbar onAuthClick={m => setAuthMode(m)} authMode={authMode} onNgoRegister={() => setNgoModal(true)} />
 
-            {/* Auth Modal */}
-            <AnimatePresence>
-                {authMode && (
-                    <AuthModal mode={authMode} onClose={handleClose} onSwitch={handleSwitch} />
-                )}
-            </AnimatePresence>
+                <AnimatePresence>
+                    {authMode && <AuthModal mode={authMode} onClose={() => setAuthMode(null)} onSwitch={m => setAuthMode(m)} />}
+                </AnimatePresence>
 
-            {/* NGO Registration Modal */}
-            <AnimatePresence>
-                {ngoModal && <NgoRegisterModal onClose={handleNgoClose} />}
-            </AnimatePresence>
+                <AnimatePresence>
+                    {ngoModal && <NgoRegisterModal onClose={() => setNgoModal(false)} />}
+                </AnimatePresence>
 
-            <HeroSection onAuthClick={handleAuthClick} onNgoRegister={handleNgoOpen} />
-            <AboutSection />
-            <NGOSection onNgoRegister={handleNgoOpen} />
-            <ContactSection />
-            <Footer />
-            <ScrollTop />
-        </div>
+                <HeroSection onAuthClick={m => setAuthMode(m)} onNgoRegister={() => setNgoModal(true)} />
+                <AboutSection />
+                <NGOSection onNgoRegister={() => setNgoModal(true)} />
+                <ContactSection />
+                <Footer />
+                <ScrollTop />
+            </div>
+        </ThemeContext.Provider>
     )
 }
 
