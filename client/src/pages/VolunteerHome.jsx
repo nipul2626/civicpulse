@@ -314,7 +314,7 @@ const TaskModal = ({ task, onClose }) => {
                             </div>
 
                             <div style={{ background:C.card, borderRadius:12, padding:"13px 15px", marginBottom:12, border:`1px solid ${C.border}` }}>
-                                <p style={{ fontSize:10, fontWeight:700, color:C.muted, margin:"0 0 6px", textTransform:"uppercase", letterSpacing:".5px" }}>Instructions</p>
+                                <p style={{ fontSize:10, fontWeight:700, color:C.muted, margin:"0 0 6px", textTransform:"uppercase", letterSpafcing:".5px" }}>Instructions</p>
                                 <p style={{ fontSize:13, color:C.text, margin:0, lineHeight:1.7 }}>{task.desc}</p>
                             </div>
 
@@ -860,87 +860,473 @@ const LeaderboardPage = () => {
 }
 
 /* ── PAGE: MESSAGES ── */
-const MessagesPage = () => {
-    const [active, setActive] = useState(null)
-    const [input, setInput] = useState("")
-    const [chats, setChats] = useState(MESSAGES_DATA)
-    const bottomRef = useRef(null)
 
-    useEffect(() => {
-        bottomRef.current?.scrollIntoView({ behavior:"smooth" })
-    }, [active])
 
-    const sendMsg = () => {
-        if (!input.trim()) return
-        setChats(prev => prev.map(c => c.id === active ? { ...c, preview:input, messages:[...c.messages, { from:"me", text:input, time:"Now" }] } : c))
-        setInput("")
-    }
+const CHAT_COLORS = [
+    { bg: '#e6f1fb', tx: '#185fa5' },
+    { bg: '#e1f5ee', tx: '#0f6e56' },
+    { bg: '#faeeda', tx: '#854f0b' },
+    { bg: '#fbeaf0', tx: '#993556' },
+    { bg: '#eeedfe', tx: '#534ab7' },
+]
 
-    const conv = chats.find(c => c.id === active)
+const VOLUNTEERS_LIST = [
+    { id: 'v1', name: 'Priya Sharma',  role: 'Event Coordinator', online: true,  color: CHAT_COLORS[0] },
+    { id: 'v2', name: 'Rahul Mehta',   role: 'Food Drive Lead',   online: true,  color: CHAT_COLORS[1] },
+    { id: 'v3', name: 'Sara Khan',     role: 'Community Outreach',online: false, color: CHAT_COLORS[2] },
+    { id: 'v4', name: 'Amit Desai',    role: 'Transport Manager', online: true,  color: CHAT_COLORS[3] },
+]
+
+const AUTO_REPLIES = [
+    "Got it, thanks!", "Sure, I'll look into that.", "Sounds good 👍",
+    "On it! Will update you soon.", "Let me check and get back to you.", "Great, noted!",
+]
+
+const initials = (name) => name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase()
+const nowTime  = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+
+/* ─── sub-components ─── */
+
+const Avatar = ({ name, color, size = 36, online = false, unread = 0 }) => (
+    <div style={{ position: 'relative', flexShrink: 0 }}>
+        <div style={{
+            width: size, height: size, borderRadius: '50%',
+            background: color.bg, color: color.tx,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: size * 0.3, fontWeight: 500,
+        }}>
+            {initials(name)}
+        </div>
+        {online && (
+            <div style={{ position: 'absolute', bottom: 1, right: 1, width: 8, height: 8, borderRadius: '50%', background: '#1d9e75', border: `2px solid ${C.surface}` }} />
+        )}
+        {unread > 0 && (
+            <div style={{ position: 'absolute', top: -2, right: -2, width: 16, height: 16, borderRadius: '50%', background: C.red, color: '#fff', fontSize: 9, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', border: `2px solid ${C.surface}` }}>
+                {unread}
+            </div>
+        )}
+    </div>
+)
+
+const NewChatModal = ({ existingNames, sentNames, onClose, onSend }) => {
+    const [selected, setSelected] = useState(null)
+    const available = VOLUNTEERS_LIST.filter(v => !existingNames.includes(v.name) && !sentNames.includes(v.name))
 
     return (
-        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
-            <div>
-                <h2 style={{ fontSize:20, fontWeight:800, color:C.text, margin:"0 0 4px", fontFamily:"'Outfit',sans-serif" }}>Messages</h2>
-                <p style={{ fontSize:13, color:C.muted, margin:0 }}>{chats.filter(c => c.unread).length} unread conversations</p>
-            </div>
+        <div onClick={e => e.target === e.currentTarget && onClose()}
+             style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, borderRadius: 16 }}>
+            <motion.div initial={{ opacity: 0, scale: .96 }} animate={{ opacity: 1, scale: 1 }}
+                        style={{ width: 340, background: C.bg, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden' }}>
 
-            <div style={{ display:"grid", gridTemplateColumns:"300px 1fr", gap:14, minHeight:400 }}>
-                <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-                    {chats.map((c, i) => (
-                        <motion.div key={c.id} initial={{ opacity:0, x:-8 }} animate={{ opacity:1, x:0 }} transition={{ delay:i*.05 }} whileHover={{ x:2 }}
-                                    onClick={() => setActive(c.id)}
-                                    style={{ background:active === c.id ? `${C.green}0D` : C.surface, border:`1px solid ${active === c.id ? C.green+"30" : C.border}`, borderRadius:12, padding:"12px 14px", cursor:"pointer", display:"flex", alignItems:"center", gap:10, transition:"all .15s" }}>
-                            <div style={{ position:"relative", flexShrink:0 }}>
-                                <div style={{ width:40, height:40, borderRadius:12, background:`${c.color}18`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:900, color:c.color }}>{c.init}</div>
-                                {c.unread > 0 && (
-                                    <div style={{ position:"absolute", top:-4, right:-4, width:18, height:18, borderRadius:"50%", background:C.red, color:"#fff", fontSize:9, fontWeight:800, display:"flex", alignItems:"center", justifyContent:"center", border:`2px solid ${C.bg}` }}>{c.unread}</div>
-                                )}
-                            </div>
-                            <div style={{ flex:1, minWidth:0 }}>
-                                <div style={{ display:"flex", justifyContent:"space-between", marginBottom:2 }}>
-                                    <p style={{ fontSize:12, fontWeight:700, color:C.text, margin:0 }}>{c.from}</p>
-                                    <span style={{ fontSize:10, color:C.faint }}>{c.time}</span>
-                                </div>
-                                <p style={{ fontSize:11, color:C.muted, margin:0, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontWeight:c.unread ? 700 : 400 }}>{c.preview}</p>
-                            </div>
-                        </motion.div>
-                    ))}
+                <div style={{ padding: '13px 16px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: C.text, margin: 0, fontFamily: "'Outfit',sans-serif" }}>Send chat request</p>
+                    <button onClick={onClose} style={{ width: 24, height: 24, borderRadius: 6, border: 'none', background: 'transparent', cursor: 'pointer', fontSize: 14, color: C.muted }}>✕</button>
                 </div>
 
-                {conv ? (
-                    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, display:"flex", flexDirection:"column" }}>
-                        <div style={{ padding:"14px 18px", borderBottom:`1px solid ${C.border}`, display:"flex", alignItems:"center", gap:10 }}>
-                            <div style={{ width:38, height:38, borderRadius:11, background:`${conv.color}18`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:900, color:conv.color }}>{conv.init}</div>
-                            <p style={{ fontSize:14, fontWeight:700, color:C.text, margin:0, fontFamily:"'Outfit',sans-serif" }}>{conv.from}</p>
+                <div style={{ padding: '14px 16px' }}>
+                    <p style={{ fontSize: 12, color: C.muted, margin: '0 0 12px' }}>
+                        Select a volunteer to send a request to. They must accept before you can chat.
+                    </p>
+
+                    {available.length === 0 ? (
+                        <p style={{ fontSize: 12, color: C.faint, textAlign: 'center', padding: '16px 0' }}>All volunteers already added</p>
+                    ) : available.map(v => (
+                        <div key={v.id} onClick={() => setSelected(v.id)}
+                             style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 10px', borderRadius: 10,
+                                 border: `1px solid ${selected === v.id ? C.green : C.border}`,
+                                 background: selected === v.id ? `${C.green}12` : 'transparent',
+                                 cursor: 'pointer', marginBottom: 8, transition: 'all .15s' }}>
+                            <Avatar name={v.name} color={v.color} size={34} online={v.online} />
+                            <div style={{ flex: 1 }}>
+                                <p style={{ fontSize: 12, fontWeight: 600, color: C.text, margin: 0 }}>{v.name}</p>
+                                <p style={{ fontSize: 11, color: C.muted, margin: 0 }}>{v.role}</p>
+                            </div>
+                            <span style={{ fontSize: 10, padding: '2px 8px', borderRadius: 10,
+                                background: v.online ? '#e1f5ee' : '#faeeda',
+                                color: v.online ? '#0f6e56' : '#854f0b' }}>
+                {v.online ? 'Online' : 'Away'}
+              </span>
                         </div>
-                        <div style={{ flex:1, overflowY:"auto", padding:"16px 18px", display:"flex", flexDirection:"column", gap:10, minHeight:280 }}>
-                            {conv.messages.map((m, i) => (
-                                <div key={i} style={{ display:"flex", justifyContent:m.from === "me" ? "flex-end" : "flex-start" }}>
-                                    <div style={{ maxWidth:"70%", padding:"9px 13px", borderRadius:m.from === "me" ? "14px 14px 4px 14px" : "14px 14px 14px 4px", background:m.from === "me" ? C.green : C.card, color:m.from === "me" ? "#fff" : C.text, fontSize:13, lineHeight:1.5, border:m.from === "me" ? "none" : `1px solid ${C.border}` }}>
-                                        <p style={{ margin:"0 0 3px" }}>{m.text}</p>
-                                        <p style={{ fontSize:9, margin:0, opacity:.6, textAlign:m.from === "me" ? "right" : "left" }}>{m.time}</p>
+                    ))}
+
+                    <button disabled={!selected || available.length === 0} onClick={() => onSend(VOLUNTEERS_LIST.find(v => v.id === selected))}
+                            style={{ width: '100%', padding: '9px', borderRadius: 8, border: 'none',
+                                background: selected ? C.green : C.surface, color: selected ? '#fff' : C.faint,
+                                cursor: selected ? 'pointer' : 'not-allowed', fontSize: 12, fontWeight: 600,
+                                fontFamily: "'Outfit',sans-serif", transition: 'background .15s', marginTop: 4 }}>
+                        Send request
+                    </button>
+                </div>
+            </motion.div>
+        </div>
+    )
+}
+
+/* ─── main page of message─── */
+
+const MessagesPage = () => {
+    const [activeId,    setActiveId]    = useState(null)
+    const [tab,         setTab]         = useState('chats')    // 'chats' | 'requests'
+    const [chats,       setChats]       = useState(MESSAGES_DATA)
+    const [requests,    setRequests]    = useState([])          // incoming requests
+    const [sentReqs,    setSentReqs]    = useState([])          // requests I sent, pending
+    const [input,       setInput]       = useState("")
+    const [search,      setSearch]      = useState("")
+    const [isTyping,    setIsTyping]    = useState(false)
+    const [showModal,   setShowModal]   = useState(false)
+    const [toast,       setToast]       = useState(null)
+    const typingTimer = useRef(null)
+    const bottomRef   = useRef(null)
+    const inputRef    = useRef(null)
+
+    useEffect(() => {
+        bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+    }, [activeId, chats, isTyping])
+
+    const showToast = (msg) => {
+        setToast(msg)
+        setTimeout(() => setToast(null), 2500)
+    }
+
+    /* ── send a chat request ── */
+    const handleSendRequest = (volunteer) => {
+        setShowModal(false)
+        setSentReqs(prev => [...prev, { id: 'sr' + Date.now(), ...volunteer, time: 'Now' }])
+        showToast(`Request sent to ${volunteer.name}`)
+        setTab('requests')
+
+        /* Simulate: volunteer gets notified and accepts after ~4 seconds */
+        setTimeout(() => {
+            setSentReqs(prev => prev.filter(r => r.name !== volunteer.name))
+            /* Create the new chat conversation */
+            const newChat = {
+                id: 'c' + Date.now(),
+                from: volunteer.name,
+                role: volunteer.role,
+                color: volunteer.color,
+                online: volunteer.online,
+                time: 'Now',
+                unread: 1,
+                messages: [{ from: 'them', text: `Hey! Thanks for connecting 👋`, time: nowTime(), reactions: [] }],
+            }
+            setChats(prev => [newChat, ...prev])
+            showToast(`${volunteer.name} accepted your request!`)
+            setTab('chats')
+            setActiveId(newChat.id)
+        }, 4000)
+    }
+
+    /* ── accept incoming request ── */
+    const acceptRequest = (req) => {
+        setRequests(prev => prev.filter(r => r.id !== req.id))
+        const newChat = {
+            id: 'c' + Date.now(),
+            from: req.from, role: req.role, color: req.color,
+            online: true, time: 'Now', unread: 1,
+            messages: [{ from: 'them', text: `Hey! Thanks for accepting 👋`, time: nowTime(), reactions: [] }],
+        }
+        setChats(prev => [newChat, ...prev])
+        showToast(`${req.from} added to conversations`)
+        setTab('chats')
+        setActiveId(newChat.id)
+    }
+
+    const declineRequest = (id) => {
+        setRequests(prev => prev.filter(r => r.id !== id))
+        showToast('Request declined')
+    }
+
+    /* ── send message ── */
+    const sendMsg = () => {
+        const txt = input.trim()
+        if (!txt || !activeId) return
+        const t = nowTime()
+        setChats(prev => prev.map(c => c.id === activeId
+            ? { ...c, time: 'Now', messages: [...c.messages, { from: 'me', text: txt, time: t, reactions: [] }] }
+            : c))
+        setInput("")
+        clearTimeout(typingTimer.current)
+        setIsTyping(true)
+        typingTimer.current = setTimeout(() => {
+            setIsTyping(false)
+            const reply = AUTO_REPLIES[Math.floor(Math.random() * AUTO_REPLIES.length)]
+            setChats(prev => prev.map(c => c.id === activeId
+                ? { ...c, time: 'Now', messages: [...c.messages, { from: 'them', text: reply, time: nowTime(), reactions: [] }] }
+                : c))
+        }, 1300)
+    }
+
+    const openChat = (id) => {
+        setActiveId(id)
+        setTab('chats')
+        setChats(prev => prev.map(c => c.id === id ? { ...c, unread: 0 } : c))
+        setTimeout(() => inputRef.current?.focus(), 80)
+    }
+
+    const toggleReaction = (chatId, msgIdx, emoji) => {
+        setChats(prev => prev.map(c => {
+            if (c.id !== chatId) return c
+            const msgs = c.messages.map((m, i) => i !== msgIdx ? m : {
+                ...m,
+                reactions: m.reactions?.includes(emoji)
+                    ? m.reactions.filter(r => r !== emoji)
+                    : [...(m.reactions || []), emoji],
+            })
+            return { ...c, messages: msgs }
+        }))
+    }
+
+    const conv = chats.find(c => c.id === activeId)
+    const filteredChats = chats.filter(c => !search || c.from.toLowerCase().includes(search.toLowerCase()))
+    const incomingCount = requests.length
+
+    const panelH = 'calc(100vh - 148px)'   // adjust to match your dashboard content area
+
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', height: panelH, minHeight: 0, position: 'relative' }}>
+
+            {/* Header */}
+            <div style={{ marginBottom: 12, flexShrink: 0 }}>
+                <h2 style={{ fontSize: 20, fontWeight: 800, color: C.text, margin: '0 0 2px', fontFamily: "'Outfit',sans-serif" }}>Messages</h2>
+                <p style={{ fontSize: 12, color: C.muted, margin: 0 }}>
+                    {chats.filter(c => c.unread).length} unread · {chats.length} conversations
+                </p>
+            </div>
+
+            {/* Body — fixed height, no page scroll */}
+            <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: 12, flex: 1, minHeight: 0, overflow: 'hidden' }}>
+
+                {/* ── SIDEBAR ── */}
+                <div style={{ display: 'flex', flexDirection: 'column', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden', minHeight: 0 }}>
+
+                    {/* Search */}
+                    <div style={{ padding: '12px 12px 8px', flexShrink: 0 }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 7, background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: '6px 11px' }}>
+                            <svg width="12" height="12" viewBox="0 0 16 16" fill="none" style={{ opacity: .4, flexShrink: 0 }}>
+                                <circle cx="6.5" cy="6.5" r="5.5" stroke={C.text} strokeWidth="1.5"/>
+                                <path d="M10.5 10.5l4 4" stroke={C.text} strokeWidth="1.5" strokeLinecap="round"/>
+                            </svg>
+                            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search…"
+                                   style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 12, color: C.text, fontFamily: "'Outfit',sans-serif" }}/>
+                            {search && <span onClick={() => setSearch("")} style={{ cursor: 'pointer', fontSize: 11, color: C.muted }}>✕</span>}
+                        </div>
+                    </div>
+
+                    {/* Tabs: Chats / Requests */}
+                    <div style={{ display: 'flex', gap: 6, padding: '0 10px 8px', flexShrink: 0, borderBottom: `1px solid ${C.border}` }}>
+                        {['chats', 'requests'].map(t => (
+                            <button key={t} onClick={() => { setTab(t); if (t !== 'chats') setActiveId(null) }}
+                                    style={{ flex: 1, padding: '6px 0', fontSize: 11, fontWeight: 600, borderRadius: 7,
+                                        border: `1px solid ${tab === t ? C.border : 'transparent'}`,
+                                        background: tab === t ? C.bg : 'transparent',
+                                        color: tab === t ? C.text : C.muted, cursor: 'pointer', fontFamily: "'Outfit',sans-serif",
+                                        position: 'relative' }}>
+                                {t.charAt(0).toUpperCase() + t.slice(1)}
+                                {t === 'requests' && incomingCount > 0 && (
+                                    <span style={{ position: 'absolute', top: -4, right: 4, width: 15, height: 15, borderRadius: '50%', background: C.red, color: '#fff', fontSize: 9, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {incomingCount}
+                  </span>
+                                )}
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* List area — scrollable independently */}
+                    <div style={{ flex: 1, overflowY: 'auto', padding: '8px 8px' }}>
+
+                        {tab === 'chats' && (
+                            filteredChats.length === 0
+                                ? <p style={{ textAlign: 'center', padding: '24px 0', fontSize: 12, color: C.faint }}>No conversations</p>
+                                : filteredChats.map((c, i) => (
+                                    <motion.div key={c.id} initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * .04 }}
+                                                onClick={() => openChat(c.id)}
+                                                style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '9px 8px', borderRadius: 10, cursor: 'pointer',
+                                                    background: activeId === c.id ? `${C.green}10` : 'transparent',
+                                                    outline: activeId === c.id ? `1px solid ${C.green}30` : 'none',
+                                                    marginBottom: 2, transition: 'all .15s' }}>
+                                        <Avatar name={c.from} color={c.color} size={36} online={c.online} unread={c.unread} />
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 2 }}>
+                                                <span style={{ fontSize: 12, fontWeight: 600, color: C.text }}>{c.from}</span>
+                                                <span style={{ fontSize: 10, color: C.faint }}>{c.time}</span>
+                                            </div>
+                                            <p style={{ fontSize: 11, color: c.unread ? C.text : C.muted, margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontWeight: c.unread ? 700 : 400 }}>
+                                                {c.messages.at(-1)?.text || 'Say hello!'}
+                                            </p>
+                                        </div>
+                                    </motion.div>
+                                ))
+                        )}
+
+                        {tab === 'requests' && (
+                            <>
+                                {requests.length > 0 && (
+                                    <>
+                                        <p style={{ fontSize: 10, fontWeight: 600, color: C.faint, padding: '2px 4px 6px', textTransform: 'uppercase', letterSpacing: '.5px' }}>Incoming</p>
+                                        {requests.map(r => (
+                                            <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '9px 10px', borderRadius: 10, border: `1px solid ${C.border}`, marginBottom: 8, background: C.bg }}>
+                                                <Avatar name={r.from} color={r.color} size={34} />
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <p style={{ fontSize: 12, fontWeight: 600, color: C.text, margin: 0 }}>{r.from}</p>
+                                                    <p style={{ fontSize: 11, color: C.muted, margin: 0 }}>{r.role} · wants to chat</p>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: 5 }}>
+                                                    <button onClick={() => declineRequest(r.id)}
+                                                            style={{ padding: '4px 9px', borderRadius: 7, border: `1px solid ${C.border}`, background: 'transparent', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: C.muted, fontFamily: "'Outfit',sans-serif" }}>
+                                                        Decline
+                                                    </button>
+                                                    <button onClick={() => acceptRequest(r)}
+                                                            style={{ padding: '4px 9px', borderRadius: 7, border: 'none', background: C.green, cursor: 'pointer', fontSize: 11, fontWeight: 600, color: '#fff', fontFamily: "'Outfit',sans-serif" }}>
+                                                        Accept
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </>
+                                )}
+
+                                {sentReqs.length > 0 && (
+                                    <>
+                                        <p style={{ fontSize: 10, fontWeight: 600, color: C.faint, padding: '6px 4px 6px', textTransform: 'uppercase', letterSpacing: '.5px' }}>Sent</p>
+                                        {sentReqs.map(r => (
+                                            <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '9px 10px', borderRadius: 10, border: `1px solid ${C.border}`, marginBottom: 8, background: C.bg }}>
+                                                <Avatar name={r.name} color={r.color} size={34} />
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <p style={{ fontSize: 12, fontWeight: 600, color: C.text, margin: 0 }}>{r.name}</p>
+                                                    <p style={{ fontSize: 11, color: C.muted, margin: 0 }}>{r.role}</p>
+                                                </div>
+                                                <span style={{ fontSize: 10, background: '#faeeda', color: '#854f0b', padding: '2px 8px', borderRadius: 10 }}>Pending…</span>
+                                            </div>
+                                        ))}
+                                    </>
+                                )}
+
+                                {requests.length === 0 && sentReqs.length === 0 && (
+                                    <p style={{ textAlign: 'center', padding: '24px 0', fontSize: 12, color: C.faint }}>No pending requests</p>
+                                )}
+                            </>
+                        )}
+                    </div>
+
+                    {/* New conversation */}
+                    <div style={{ padding: '10px', borderTop: `1px solid ${C.border}`, flexShrink: 0 }}>
+                        <button onClick={() => setShowModal(true)}
+                                style={{ width: '100%', padding: '8px', borderRadius: 9, border: `1px solid ${C.border}`, background: 'transparent', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: C.muted, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontFamily: "'Outfit',sans-serif", transition: 'background .15s' }}>
+                            <svg width="11" height="11" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10" stroke={C.muted} strokeWidth="1.7" strokeLinecap="round"/></svg>
+                            New conversation
+                        </button>
+                    </div>
+                </div>
+
+                {/* ── CHAT PANEL ── */}
+                {conv ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16, overflow: 'hidden', minHeight: 0 }}>
+
+                        {/* Topbar */}
+                        <div style={{ padding: '11px 15px', borderBottom: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                            <Avatar name={conv.from} color={conv.color} size={36} online={conv.online} />
+                            <div style={{ flex: 1 }}>
+                                <p style={{ fontSize: 13, fontWeight: 700, color: C.text, margin: 0, fontFamily: "'Outfit',sans-serif" }}>{conv.from}</p>
+                                <p style={{ fontSize: 11, color: C.green, margin: 0, display: 'flex', alignItems: 'center', gap: 4 }}>
+                                    <span style={{ width: 6, height: 6, borderRadius: '50%', background: C.green, display: 'inline-block' }}/>
+                                    {conv.online ? 'Online' : 'Away'}
+                                </p>
+                            </div>
+                            <button style={{ width: 30, height: 30, borderRadius: 8, border: `1px solid ${C.border}`, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke={C.muted} strokeWidth="1.5"/><path d="M12 8h.01M11 12h1v4h1" stroke={C.muted} strokeWidth="1.5" strokeLinecap="round"/></svg>
+                            </button>
+                        </div>
+
+                        {/* Messages — independently scrollable */}
+                        <div style={{ flex: 1, overflowY: 'auto', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10, minHeight: 0 }}>
+                            <div style={{ textAlign: 'center', fontSize: 10, color: C.faint, display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
+                                <div style={{ flex: 1, height: '0.5px', background: C.border }}/> Today <div style={{ flex: 1, height: '0.5px', background: C.border }}/>
+                            </div>
+
+                            {conv.messages.map((m, i) => {
+                                const isMe = m.from === 'me'
+                                return (
+                                    <div key={i} style={{ display: 'flex', flexDirection: isMe ? 'row-reverse' : 'row', alignItems: 'flex-end', gap: 7 }}>
+                                        {!isMe && <Avatar name={conv.from} color={conv.color} size={26} />}
+                                        <div>
+                                            <motion.div initial={{ opacity: 0, y: 5 }} animate={{ opacity: 1, y: 0 }}
+                                                        style={{ maxWidth: '66%', padding: '8px 12px', fontSize: 13, lineHeight: 1.55, wordBreak: 'break-word',
+                                                            borderRadius: isMe ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                                                            background: isMe ? C.green : C.card,
+                                                            color: isMe ? '#fff' : C.text,
+                                                            border: isMe ? 'none' : `1px solid ${C.border}` }}>
+                                                <p style={{ margin: '0 0 3px' }}>{m.text}</p>
+                                                <p style={{ fontSize: 9, margin: 0, opacity: .6, textAlign: isMe ? 'right' : 'left' }}>{m.time}{isMe ? ' ✓✓' : ''}</p>
+                                            </motion.div>
+                                            {m.reactions?.length > 0 && (
+                                                <div style={{ display: 'flex', gap: 3, marginTop: 3, justifyContent: isMe ? 'flex-end' : 'flex-start' }}>
+                                                    {m.reactions.map((r, ri) => (
+                                                        <span key={ri} onClick={() => toggleReaction(conv.id, i, r)}
+                                                              style={{ fontSize: 12, background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: '2px 6px', cursor: 'pointer' }}>
+                              {r}
+                            </span>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                )
+                            })}
+
+                            {isTyping && (
+                                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={{ display: 'flex', alignItems: 'center', gap: 7, paddingLeft: 33 }}>
+                                    {[0, .2, .4].map((d, i) => (
+                                        <motion.div key={i} animate={{ y: [0, -4, 0] }} transition={{ delay: d, repeat: Infinity, duration: .9 }}
+                                                    style={{ width: 5, height: 5, borderRadius: '50%', background: C.faint }}/>
+                                    ))}
+                                    <span style={{ fontSize: 10, color: C.faint, marginLeft: 3 }}>typing…</span>
+                                </motion.div>
+                            )}
                             <div ref={bottomRef}/>
                         </div>
-                        <div style={{ padding:"12px 16px", borderTop:`1px solid ${C.border}`, display:"flex", gap:8 }}>
-                            <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && sendMsg()} placeholder="Type a message..."
-                                   style={{ flex:1, padding:"10px 14px", borderRadius:11, border:`1px solid ${C.border}`, background:C.card, color:C.text, fontSize:13, fontFamily:"'Outfit',sans-serif", outline:"none" }}/>
-                            <motion.button whileTap={{ scale:.93 }} onClick={sendMsg}
-                                           style={{ width:40, height:40, borderRadius:11, background:C.green, border:"none", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                                <Icon name="send" size={16} color="#fff"/>
+
+                        {/* Input */}
+                        <div style={{ padding: '10px 13px', borderTop: `1px solid ${C.border}`, display: 'flex', alignItems: 'center', gap: 7, flexShrink: 0 }}>
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 7, background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: '7px 13px' }}>
+                                <input ref={inputRef} value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === 'Enter' && sendMsg()}
+                                       placeholder="Type a message…"
+                                       style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent', fontSize: 12, color: C.text, fontFamily: "'Outfit',sans-serif" }}/>
+                            </div>
+                            <motion.button whileTap={{ scale: .9 }} onClick={sendMsg}
+                                           style={{ width: 34, height: 34, borderRadius: '50%', background: C.green, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                <Icon name="send" size={14} color="#fff"/>
                             </motion.button>
                         </div>
                     </div>
+
                 ) : (
-                    <div style={{ background:C.surface, border:`1px solid ${C.border}`, borderRadius:16, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:12, color:C.muted, minHeight:300 }}>
-                        <Icon name="chat" size={36} color={C.faint}/>
-                        <p style={{ fontSize:14, fontWeight:600, color:C.faint }}>Select a conversation</p>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, background: C.surface, border: `1px solid ${C.border}`, borderRadius: 16 }}>
+                        <div style={{ width: 48, height: 48, borderRadius: '50%', background: C.card, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Icon name="chat" size={22} color={C.faint}/>
+                        </div>
+                        <p style={{ fontSize: 13, fontWeight: 600, color: C.faint }}>No conversation selected</p>
+                        <p style={{ fontSize: 12, color: C.faint }}>Pick one or send a new request</p>
                     </div>
                 )}
             </div>
+
+            {/* New chat modal */}
+            {showModal && (
+                <NewChatModal
+                    existingNames={chats.map(c => c.from)}
+                    sentNames={sentReqs.map(r => r.name)}
+                    onClose={() => setShowModal(false)}
+                    onSend={handleSendRequest}
+                />
+            )}
+
+            {/* Toast */}
+            {toast && (
+                <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
+                            style={{ position: 'absolute', bottom: 16, left: '50%', transform: 'translateX(-50%)', background: C.green, color: '#fff', padding: '7px 16px', borderRadius: 20, fontSize: 12, fontWeight: 600, whiteSpace: 'nowrap', zIndex: 60 }}>
+                    {toast}
+                </motion.div>
+            )}
         </div>
     )
 }
