@@ -1229,40 +1229,40 @@ const Navbar = ({ onAuthClick, onNgoRegister }) => {
                         </GradientBtn>
                     </div>
 
-                    {/* Mobile menu button */}
-                    <button onClick={() => setMobileOpen(p=>!p)} className="flex md:hidden"
-                            style={{ width:34, height:34, borderRadius:8, background:"transparent",
-                                border:`1px solid ${dark?"rgba(120,180,80,0.2)":"#d4e4cc"}`,
-                                color:textCol, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>
-                        {mobileOpen ? <X size={16}/> : <Menu size={16}/>}
-                    </button>
+                    {/*/!* Mobile menu button *!/*/}
+                    {/*<button onClick={() => setMobileOpen(p=>!p)} className="flex md:hidden"*/}
+                    {/*        style={{ width:34, height:34, borderRadius:8, background:"transparent",*/}
+                    {/*            border:`1px solid ${dark?"rgba(120,180,80,0.2)":"#d4e4cc"}`,*/}
+                    {/*            color:textCol, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>*/}
+                    {/*    {mobileOpen ? <X size={16}/> : <Menu size={16}/>}*/}
+                    {/*</button>*/}
                 </div>
             </div>
 
-            {/* Mobile menu */}
-            <AnimatePresence>
-                {mobileOpen && (
-                    <Motion.div initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:"auto" }}
-                                exit={{ opacity:0, height:0 }}
-                                style={{ borderTop:`1px solid ${dark?"rgba(120,180,80,0.12)":"#e8f0e0"}`,
-                                    background: dark ? "#0a0f08" : "#fff", overflow:"hidden" }}>
-                        <div style={{ padding:20, display:"flex", flexDirection:"column", gap:14 }}>
-                            {NAV_LINKS.map(l => (
-                                <button key={l.label} onClick={() => scrollTo(l.href)}
-                                        style={{ textAlign:"left", fontSize:14, fontWeight:700, color:textCol,
-                                            background:"none", border:"none", cursor:"pointer", padding:0 }}>
-                                    {l.label}
-                                </button>
-                            ))}
-                            <div style={{ display:"flex", gap:8, paddingTop:8,
-                                borderTop:`1px solid ${dark?"rgba(120,180,80,0.1)":"#e8f0e0"}` }}>
-                                <GradientBtn onClick={() => { onAuthClick("login"); setMobileOpen(false) }} dark={dark} outline small>Sign In</GradientBtn>
-                                <GradientBtn onClick={() => { onAuthClick("signup"); setMobileOpen(false) }} dark={dark} small>Join Free</GradientBtn>
-                            </div>
-                        </div>
-                    </Motion.div>
-                )}
-            </AnimatePresence>
+            {/*/!* Mobile menu *!/*/}
+            {/*<AnimatePresence>*/}
+            {/*    {mobileOpen && (*/}
+            {/*        <Motion.div initial={{ opacity:0, height:0 }} animate={{ opacity:1, height:"auto" }}*/}
+            {/*                    exit={{ opacity:0, height:0 }}*/}
+            {/*                    style={{ borderTop:`1px solid ${dark?"rgba(120,180,80,0.12)":"#e8f0e0"}`,*/}
+            {/*                        background: dark ? "#0a0f08" : "#fff", overflow:"hidden" }}>*/}
+            {/*            <div style={{ padding:20, display:"flex", flexDirection:"column", gap:14 }}>*/}
+            {/*                {NAV_LINKS.map(l => (*/}
+            {/*                    <button key={l.label} onClick={() => scrollTo(l.href)}*/}
+            {/*                            style={{ textAlign:"left", fontSize:14, fontWeight:700, color:textCol,*/}
+            {/*                                background:"none", border:"none", cursor:"pointer", padding:0 }}>*/}
+            {/*                        {l.label}*/}
+            {/*                    </button>*/}
+            {/*                ))}*/}
+            {/*                <div style={{ display:"flex", gap:8, paddingTop:8,*/}
+            {/*                    borderTop:`1px solid ${dark?"rgba(120,180,80,0.1)":"#e8f0e0"}` }}>*/}
+            {/*                    <GradientBtn onClick={() => { onAuthClick("login"); setMobileOpen(false) }} dark={dark} outline small>Sign In</GradientBtn>*/}
+            {/*                    <GradientBtn onClick={() => { onAuthClick("signup"); setMobileOpen(false) }} dark={dark} small>Join Free</GradientBtn>*/}
+            {/*                </div>*/}
+            {/*            </div>*/}
+            {/*        </Motion.div>*/}
+            {/*    )}*/}
+            {/*</AnimatePresence>*/}
         </Motion.nav>
     )
 }
