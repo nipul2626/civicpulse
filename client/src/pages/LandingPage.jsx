@@ -1802,7 +1802,14 @@ const ContactSection = () => {
                             ) : (
                                 <Motion.div key="form" style={{ display:"flex", flexDirection:"column", gap:16 }}>
                                     <div>
-                                        <h3 style={{ fontWeight:900, fontSize:20, marginBottom:4, color:"#EBF4DD" }}>Send us a message</h3>
+                                        <h3 style={{
+                                            fontWeight:900,
+                                            fontSize:20,
+                                            marginBottom:4,
+                                            color: dark ? "#EBF4DD" : "#000000"
+                                        }}>
+                                            Send us a message
+                                        </h3>
                                         <p style={{ fontSize:13, color:"#90AB8B", margin:0 }}>NGO registration, partnership, or general inquiry</p>
                                     </div>
                                     <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
