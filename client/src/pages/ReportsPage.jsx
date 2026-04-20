@@ -1,555 +1,491 @@
-import { useState, useRef, useEffect } from "react"
-import { motion, AnimatePresence, useInView } from "framer-motion"
+import React, { useState, useEffect, useContext } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-    BarChart3, TrendingUp, Download, MapPin, Users, Heart,
-    Home, Droplets, BookOpen, Utensils, CheckCircle, Clock,
-    Share2, FileText, PieChart, Activity, Zap, ChevronDown,
-    Star, Target, Award, RefreshCw, ArrowUpRight, ArrowDownRight,
-    Layers, Globe
-} from "lucide-react"
+    BarChart, Bar, PieChart, Pie, Cell,
+    XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
+} from "recharts";
+import {
+    LayoutDashboard, Map, CheckSquare, Users, Heart,
+    ClipboardList, BarChart2, Settings,
+    Zap, ChevronLeft, FileText, RefreshCw, ChevronUp,
+    ChevronDown, ChevronsUpDown, AlertCircle, CheckCircle2,
+    TrendingUp, Award, Download, X, Check
+} from "lucide-react";
 
-const T = {
-    bg:      "#eef2eb",
-    surface: "#e2e8de",
-    card:    "#ffffff",
-    border:  "rgba(45,90,45,0.12)",
-    text:    "#1a2e1a",
-    muted:   "#5a7a5a",
-    faint:   "#c8d8c4",
-    accent:  "#2d5a2d",
-    f300:    "#4a7a44",
-    green:   "#1a6b4a",
-    amber:   "#c07a0a",
-    red:     "#b84c2e",
-    purple:  "#5a3a8a",
-    cyan:    "#1a6b7a",
-    pink:    "#8a3a5a",
-    s300:    "#7ab870",
-}
+// ─── Theme ─────────────────────────────────────────────────────────────────────
+const ThemeCtx = React.createContext({ dark: false, toggle: () => {} });
+const TK = {
+    light: {
+        bg: "#eef2eb", card: "#ffffff",
+        border: "rgba(45,90,45,0.12)", text: "#1a2e1a", muted: "#5a7a5a", accent: "#2d5a2d",
+        red: "#b84c2e", amber: "#c07a0a", green: "#1a6b4a", blue: "#1a4a8a", purple: "#5a3a8a", cyan: "#1a6b7a",
+    },
+    dark: {
+        bg: "#0a0f08", card: "#1c2a18",
+        border: "rgba(120,180,80,0.12)", text: "#edf5e0", muted: "#7a9b6a", accent: "#78b450",
+        red: "#e05a3a", amber: "#e8a020", green: "#2dc9a0", blue: "#4a9fce", purple: "#9b7cf8", cyan: "#3ec9b0",
+    }
+};
 
-const MONTHLY = [
-    {m:"Jan",needs:45,resolved:38},{m:"Feb",needs:62,resolved:54},{m:"Mar",needs:78,resolved:71},
-    {m:"Apr",needs:55,resolved:50},{m:"May",needs:89,resolved:82},{m:"Jun",needs:102,resolved:95},
-    {m:"Jul",needs:88,resolved:84},{m:"Aug",needs:115,resolved:109},{m:"Sep",needs:94,resolved:91},
-    {m:"Oct",needs:127,resolved:120},{m:"Nov",needs:108,resolved:103},{m:"Dec",needs:143,resolved:138},
-]
+// ─── Dashboard-Exact Sidebar ───────────────────────────────────────────────────
+const NAV = [
+    { icon: LayoutDashboard, label: "Dashboard",  path: "/dashboard",  ic: "#e8734a" },
+    { icon: Map,             label: "Heatmap",     path: "/heatmap",    ic: "#4a9fce" },
+    { icon: CheckSquare,     label: "Task Board",  path: "/tasks",      ic: "#2dc9a0" },
+    { icon: Users,           label: "Volunteers",  path: "/volunteers", ic: "#9b7cf8" },
+    { icon: Heart,           label: "Survey",      path: "/survey",     ic: "#e05a7a" },
+    { icon: ClipboardList,   label: "Reports",     path: "/reports",    ic: "#c07a0a", active: true },
+    { icon: BarChart2,       label: "Analytics",   path: "/analytics",  ic: "#4a9fce" },
+    { icon: Settings,        label: "Settings",    path: "/settings",   ic: "#7a9b6a" },
+];
 
-const ZONE_DATA = [
-    { zone: "Dharavi",   needs: 47, resolved: 41, color: T.red    },
-    { zone: "Kurla",     needs: 38, resolved: 35, color: T.amber  },
-    { zone: "Chembur",   needs: 29, resolved: 27, color: T.purple },
-    { zone: "Ghatkopar", needs: 34, resolved: 32, color: T.cyan   },
-    { zone: "Mankhurd",  needs: 22, resolved: 21, color: T.s300   },
-    { zone: "Andheri",   needs: 31, resolved: 29, color: T.pink   },
-]
-
-const CAT_DATA = [
-    { cat: "Medical",   count: 89, pct: 32, color: T.red,    icon: Heart    },
-    { cat: "Food",      count: 74, pct: 27, color: T.amber,  icon: Utensils },
-    { cat: "Water",     count: 52, pct: 19, color: T.cyan,   icon: Droplets },
-    { cat: "Shelter",   count: 38, pct: 14, color: T.purple, icon: Home     },
-    { cat: "Education", count: 22, pct: 8,  color: T.s300,   icon: BookOpen },
-]
-
-// KPI — 3+3 layout (two rows of 3) instead of broken 6-col
-const KPI_ROW1 = [
-    { label: "Total Needs",       value: "1,243", delta: "+18%", up: true,  icon: FileText, color: T.accent  },
-    { label: "Resolution Rate",   value: "94.2%", delta: "+2.1%",up: true,  icon: Target,   color: T.green   },
-    { label: "Avg Response",      value: "4.2h",  delta: "-0.8h",up: true,  icon: Clock,    color: T.amber   },
-]
-const KPI_ROW2 = [
-    { label: "People Helped",     value: "8,432", delta: "+23%", up: true,  icon: Users,    color: T.purple  },
-    { label: "Active Volunteers", value: "38",    delta: "+5",   up: true,  icon: Star,     color: T.cyan    },
-    { label: "AI Accuracy",       value: "96.8%", delta: "+1.2%",up: true,  icon: Zap,      color: T.pink    },
-]
-
-const VOLUNTEERS_TOP = [
-    { name: "Priya Mehta",  init: "PM", tasks: 47, score: 98, zone: "Dharavi",   color: T.s300   },
-    { name: "Rahul Singh",  init: "RS", tasks: 43, score: 95, zone: "Kurla",     color: T.cyan   },
-    { name: "Arjun Patil",  init: "AP", tasks: 39, score: 94, zone: "Andheri",   color: T.purple },
-    { name: "Divya Nair",   init: "DN", tasks: 36, score: 91, zone: "Chembur",   color: T.amber  },
-    { name: "Sneha Joshi",  init: "SJ", tasks: 31, score: 88, zone: "Ghatkopar", color: T.pink   },
-]
-
-// Animated number counter
-const AnimNum = ({ value }) => {
-    const ref = useRef(null)
-    const inView = useInView(ref, { once: true })
-    const [display, setDisplay] = useState("0")
-
-    useEffect(() => {
-        if (!inView) return
-        const raw = value.replace(/[^0-9.]/g, "")
-        const prefix = value.match(/[₹£$€]/)?.[0] || ""
-        const suffix = value.match(/[%h]/)?.[0] || ""
-        const num = parseFloat(raw)
-        let cur = 0
-        const dur = 1000, step = 14
-        const inc = (num - cur) / (dur / step)
-        const t = setInterval(() => {
-            cur = Math.min(cur + inc, num)
-            const rounded = cur >= 1000 ? Math.round(cur).toLocaleString() : cur.toFixed(cur < 10 ? 1 : 0)
-            setDisplay(`${prefix}${rounded}${suffix}`)
-            if (cur >= num) clearInterval(t)
-        }, step)
-        return () => clearInterval(t)
-    }, [inView, value])
-
-    return <span ref={ref}>{inView ? display : "0"}</span>
-}
-
-const Card = ({ children, style = {} }) => (
-    <div style={{
-        background: T.card, border: `1px solid ${T.border}`,
-        borderRadius: 16, padding: "18px 20px", ...style,
-    }}>{children}</div>
-)
-
-const SectionHeader = ({ title, subtitle, icon: Icon, color = T.accent }) => (
-    <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 14 }}>
-        <div style={{ width: 28, height: 28, borderRadius: 7, background: `${color}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <Icon size={13} style={{ color }} />
-        </div>
-        <div>
-            <p style={{ fontSize: 13, fontWeight: 800, color: T.text, margin: 0 }}>{title}</p>
-            {subtitle && <p style={{ fontSize: 10, color: T.muted, margin: 0 }}>{subtitle}</p>}
-        </div>
-    </div>
-)
-
-// Bar chart — stacked
-const BarMini = ({ data, height = 110 }) => {
-    const max = Math.max(...data.map(d => d.needs))
+function Sidebar({ exp, onToggle }) {
+    const { dark, toggle } = useContext(ThemeCtx);
     return (
-        <div style={{ height, display: "flex", alignItems: "flex-end", gap: 5, padding: "0 4px" }}>
-            {data.map((d, i) => (
-                <div key={d.m} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-                    <motion.div
-                        initial={{ height: 0 }} animate={{ height: `${(d.resolved / max) * 100}%` }}
-                        transition={{ delay: i * .04, duration: .5, ease: "easeOut" }}
-                        style={{ width: "100%", borderRadius: "3px 3px 0 0", background: T.green, minHeight: 2 }}
-                    />
-                    <motion.div
-                        initial={{ height: 0 }}
-                        animate={{ height: `${((d.needs - d.resolved) / max) * 100}%` }}
-                        transition={{ delay: i * .04 + .1, duration: .5, ease: "easeOut" }}
-                        style={{ width: "100%", borderRadius: "3px 3px 0 0", background: T.accent, minHeight: 1, marginTop: -3 }}
-                    />
-                    <span style={{ fontSize: 8.5, color: T.muted }}>{d.m}</span>
+        <motion.aside
+            animate={{ width: exp ? 220 : 68 }}
+            transition={{ type: "spring", stiffness: 320, damping: 32 }}
+            style={{ background: "#eef2eb", borderRight: "1px solid rgba(45,90,45,0.10)", height: "100vh", position: "fixed", left: 0, top: 0, overflow: "hidden", display: "flex", flexDirection: "column", zIndex: 100 }}
+        >
+            <div style={{ padding: "18px 14px 14px", display: "flex", alignItems: "center", gap: 10, borderBottom: "1px solid rgba(45,90,45,0.08)", flexShrink: 0 }}>
+                <div style={{ width: 34, height: 34, background: "#1a2e1a", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Zap size={18} color="#fff" fill="#fff" />
                 </div>
+                {exp && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: "#1a2e1a", fontFamily: "DM Sans, sans-serif", lineHeight: 1.1 }}>CivicPulse</div>
+                        <div style={{ fontSize: 10, color: "#5a7a5a", fontFamily: "DM Sans, sans-serif", marginTop: 1 }}>NGO Dashboard</div>
+                    </motion.div>
+                )}
+            </div>
+
+            <nav style={{ flex: 1, padding: "10px 8px", overflowY: "auto", overflowX: "hidden" }}>
+                {NAV.map(item => {
+                    const Icon = item.icon;
+                    return (
+                        <motion.a key={item.path} href={item.path} whileHover={{ backgroundColor: "rgba(45,90,45,0.06)" }}
+                                  style={{ display: "flex", alignItems: "center", gap: 11, padding: exp ? "9px 10px" : "9px 0", justifyContent: exp ? "flex-start" : "center", borderRadius: 8, textDecoration: "none", marginBottom: 2, position: "relative", background: item.active ? "rgba(45,90,45,0.08)" : "transparent", transition: "background 0.15s" }}>
+                            {item.active && <div style={{ position: "absolute", left: 0, top: 6, bottom: 6, width: 3, background: "#2d5a2d", borderRadius: "0 3px 3px 0" }} />}
+                            <div style={{ width: 28, height: 28, borderRadius: 7, background: item.active ? `${item.ic}22` : "rgba(45,90,45,0.07)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                <Icon size={15} color={item.active ? item.ic : "#5a7a5a"} />
+                            </div>
+                            {exp && <span style={{ fontSize: 13.5, fontWeight: item.active ? 700 : 500, color: item.active ? "#1a2e1a" : "#4a6a4a", fontFamily: "DM Sans, sans-serif", whiteSpace: "nowrap" }}>{item.label}</span>}
+                        </motion.a>
+                    );
+                })}
+            </nav>
+
+            <div style={{ padding: "10px 10px 14px", borderTop: "1px solid rgba(45,90,45,0.08)", flexShrink: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 6px", marginBottom: 8 }}>
+                    <motion.button onClick={toggle} style={{ width: 44, height: 24, borderRadius: 999, background: dark ? "linear-gradient(90deg,#1a1a3a,#0a0a1a)" : "linear-gradient(90deg,#f0c040,#87ceeb)", border: "none", cursor: "pointer", position: "relative", padding: 0, flexShrink: 0 }}>
+                        <motion.div animate={{ x: dark ? 22 : 2 }} transition={{ type: "spring", stiffness: 450, damping: 28 }} style={{ width: 20, height: 20, borderRadius: "50%", background: dark ? "#c8c8d8" : "#fff", position: "absolute", top: 2, boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }} />
+                    </motion.button>
+                    {exp && <span style={{ fontSize: 12.5, fontWeight: 500, color: "#4a6a4a", fontFamily: "DM Sans, sans-serif", whiteSpace: "nowrap" }}>{dark ? "Dark Mode" : "Light Mode"}</span>}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 8px", background: "rgba(45,90,45,0.06)", borderRadius: 10, marginBottom: 8, cursor: "pointer" }}>
+                    <div style={{ width: 30, height: 30, borderRadius: 8, background: "#2d5a2d", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#fff", flexShrink: 0 }}>RS</div>
+                    {exp && <div><div style={{ fontSize: 12.5, fontWeight: 700, color: "#1a2e1a", fontFamily: "DM Sans, sans-serif" }}>Riya Sharma</div><div style={{ fontSize: 10.5, color: "#5a7a5a", fontFamily: "DM Sans, sans-serif" }}>Coordinator</div></div>}
+                </div>
+                <motion.button onClick={onToggle} whileHover={{ backgroundColor: "rgba(45,90,45,0.08)" }} style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 8px", background: "transparent", border: "none", borderRadius: 8, cursor: "pointer", width: "100%" }}>
+                    <motion.div animate={{ rotate: exp ? 0 : 180 }} transition={{ duration: 0.3 }}><ChevronLeft size={15} color="#5a7a5a" /></motion.div>
+                    {exp && <span style={{ fontSize: 12.5, fontWeight: 500, color: "#4a6a4a", fontFamily: "DM Sans, sans-serif" }}>Collapse</span>}
+                </motion.button>
+            </div>
+        </motion.aside>
+    );
+}
+
+// ─── UI Components ─────────────────────────────────────────────────────────────
+function PillToggle({ options, value, onChange }) {
+    const { dark } = useContext(ThemeCtx);
+    const t = dark ? TK.dark : TK.light;
+    const idx = options.indexOf(value);
+    return (
+        <div style={{ position: "relative", background: dark ? "#1c2a18" : "#e2e8de", borderRadius: 999, padding: 4, display: "flex", border: `1px solid ${t.border}` }}>
+            <motion.div animate={{ x: `${idx * 100}%` }} transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                        style={{ position: "absolute", top: 4, left: 4, width: `calc(${100/options.length}% - ${8/options.length}px)`, height: "calc(100% - 8px)", background: "#2d5a2d", borderRadius: 999 }} />
+            {options.map(opt => (
+                <button key={opt} onClick={() => onChange(opt)} style={{ position: "relative", zIndex: 1, background: "transparent", border: "none", borderRadius: 999, padding: "6px 14px", fontSize: 13, fontWeight: 600, fontFamily: "DM Sans, sans-serif", cursor: "pointer", color: value === opt ? "#fff" : t.muted, transition: "color 0.3s", flex: 1, whiteSpace: "nowrap" }}>{opt}</button>
             ))}
         </div>
-    )
+    );
 }
 
-// Donut — fixed offset calculation
-const DonutChart = ({ data, size = 130 }) => {
-    const total = data.reduce((s, d) => s + d.count, 0)
-    const r = 44, cx = 65, cy = 65, circ = 2 * Math.PI * r
-    let cumPct = 0
-
+function GradientBtn({ children, onClick, small }) {
+    const { dark } = useContext(ThemeCtx);
     return (
-        <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
-            <svg viewBox="0 0 130 130" style={{ width: "100%", height: "100%", transform: "rotate(-90deg)" }}>
-                {data.map((d, i) => {
-                    const pct = d.count / total
-                    const dashArr = `${pct * circ} ${circ}`
-                    const dashOffset = -(cumPct * circ)
-                    cumPct += pct
-                    return (
-                        <motion.circle key={d.cat}
-                                       cx={cx} cy={cy} r={r}
-                                       fill="none" stroke={d.color} strokeWidth={16}
-                                       strokeDasharray={dashArr} strokeDashoffset={dashOffset}
-                                       initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-                                       transition={{ delay: i * .08, duration: .4 }}
-                        />
-                    )
-                })}
-                <circle cx={cx} cy={cy} r={28} fill={T.card} />
-            </svg>
-            <div style={{
-                position: "absolute", inset: 0,
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-            }}>
-                <p style={{ fontSize: 18, fontWeight: 900, color: T.text, margin: 0 }}>{total}</p>
-                <p style={{ fontSize: 9, color: T.muted, margin: 0, fontWeight: 700 }}>TOTAL</p>
+        <motion.div whileHover={{ scale: 1.04 }} style={{ padding: "2px", background: "linear-gradient(90deg,#1a8a3a,#4ade80)", borderRadius: "0.85em", display: "inline-block", cursor: "pointer", position: "relative" }} onClick={onClick}>
+            <motion.div whileHover={{ opacity: 0.7 }} style={{ position: "absolute", inset: 0, background: "linear-gradient(90deg,#1a8a3a,#4ade80)", borderRadius: "0.85em", opacity: 0, filter: "blur(1em)", zIndex: -1, transition: "opacity 0.3s" }} />
+            <button style={{ background: dark ? "#0f1f0f" : "#1a2e1a", color: "#fff", border: "none", borderRadius: "0.5em", padding: small ? "6px 14px" : "8px 20px", fontSize: small ? 12.5 : 13.5, fontWeight: 600, fontFamily: "DM Sans, sans-serif", cursor: "pointer", display: "flex", alignItems: "center", gap: 7 }}>{children}</button>
+        </motion.div>
+    );
+}
+
+function DownloadBtn({ onClick }) {
+    const [s, setS] = useState("idle");
+    const go = () => { setS("loading"); setTimeout(() => { setS("done"); onClick && onClick(); }, 1600); setTimeout(() => setS("idle"), 4000); };
+    return (
+        <motion.button onClick={go} whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.95 }}
+                       style={{ width: 36, height: 36, borderRadius: "50%", border: "2px solid rgb(91,91,240)", background: s === "done" ? "rgb(91,91,240)" : "transparent", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", transition: "background 0.3s" }}>
+            {s === "idle" && <Download size={15} color="rgb(91,91,240)" />}
+            {s === "loading" && <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 0.8, ease: "linear" }} style={{ width: 14, height: 14, border: "2px solid rgb(91,91,240)", borderTopColor: "transparent", borderRadius: "50%" }} />}
+            {s === "done" && <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} style={{ color: "#fff", fontSize: 12, fontWeight: 700 }}>✓</motion.span>}
+        </motion.button>
+    );
+}
+
+function LiquidRadio({ options, value, onChange }) {
+    const idx = options.indexOf(value);
+    return (
+        <div style={{ position: "relative", background: "#111", borderRadius: 7, padding: 3, display: "grid", gridTemplateColumns: `repeat(${options.length},1fr)`, width: "fit-content" }}>
+            <motion.div animate={{ x: `${idx * 100}%` }} transition={{ ease: [0.22,0.9,0.25,1], duration: 0.5 }}
+                        style={{ position: "absolute", top: 3, left: 3, width: `calc(${100/options.length}% - ${6/options.length}px)`, height: "calc(100% - 6px)", background: "#fff", borderRadius: 5 }} />
+            {options.map(opt => (
+                <button key={opt} onClick={() => onChange(opt)} style={{ position: "relative", zIndex: 1, background: "transparent", border: "none", padding: "7px 16px", fontSize: 12.5, fontWeight: 600, fontFamily: "DM Sans, sans-serif", cursor: "pointer", color: value === opt ? "#000" : "#666", transition: "color 0.3s", whiteSpace: "nowrap" }}>{opt}</button>
+            ))}
+        </div>
+    );
+}
+
+function CosmicToggle({ checked, onChange, label }) {
+    const { dark } = useContext(ThemeCtx);
+    const t = dark ? TK.dark : TK.light;
+    return (
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+            <motion.button onClick={() => onChange(!checked)}
+                           animate={{ background: checked ? "linear-gradient(135deg,#1a8a3a,#4ade80)" : "linear-gradient(135deg,#2a2a2a,#3a3a3a)" }}
+                           transition={{ duration: 0.3 }}
+                           style={{ width: 48, height: 26, borderRadius: 999, border: "none", cursor: "pointer", position: "relative", padding: 0, flexShrink: 0 }}>
+                <motion.div animate={{ x: checked ? 24 : 2 }} transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                            style={{ width: 22, height: 22, borderRadius: "50%", background: "#fff", position: "absolute", top: 2 }} />
+            </motion.button>
+            {label && <span style={{ fontSize: 13.5, color: t.text, fontFamily: "DM Sans, sans-serif" }}>{label}</span>}
+        </div>
+    );
+}
+
+function useCountUp(n, dur = 1100) {
+    const [v, setV] = useState(0);
+    useEffect(() => {
+        const s = Date.now();
+        const id = setInterval(() => {
+            const p = Math.min((Date.now() - s) / dur, 1);
+            setV(Math.round((1 - Math.pow(1 - p, 3)) * n));
+            if (p >= 1) clearInterval(id);
+        }, 16);
+        return () => clearInterval(id);
+    }, [n]);
+    return v;
+}
+
+// ─── Data ──────────────────────────────────────────────────────────────────────
+const monthlyData = [
+    { month: "Jan", reported: 42, resolved: 35 }, { month: "Feb", reported: 58, resolved: 47 },
+    { month: "Mar", reported: 73, resolved: 62 }, { month: "Apr", reported: 65, resolved: 58 },
+    { month: "May", reported: 89, resolved: 74 }, { month: "Jun", reported: 94, resolved: 81 },
+    { month: "Jul", reported: 78, resolved: 70 },
+];
+
+const categoryData = [
+    { name: "Food Aid",   value: 32, color: "#1a6b4a" },
+    { name: "Medical",    value: 24, color: "#1a4a8a" },
+    { name: "Education",  value: 18, color: "#5a3a8a" },
+    { name: "Shelter",    value: 15, color: "#c07a0a" },
+    { name: "Livelihood", value: 11, color: "#1a6b7a" },
+];
+
+const zoneData = [
+    { zone: "Dharavi",  reported: 48, resolved: 41, pending: 7, avgTime: "2.4h", volunteer: "Meera S." },
+    { zone: "Kurla",    reported: 35, resolved: 28, pending: 7, avgTime: "3.1h", volunteer: "Rajan K." },
+    { zone: "Govandi",  reported: 62, resolved: 55, pending: 7, avgTime: "1.8h", volunteer: "Priya T." },
+    { zone: "Mankhurd", reported: 29, resolved: 22, pending: 7, avgTime: "4.2h", volunteer: "Arjun M." },
+    { zone: "Chembur",  reported: 44, resolved: 38, pending: 6, avgTime: "2.9h", volunteer: "Sita R." },
+];
+
+const leaderData = [
+    { rank: 1, name: "Priya Sharma", tasks: 94, hours: 186, reliability: 98, av: "PS" },
+    { rank: 2, name: "Arjun Mehta",  tasks: 87, hours: 162, reliability: 95, av: "AM" },
+    { rank: 3, name: "Meera Nair",   tasks: 81, hours: 154, reliability: 92, av: "MN" },
+    { rank: 4, name: "Rajan Kumar",  tasks: 74, hours: 138, reliability: 89, av: "RK" },
+    { rank: 5, name: "Sita Rao",     tasks: 68, hours: 127, reliability: 87, av: "SR" },
+    { rank: 6, name: "Vijay Patel",  tasks: 63, hours: 119, reliability: 84, av: "VP" },
+    { rank: 7, name: "Anita Singh",  tasks: 59, hours: 108, reliability: 82, av: "AS" },
+    { rank: 8, name: "Deepak Jha",   tasks: 54, hours: 98,  reliability: 80, av: "DJ" },
+    { rank: 9, name: "Kavya Reddy",  tasks: 48, hours: 89,  reliability: 78, av: "KR" },
+    { rank: 10,name: "Sunil Das",    tasks: 43, hours: 82,  reliability: 75, av: "SD" },
+];
+
+function CTooltip({ active, payload, label }) {
+    if (!active || !payload?.length) return null;
+    return (
+        <div style={{ background: "#18181b", borderRadius: 9, overflow: "hidden", display: "flex", minWidth: 150, boxShadow: "0 8px 28px rgba(0,0,0,0.4)" }}>
+            <div style={{ width: 3, background: "linear-gradient(180deg,#1a6b4a,#4ade80)", flexShrink: 0 }} />
+            <div style={{ padding: "9px 12px" }}>
+                <div style={{ color: "#4ade80", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>{label}</div>
+                {payload.map((p, i) => (
+                    <div key={i} style={{ fontSize: 11, marginBottom: 2 }}>
+                        <span style={{ color: p.fill || p.stroke }}>{p.name}: </span>
+                        <span style={{ color: "#edf5e0", fontWeight: 700 }}>{p.value}</span>
+                    </div>
+                ))}
             </div>
         </div>
-    )
+    );
 }
 
-// Line chart
-const LineChart = ({ data, height = 160 }) => {
-    const w = 100, h = 100
-    const max = Math.max(...data.map(d => d.needs))
-    const needsPts  = data.map((d, i) => `${(i / (data.length - 1)) * w},${h - (d.needs    / max) * h}`).join(" ")
-    const resolvedPts = data.map((d, i) => `${(i / (data.length - 1)) * w},${h - (d.resolved / max) * h}`).join(" ")
-
+function KpiCard({ label, value, suffix = "", color, icon: Icon, trend }) {
+    const { dark } = useContext(ThemeCtx);
+    const t = dark ? TK.dark : TK.light;
+    const counted = useCountUp(value);
     return (
-        <div style={{ height, position: "relative" }}>
-            <svg viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none" style={{ width: "100%", height: "100%", overflow: "visible" }}>
-                <polyline points={needsPts} fill="none" stroke={T.accent} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                <polyline points={resolvedPts} fill="none" stroke={T.green} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" strokeDasharray="3 2" />
-                {data.map((d, i) => {
-                    const x = (i / (data.length - 1)) * w
-                    return (
-                        <g key={i}>
-                            <circle cx={x} cy={h - (d.needs    / max) * h} r="1.5" fill={T.accent} />
-                            <circle cx={x} cy={h - (d.resolved / max) * h} r="1.5" fill={T.green} />
-                        </g>
-                    )
-                })}
-            </svg>
-        </div>
-    )
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} whileHover={{ y: -3 }}
+                    style={{ background: dark ? "#18181b" : "#fff", borderRadius: 13, overflow: "hidden", display: "flex", boxShadow: dark ? "0 2px 18px rgba(0,0,0,0.28)" : "0 2px 14px rgba(45,90,45,0.07)", border: dark ? "1px solid rgba(255,255,255,0.04)" : `1px solid ${t.border}` }}>
+            <div style={{ width: 4, flexShrink: 0, background: `linear-gradient(180deg,${color},${color}55)` }} />
+            <div style={{ padding: "16px 18px", flex: 1 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 9 }}>
+                    <div style={{ color: t.muted, fontSize: 12.5, fontWeight: 500, fontFamily: "DM Sans, sans-serif" }}>{label}</div>
+                    <div style={{ width: 32, height: 32, borderRadius: 9, background: `${color}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <Icon size={16} color={color} />
+                    </div>
+                </div>
+                <div style={{ fontSize: 26, fontWeight: 900, color: t.text, fontFamily: "DM Sans, sans-serif", lineHeight: 1 }}>{counted.toLocaleString()}{suffix}</div>
+                {trend && (
+                    <div style={{ display: "flex", alignItems: "center", gap: 3, marginTop: 7, color: "#1a6b4a", fontSize: 11, fontWeight: 600 }}>
+                        <ChevronUp size={12} />{trend}
+                    </div>
+                )}
+            </div>
+        </motion.div>
+    );
 }
 
-// Export modal
-const ExportModal = ({ onClose }) => {
-    const [format, setFormat] = useState("pdf")
-    const [loading, setLoading] = useState(false)
-    const [done, setDone] = useState(false)
-
-    const doExport = () => {
-        setLoading(true)
-        setTimeout(() => { setLoading(false); setDone(true) }, 2000)
-    }
-
+// Export Modal
+function ExportModal({ onClose }) {
+    const { dark } = useContext(ThemeCtx);
+    const t = dark ? TK.dark : TK.light;
+    const [fmt, setFmt] = useState("PDF");
+    const [sections, setSections] = useState({ kpis: true, charts: true, zones: true, leaderboard: false });
     return (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                    style={{
-                        position: "fixed", inset: 0, background: "rgba(0,0,0,0.55)",
-                        zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 20,
-                    }} onClick={onClose}>
-            <motion.div initial={{ scale: .93, y: 16 }} animate={{ scale: 1, y: 0 }}
-                        exit={{ scale: .93 }} onClick={e => e.stopPropagation()}
-                        style={{
-                            background: T.card, border: `1px solid ${T.border}`,
-                            borderRadius: 18, padding: 22, width: "100%", maxWidth: 360,
-                        }}>
-                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
-                    <p style={{ fontSize: 15, fontWeight: 800, color: T.text, margin: 0 }}>Export Report</p>
-                    <button onClick={onClose} style={{ background: "none", border: "none", color: T.muted, cursor: "pointer", fontSize: 16 }}>✕</button>
+                    style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", backdropFilter: "blur(8px)", zIndex: 1000, display: "flex", alignItems: "center", justifyContent: "center" }}
+                    onClick={onClose}>
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }}
+                        onClick={e => e.stopPropagation()}
+                        style={{ background: dark ? "#111a0e" : "#fff", borderRadius: 18, padding: 28, width: 440, border: `1px solid ${t.border}`, boxShadow: "0 32px 70px rgba(0,0,0,0.4)" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
+                    <div style={{ fontSize: 16, fontWeight: 800, color: t.text, fontFamily: "DM Sans, sans-serif" }}>Export Report</div>
+                    <button onClick={onClose} style={{ background: "none", border: "none", cursor: "pointer", color: t.muted, padding: 4 }}><X size={16} /></button>
                 </div>
-                {done ? (
-                    <div style={{ textAlign: "center", padding: "14px 0" }}>
-                        <CheckCircle size={38} style={{ color: T.green, marginBottom: 10 }} />
-                        <p style={{ fontSize: 14, fontWeight: 700, color: T.green, margin: "0 0 5px" }}>Exported successfully!</p>
-                        <button onClick={onClose} style={{
-                            marginTop: 12, padding: "9px 22px", borderRadius: 9, background: T.accent,
-                            color: "#fff", fontWeight: 700, border: "none", cursor: "pointer",
-                        }}>Done</button>
-                    </div>
-                ) : (
-                    <>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 7, marginBottom: 14 }}>
-                            {[
-                                { key: "pdf",   label: "PDF Report",      icon: FileText, desc: "Stakeholder-ready"    },
-                                { key: "csv",   label: "CSV Data Export",  icon: BarChart3,desc: "Raw data for analysis" },
-                                { key: "excel", label: "Excel Workbook",   icon: Layers,   desc: "Multi-sheet report"   },
-                            ].map(f => (
-                                <div key={f.key} onClick={() => setFormat(f.key)}
-                                     style={{
-                                         padding: "11px 13px", borderRadius: 9, cursor: "pointer",
-                                         display: "flex", alignItems: "center", gap: 9,
-                                         background: format === f.key ? `${T.accent}10` : "transparent",
-                                         border: `1px solid ${format === f.key ? T.accent + "40" : T.border}`,
-                                         transition: "all .15s",
-                                     }}>
-                                    <f.icon size={14} style={{ color: format === f.key ? T.accent : T.muted }} />
-                                    <div style={{ flex: 1 }}>
-                                        <p style={{ fontSize: 12, fontWeight: 700, color: T.text, margin: 0 }}>{f.label}</p>
-                                        <p style={{ fontSize: 10, color: T.muted, margin: 0 }}>{f.desc}</p>
-                                    </div>
-                                    {format === f.key && <CheckCircle size={13} style={{ color: T.accent }} />}
-                                </div>
-                            ))}
+                <div style={{ marginBottom: 18 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: t.muted, marginBottom: 9, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "DM Sans, sans-serif" }}>Format</div>
+                    <LiquidRadio options={["PDF","CSV","Excel"]} value={fmt} onChange={setFmt} />
+                </div>
+                <div style={{ marginBottom: 22 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: t.muted, marginBottom: 11, textTransform: "uppercase", letterSpacing: "0.08em", fontFamily: "DM Sans, sans-serif" }}>Sections to Include</div>
+                    {Object.entries(sections).map(([k, v]) => (
+                        <div key={k} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 13 }}>
+              <span style={{ color: t.text, fontSize: 13.5, fontFamily: "DM Sans, sans-serif" }}>
+                {k === "kpis" ? "KPI Cards" : k === "leaderboard" ? "Volunteer Leaderboard" : k.charAt(0).toUpperCase() + k.slice(1)}
+              </span>
+                            <CosmicToggle checked={v} onChange={nv => setSections(s => ({...s, [k]: nv}))} />
                         </div>
-                        <button onClick={doExport}
-                                style={{
-                                    width: "100%", padding: "11px", borderRadius: 10, border: "none",
-                                    background: T.accent, color: "#dcebd6",
-                                    fontWeight: 700, fontSize: 13, cursor: "pointer",
-                                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                                    fontFamily: "'DM Sans',sans-serif",
-                                }}>
-                            {loading ? <><RefreshCw size={13} style={{ animation: "spin .8s linear infinite" }} /> Exporting...</>
-                                : <><Download size={13} /> Export {format.toUpperCase()}</>}
-                        </button>
-                    </>
-                )}
+                    ))}
+                </div>
+                <GradientBtn><Download size={13} /> Download {fmt}</GradientBtn>
             </motion.div>
         </motion.div>
-    )
+    );
 }
 
-// KPI card used in a 3-col grid
-const KPICard = ({ k, i }) => (
-    <motion.div
-        initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: i * .05 }}
-        whileHover={{ y: -2, transition: { duration: .15 } }}
-        style={{
-            background: T.card, border: `1px solid ${T.border}`,
-            borderRadius: 13, padding: "14px 16px",
-        }}>
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 9 }}>
-            <div style={{ width: 28, height: 28, borderRadius: 7, background: `${k.color}18`, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <k.icon size={13} style={{ color: k.color }} />
-            </div>
-            <span style={{
-                fontSize: 9.5, fontWeight: 700, padding: "2px 6px", borderRadius: 6,
-                background: k.up ? "rgba(26,107,74,0.12)" : "rgba(184,85,71,0.12)",
-                color: k.up ? T.green : T.red,
-                display: "flex", alignItems: "center", gap: 2,
-            }}>
-                {k.up ? <ArrowUpRight size={9} /> : <ArrowDownRight size={9} />} {k.delta}
-            </span>
-        </div>
-        <p style={{ fontSize: 22, fontWeight: 900, color: k.color, margin: "0 0 2px" }}>
-            <AnimNum value={k.value} />
-        </p>
-        <p style={{ fontSize: 10, color: T.muted, fontWeight: 600 }}>{k.label}</p>
-    </motion.div>
-)
-
+// ─── Main ──────────────────────────────────────────────────────────────────────
 export default function ReportsPage() {
-    const [period, setPeriod] = useState("monthly")
-    const [showExport, setShowExport] = useState(false)
-    const [activeZone, setActiveZone] = useState(null)
+    const [dark, setDark] = useState(false);
+    const [exp, setExp] = useState(true);
+    const [period, setPeriod] = useState("Month");
+    const [sortCol, setSortCol] = useState("reported");
+    const [sortDir, setSortDir] = useState("desc");
+    const [showExport, setShowExport] = useState(false);
+    const [spin, setSpin] = useState(false);
+    const t = dark ? TK.dark : TK.light;
+    const sw = exp ? 220 : 68;
+    const today = new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "long", year: "numeric" });
+
+    const sorted = [...zoneData].sort((a, b) => {
+        const av = isNaN(a[sortCol]) ? a[sortCol] : Number(a[sortCol]);
+        const bv = isNaN(b[sortCol]) ? b[sortCol] : Number(b[sortCol]);
+        return sortDir === "asc" ? (av > bv ? 1 : -1) : (av < bv ? 1 : -1);
+    });
+
+    const doSort = col => { if (sortCol === col) setSortDir(d => d === "asc" ? "desc" : "asc"); else { setSortCol(col); setSortDir("desc"); } };
+    const SIcon = ({ col }) => sortCol !== col ? <ChevronsUpDown size={11} opacity={0.4} /> : sortDir === "asc" ? <ChevronUp size={11} /> : <ChevronDown size={11} />;
 
     return (
-        <div style={{
-            minHeight: "100vh", background: T.bg, color: T.text,
-            fontFamily: "'DM Sans',sans-serif", padding: "26px 30px",
-        }}>
-            <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&display=swap');
-                @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-                * { box-sizing: border-box; margin: 0; padding: 0; }
-                ::-webkit-scrollbar { width: 4px; }
-                ::-webkit-scrollbar-thumb { background: rgba(90,120,99,0.3); border-radius: 2px; }
-            `}</style>
+        <ThemeCtx.Provider value={{ dark, toggle: () => setDark(d => !d) }}>
+            <div style={{ minHeight: "100vh", background: t.bg, fontFamily: "DM Sans, sans-serif", color: t.text, display: "flex" }}>
+                <Sidebar exp={exp} onToggle={() => setExp(v => !v)} />
 
-            <div style={{ maxWidth: 1280, margin: "0 auto" }}>
+                <motion.main animate={{ marginLeft: sw }} transition={{ type: "spring", stiffness: 320, damping: 32 }} style={{ flex: 1, minHeight: "100vh" }}>
 
-                {/* Header */}
-                <div style={{
-                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                    marginBottom: 24, flexWrap: "wrap", gap: 10,
-                }}>
-                    <div>
-                        <h1 style={{ fontSize: 22, fontWeight: 900, color: T.text, margin: "0 0 3px", letterSpacing: "-.4px" }}>
-                            Impact Reports
-                        </h1>
-                        <p style={{ fontSize: 12, color: T.muted }}>Comprehensive analytics for stakeholders · Updated live</p>
+                    {/* Topbar */}
+                    <div style={{ background: dark ? "#111a0e" : "#eef2eb", borderBottom: `1px solid ${t.border}`, padding: "0 24px", height: 62, display: "flex", alignItems: "center", gap: 14, position: "sticky", top: 0, zIndex: 50 }}>
+                        <div>
+                            <div style={{ fontSize: 17, fontWeight: 800, color: t.text, fontFamily: "DM Sans, sans-serif" }}>Impact Reports</div>
+                            <div style={{ fontSize: 11, color: t.muted, marginTop: 1, fontFamily: "DM Sans, sans-serif" }}>Data as of {today}</div>
+                        </div>
+                        <div style={{ flex: 1 }} />
+                        <PillToggle options={["Week","Month","Quarter","Year"]} value={period} onChange={setPeriod} />
+                        <GradientBtn small><FileText size={13} /> Generate Report</GradientBtn>
+                        <DownloadBtn onClick={() => setShowExport(true)} />
+                        <motion.button onClick={() => { setSpin(true); setTimeout(() => setSpin(false), 900); }}
+                                       animate={{ rotate: spin ? 360 : 0 }} transition={{ duration: 0.7, ease: "linear" }}
+                                       style={{ background: "none", border: "none", cursor: "pointer", color: t.muted, padding: 5, borderRadius: 7, display: "flex", alignItems: "center" }}>
+                            <RefreshCw size={16} />
+                        </motion.button>
                     </div>
-                    <div style={{ display: "flex", gap: 8 }}>
-                        {/* Period selector */}
-                        <div style={{ display: "flex", gap: 3, padding: 3, borderRadius: 9, background: T.card, border: `1px solid ${T.border}` }}>
-                            {["weekly", "monthly", "quarterly", "yearly"].map(p => (
-                                <button key={p} onClick={() => setPeriod(p)}
-                                        style={{
-                                            padding: "6px 11px", borderRadius: 7, border: "none", cursor: "pointer",
-                                            fontFamily: "'DM Sans',sans-serif", fontSize: 11, fontWeight: 700,
-                                            background: period === p ? T.accent : "transparent",
-                                            color: period === p ? "#fff" : T.muted,
-                                            transition: "all .15s", textTransform: "capitalize",
-                                        }}>{p}</button>
-                            ))}
-                        </div>
-                        <button onClick={() => setShowExport(true)}
-                                style={{
-                                    display: "flex", alignItems: "center", gap: 6, padding: "7px 14px",
-                                    borderRadius: 9, border: `1px solid ${T.accent}35`,
-                                    background: `${T.accent}14`, color: T.accent,
-                                    fontSize: 12, fontWeight: 700, cursor: "pointer",
-                                    fontFamily: "'DM Sans',sans-serif",
-                                }}>
-                            <Download size={12} /> Export
-                        </button>
-                    </div>
-                </div>
 
-                {/* KPI — two rows of 3 instead of broken 6-col */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 12 }}>
-                    {KPI_ROW1.map((k, i) => <KPICard key={k.label} k={k} i={i} />)}
-                </div>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 10, marginBottom: 14 }}>
-                    {KPI_ROW2.map((k, i) => <KPICard key={k.label} k={k} i={i + 3} />)}
-                </div>
-
-                {/* Row 3: Line chart + Donut */}
-                <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 12, marginBottom: 12 }}>
-                    <Card>
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-                            <SectionHeader title="12-Month Trend" subtitle="Needs vs resolved" icon={TrendingUp} color={T.accent} />
-                            <div style={{ display: "flex", gap: 12 }}>
-                                {[{ label: "Needs", color: T.accent }, { label: "Resolved", color: T.green }].map(l => (
-                                    <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                                        <div style={{ width: 14, height: 2, borderRadius: 1, background: l.color }} />
-                                        <span style={{ fontSize: 10.5, color: T.muted }}>{l.label}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                        <LineChart data={MONTHLY} height={160} />
-                        <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
-                            {MONTHLY.map(d => <span key={d.m} style={{ fontSize: 8.5, color: T.muted }}>{d.m}</span>)}
-                        </div>
-                    </Card>
-
-                    <Card>
-                        <SectionHeader title="By Category" subtitle="Current period" icon={PieChart} color={T.purple} />
-                        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-                            <DonutChart data={CAT_DATA} />
-                            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 7 }}>
-                                {CAT_DATA.map(d => (
-                                    <div key={d.cat}>
-                                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
-                                            <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                                                <div style={{ width: 6, height: 6, borderRadius: 2, background: d.color, flexShrink: 0 }} />
-                                                <span style={{ fontSize: 11, color: T.text, fontWeight: 600 }}>{d.cat}</span>
-                                            </div>
-                                            <span style={{ fontSize: 11, color: T.muted }}>{d.pct}%</span>
-                                        </div>
-                                        <div style={{ height: 3, borderRadius: 2, background: T.faint, overflow: "hidden" }}>
-                                            <motion.div initial={{ width: 0 }} animate={{ width: `${d.pct}%` }}
-                                                        transition={{ duration: .7, delay: .2 }}
-                                                        style={{ height: "100%", borderRadius: 2, background: d.color }} />
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </Card>
-                </div>
-
-                {/* Row 4: Zone performance + Bar chart */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-                    <Card>
-                        <SectionHeader title="Zone Performance" subtitle="By geographic area" icon={MapPin} color={T.cyan} />
-                        <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-                            {ZONE_DATA.map((z, i) => (
-                                <motion.div key={z.zone}
-                                            initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: i * .06 }}
-                                            onClick={() => setActiveZone(activeZone === z.zone ? null : z.zone)}
-                                            style={{
-                                                padding: "9px 11px", borderRadius: 9, cursor: "pointer",
-                                                background: activeZone === z.zone ? `${T.cyan}08` : "transparent",
-                                                border: `1px solid ${activeZone === z.zone ? T.cyan + "35" : T.border}`,
-                                                transition: "all .15s",
-                                            }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
-                                        <div style={{ width: 7, height: 7, borderRadius: 2, background: z.color, flexShrink: 0 }} />
-                                        <span style={{ flex: 1, fontSize: 12, fontWeight: 700, color: T.text }}>{z.zone}</span>
-                                        <span style={{ fontSize: 11, color: T.muted }}>{z.needs} needs</span>
-                                        <span style={{
-                                            fontSize: 10, fontWeight: 700, padding: "2px 7px", borderRadius: 20,
-                                            background: "rgba(26,107,74,0.12)", color: T.green,
-                                        }}>{Math.round((z.resolved / z.needs) * 100)}%</span>
-                                    </div>
-                                    <div style={{ marginTop: 6, height: 3, borderRadius: 2, background: T.faint, overflow: "hidden" }}>
-                                        <motion.div
-                                            initial={{ width: 0 }} animate={{ width: `${(z.resolved / z.needs) * 100}%` }}
-                                            transition={{ duration: .7, delay: i * .07 }}
-                                            style={{ height: "100%", borderRadius: 2, background: z.color }} />
-                                    </div>
+                    <div style={{ padding: "20px 24px" }}>
+                        {/* KPIs */}
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 14, marginBottom: 18 }}>
+                            {[
+                                { label: "Total Needs Reported", value: 499, color: t.blue,   icon: AlertCircle,  trend: "+12% vs last month" },
+                                { label: "Resolved (84%)",        value: 418, color: t.green,  icon: CheckCircle2, trend: "+8% resolution rate" },
+                                { label: "Volunteers Deployed",   value: 127, color: t.purple, icon: Users,        trend: "+15 this period" },
+                                { label: "People Impacted",       value: 8240,color: t.cyan,   icon: TrendingUp,   trend: "Est. reach" },
+                            ].map((k, i) => (
+                                <motion.div key={k.label} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }}>
+                                    <KpiCard {...k} />
                                 </motion.div>
                             ))}
                         </div>
-                    </Card>
 
-                    <Card>
-                        <SectionHeader title="Monthly Volume" subtitle="Needs per month" icon={BarChart3} color={T.amber} />
-                        <BarMini data={MONTHLY} height={150} />
-                        <div style={{ display: "flex", gap: 12, marginTop: 8 }}>
-                            {[{ label: "Resolved", color: T.green }, { label: "Pending", color: T.accent }].map(l => (
-                                <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 5 }}>
-                                    <div style={{ width: 7, height: 7, borderRadius: 2, background: l.color }} />
-                                    <span style={{ fontSize: 10.5, color: T.muted }}>{l.label}</span>
+                        {/* Charts */}
+                        <div style={{ display: "grid", gridTemplateColumns: "1.4fr 1fr", gap: 16, marginBottom: 16 }}>
+                            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}
+                                        style={{ background: dark ? "#1c2a18" : "#fff", borderRadius: 13, padding: "18px 20px", border: `1px solid ${t.border}` }}>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: t.text, marginBottom: 18, fontFamily: "DM Sans, sans-serif" }}>Monthly Overview</div>
+                                <ResponsiveContainer width="100%" height={210}>
+                                    <BarChart data={monthlyData} barCategoryGap="30%">
+                                        <CartesianGrid strokeDasharray="3 3" stroke={dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)"} />
+                                        <XAxis dataKey="month" tick={{ fill: t.muted, fontSize: 11 }} axisLine={false} tickLine={false} />
+                                        <YAxis tick={{ fill: t.muted, fontSize: 11 }} axisLine={false} tickLine={false} />
+                                        <Tooltip content={<CTooltip />} />
+                                        <Bar dataKey="reported" name="Reported" stackId="a" fill="#2d5a2d" />
+                                        <Bar dataKey="resolved"  name="Resolved"  stackId="a" fill="#4ade80" radius={[5,5,0,0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                                <div style={{ display: "flex", gap: 16, marginTop: 10 }}>
+                                    {[["#2d5a2d","Needs Reported"],["#4ade80","Resolved"]].map(([c,l]) => (
+                                        <div key={l} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: t.muted }}>
+                                            <div style={{ width: 9, height: 9, borderRadius: 3, background: c }} />{l}
+                                        </div>
+                                    ))}
                                 </div>
-                            ))}
+                            </motion.div>
+
+                            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.33 }}
+                                        style={{ background: dark ? "#1c2a18" : "#fff", borderRadius: 13, padding: "18px 20px", border: `1px solid ${t.border}` }}>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: t.text, marginBottom: 10, fontFamily: "DM Sans, sans-serif" }}>Category Breakdown</div>
+                                <ResponsiveContainer width="100%" height={170}>
+                                    <PieChart>
+                                        <Pie data={categoryData} cx="50%" cy="50%" innerRadius={52} outerRadius={76} paddingAngle={3} dataKey="value">
+                                            {categoryData.map((e, i) => <Cell key={i} fill={e.color} />)}
+                                        </Pie>
+                                        <Tooltip content={({ active, payload }) => {
+                                            if (!active || !payload?.length) return null;
+                                            const d = payload[0].payload;
+                                            return <div style={{ background: "#18181b", borderRadius: 7, padding: "8px 12px" }}><div style={{ color: d.color, fontWeight: 700, fontSize: 11 }}>{d.name}</div><div style={{ color: "#edf5e0", fontSize: 13, fontWeight: 700 }}>{d.value}%</div></div>;
+                                        }} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                                {categoryData.map(c => (
+                                    <div key={c.name} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 4, fontSize: 11 }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                                            <div style={{ width: 7, height: 7, borderRadius: "50%", background: c.color }} />
+                                            <span style={{ color: t.muted }}>{c.name}</span>
+                                        </div>
+                                        <span style={{ color: t.text, fontWeight: 700 }}>{c.value}%</span>
+                                    </div>
+                                ))}
+                            </motion.div>
                         </div>
-                    </Card>
-                </div>
 
-                {/* Row 5: Leaderboard + Stakeholder summary */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                    <Card>
-                        <SectionHeader title="Volunteer Leaderboard" subtitle="Top performers" icon={Award} color={T.amber} />
-                        {VOLUNTEERS_TOP.map((v, i) => (
-                            <div key={v.name} style={{
-                                display: "flex", alignItems: "center", gap: 9, padding: "9px 6px",
-                                borderBottom: i < VOLUNTEERS_TOP.length - 1 ? `1px solid ${T.border}` : "none",
-                            }}>
-                                <span style={{
-                                    fontSize: 11, fontWeight: 700, width: 18,
-                                    color: i === 0 ? T.amber : i === 1 ? "#9CA3AF" : i === 2 ? "#CD7F32" : T.muted,
-                                }}>#{i + 1}</span>
-                                <div style={{
-                                    width: 32, height: 32, borderRadius: 9, background: v.color,
-                                    display: "flex", alignItems: "center", justifyContent: "center",
-                                    fontSize: 10.5, fontWeight: 800, color: "#fff", flexShrink: 0,
-                                }}>{v.init}</div>
-                                <div style={{ flex: 1, minWidth: 0 }}>
-                                    <p style={{ fontSize: 12, fontWeight: 700, color: T.text, margin: 0 }}>{v.name}</p>
-                                    <p style={{ fontSize: 10, color: T.muted, margin: 0 }}>{v.zone}</p>
-                                </div>
-                                <div style={{ textAlign: "right" }}>
-                                    <p style={{ fontSize: 13, fontWeight: 800, color: T.text, margin: 0 }}>{v.tasks}</p>
-                                    <p style={{ fontSize: 9, color: T.muted, margin: 0 }}>tasks</p>
-                                </div>
-                                <div style={{
-                                    padding: "3px 8px", borderRadius: 6,
-                                    background: `${v.color}20`, color: v.color,
-                                    fontSize: 10, fontWeight: 700,
-                                }}>{v.score}%</div>
+                        {/* Zone Table */}
+                        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.38 }}
+                                    style={{ background: dark ? "#1c2a18" : "#fff", borderRadius: 13, overflow: "hidden", border: `1px solid ${t.border}`, marginBottom: 16 }}>
+                            <div style={{ padding: "14px 20px", borderBottom: `1px solid ${t.border}`, fontSize: 14, fontWeight: 700, color: t.text, fontFamily: "DM Sans, sans-serif" }}>Zone Performance</div>
+                            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                <thead>
+                                <tr style={{ background: dark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.02)" }}>
+                                    {[["zone","Zone"],["reported","Reported"],["resolved","Resolved"],["pending","Pending"],["avgTime","Avg Time"],["volunteer","Top Volunteer"]].map(([col,lbl]) => (
+                                        <th key={col} onClick={() => doSort(col)}
+                                            style={{ padding: "10px 18px", textAlign: "left", fontSize: 10, fontWeight: 700, color: t.muted, textTransform: "uppercase", letterSpacing: "0.06em", cursor: "pointer", userSelect: "none" }}>
+                                            <span style={{ display: "flex", alignItems: "center", gap: 3 }}>{lbl} <SIcon col={col} /></span>
+                                        </th>
+                                    ))}
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {sorted.map((row, i) => (
+                                    <motion.tr key={row.zone} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                                               whileHover={{ background: dark ? "rgba(120,180,80,0.04)" : "rgba(45,90,45,0.03)" }}
+                                               style={{ borderBottom: `1px solid ${t.border}` }}>
+                                        <td style={{ padding: "12px 18px", fontSize: 13, fontWeight: 700, color: t.text }}>{row.zone}</td>
+                                        <td style={{ padding: "12px 18px", fontSize: 13, color: t.text }}>{row.reported}</td>
+                                        <td style={{ padding: "12px 18px" }}><span style={{ background: `${t.green}18`, color: t.green, padding: "3px 9px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>{row.resolved}</span></td>
+                                        <td style={{ padding: "12px 18px" }}><span style={{ background: `${t.amber}18`, color: t.amber, padding: "3px 9px", borderRadius: 999, fontSize: 11, fontWeight: 700 }}>{row.pending}</span></td>
+                                        <td style={{ padding: "12px 18px", fontSize: 12.5, color: t.muted }}>{row.avgTime}</td>
+                                        <td style={{ padding: "12px 18px", fontSize: 12.5, color: t.text }}>{row.volunteer}</td>
+                                    </motion.tr>
+                                ))}
+                                </tbody>
+                            </table>
+                        </motion.div>
+
+                        {/* Leaderboard */}
+                        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.44 }}
+                                    style={{ background: dark ? "#1c2a18" : "#fff", borderRadius: 13, overflow: "hidden", border: `1px solid ${t.border}` }}>
+                            <div style={{ padding: "14px 20px", borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+                                <Award size={16} color={t.accent} />
+                                <span style={{ fontSize: 14, fontWeight: 700, color: t.text, fontFamily: "DM Sans, sans-serif" }}>Volunteer Leaderboard — {period}</span>
                             </div>
-                        ))}
-                    </Card>
+                            <div style={{ padding: "4px 0" }}>
+                                {leaderData.map((v, i) => (
+                                    <motion.div key={v.rank} initial={{ opacity: 0, x: -18 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.48 + i * 0.05 }}
+                                                whileHover={{ background: dark ? "rgba(120,180,80,0.04)" : "rgba(45,90,45,0.03)" }}
+                                                style={{ display: "flex", alignItems: "center", gap: 14, padding: "10px 20px", borderBottom: i < 9 ? `1px solid ${t.border}` : "none" }}>
+                                        <div style={{ width: 26, textAlign: "center", fontSize: v.rank <= 3 ? 16 : 13, fontWeight: 800, color: v.rank <= 3 ? ["#d4af37","#c0c0c0","#cd7f32"][v.rank-1] : t.muted }}>
+                                            {v.rank <= 3 ? ["🥇","🥈","🥉"][v.rank-1] : v.rank}
+                                        </div>
+                                        <div style={{ width: 32, height: 32, borderRadius: "50%", background: `linear-gradient(135deg,${t.accent}35,${t.accent}75)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 10, fontWeight: 800, color: t.accent, flexShrink: 0 }}>{v.av}</div>
+                                        <div style={{ flex: 1, fontSize: 13, fontWeight: 600, color: t.text, fontFamily: "DM Sans, sans-serif" }}>{v.name}</div>
+                                        <div style={{ textAlign: "center", minWidth: 52 }}>
+                                            <div style={{ fontSize: 15, fontWeight: 800, color: t.text }}>{v.tasks}</div>
+                                            <div style={{ fontSize: 9.5, color: t.muted }}>Tasks</div>
+                                        </div>
+                                        <div style={{ textAlign: "center", minWidth: 52 }}>
+                                            <div style={{ fontSize: 15, fontWeight: 800, color: t.text }}>{v.hours}</div>
+                                            <div style={{ fontSize: 9.5, color: t.muted }}>Hours</div>
+                                        </div>
+                                        <div style={{ minWidth: 110 }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: 9.5, color: t.muted, marginBottom: 3 }}>
+                                                <span>Reliability</span><span style={{ color: t.accent, fontWeight: 700 }}>{v.reliability}%</span>
+                                            </div>
+                                            <div style={{ height: 4, borderRadius: 999, background: dark ? "#2a3a28" : "#e0e8dc", overflow: "hidden" }}>
+                                                <motion.div initial={{ width: 0 }} animate={{ width: `${v.reliability}%` }} transition={{ delay: 0.52 + i * 0.04, duration: 0.7 }}
+                                                            style={{ height: "100%", background: `linear-gradient(90deg,${t.accent},#4ade80)`, borderRadius: 999 }} />
+                                            </div>
+                                        </div>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </motion.div>
+                    </div>
+                </motion.main>
 
-                    <Card>
-                        <SectionHeader title="Stakeholder Summary" subtitle="Key metrics for reporting" icon={Globe} color={T.green} />
-                        <div style={{ display: "flex", flexDirection: "column", gap: 0 }}>
-                            {[
-                                { label: "Total beneficiaries reached",   value: "8,432",  color: T.green  },
-                                { label: "Needs resolved within 24h",     value: "67.3%",  color: T.cyan   },
-                                { label: "Volunteer hours contributed",   value: "2,847h", color: T.accent },
-                                { label: "Cost saved vs manual ops",      value: "₹4.2L",  color: T.amber  },
-                                { label: "AI matching accuracy",          value: "96.8%",  color: T.purple },
-                                { label: "Duplicate needs prevented",     value: "142",    color: T.pink   },
-                            ].map((row, i, arr) => (
-                                <div key={row.label} style={{
-                                    display: "flex", alignItems: "center", justifyContent: "space-between",
-                                    padding: "9px 0",
-                                    borderBottom: i < arr.length - 1 ? `1px solid ${T.border}` : "none",
-                                }}>
-                                    <span style={{ fontSize: 12, color: T.muted }}>{row.label}</span>
-                                    <span style={{ fontSize: 14, fontWeight: 800, color: row.color }}>
-                                        <AnimNum value={row.value} />
-                                    </span>
-                                </div>
-                            ))}
-                        </div>
-                        <button onClick={() => setShowExport(true)}
-                                style={{
-                                    marginTop: 14, width: "100%", padding: "10px", borderRadius: 10, border: "none",
-                                    background: T.green, color: "#fff", fontWeight: 700, fontSize: 12, cursor: "pointer",
-                                    display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-                                    fontFamily: "'DM Sans',sans-serif",
-                                }}>
-                            <Share2 size={12} /> Share Stakeholder Report
-                        </button>
-                    </Card>
-                </div>
+                <AnimatePresence>
+                    {showExport && <ExportModal onClose={() => setShowExport(false)} />}
+                </AnimatePresence>
             </div>
-
-            <AnimatePresence>
-                {showExport && <ExportModal onClose={() => setShowExport(false)} />}
-            </AnimatePresence>
-        </div>
-    )
+        </ThemeCtx.Provider>
+    );
 }
