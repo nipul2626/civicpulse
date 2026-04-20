@@ -1,539 +1,478 @@
-import { useState, useEffect } from "react"
-import { motion, AnimatePresence } from "framer-motion"
+import React, { useState, useEffect, useContext } from "react";
+import { motion } from "framer-motion";
 import {
-    Brain, Zap, MapPin, Clock, Users, Activity,
-    Target, AlertTriangle, CheckCircle, RefreshCw,
-    ChevronRight, Layers, Cpu, Radio, Database,
-    TrendingUp, Globe
-} from "lucide-react"
+    AreaChart, Area, BarChart, Bar, XAxis, YAxis,
+    CartesianGrid, Tooltip, ResponsiveContainer, Cell
+} from "recharts";
+import {
+    LayoutDashboard, Map, CheckSquare, Users, Heart,
+    ClipboardList, BarChart2, Settings,
+    Zap, ChevronLeft, Brain, RefreshCw, Award
+} from "lucide-react";
 
-const T = {
-    bg:      "#eef2eb",
-    surface: "#e2e8de",
-    card:    "#ffffff",
-    border:  "rgba(45,90,45,0.12)",
-    text:    "#1a2e1a",
-    muted:   "#5a7a5a",
-    faint:   "#c8d8c4",
-    accent:  "#2d5a2d",
-    f300:    "#4a7a44",
-    f400:    "#3a6a34",
-    green:   "#1a6b4a",
-    amber:   "#c07a0a",
-    red:     "#b84c2e",
-    cyan:    "#1a6b7a",
-    purple:  "#5a3a8a",
-    pink:    "#8a3a5a",
-    s300:    "#7ab870",
-}
+// ─── Theme ─────────────────────────────────────────────────────────────────────
+const ThemeCtx = React.createContext({ dark: false, toggle: () => {} });
 
-const AI_INSIGHTS = [
-    {
-        id: 1, icon: Brain, color: T.accent,
-        title: "Peak demand expected Thursday",
-        desc: "AI predicts 34% surge in medical needs based on weather patterns and historical data.",
-        confidence: 92, impact: "high", action: "Pre-position 8 medical volunteers",
+const TK = {
+    light: {
+        bg: "#eef2eb", card: "#ffffff",
+        border: "rgba(45,90,45,0.12)", text: "#1a2e1a", muted: "#5a7a5a", accent: "#2d5a2d",
+        amber: "#c07a0a", green: "#1a6b4a", blue: "#1a4a8a", purple: "#5a3a8a", cyan: "#1a6b7a",
     },
-    {
-        id: 2, icon: AlertTriangle, color: T.amber,
-        title: "Unusual water scarcity in Zone B",
-        desc: "3x normal water need reports in Ghatkopar — possible infrastructure failure.",
-        confidence: 87, impact: "critical", action: "Alert water authority + deploy tankers",
-    },
-    {
-        id: 3, icon: Target, color: T.green,
-        title: "Volunteer routing optimized",
-        desc: "AI re-routed 6 volunteers saving avg 47 min per assignment today.",
-        confidence: 95, impact: "medium", action: "Applied automatically",
-    },
-    {
-        id: 4, icon: TrendingUp, color: T.cyan,
-        title: "Education need rising 22%",
-        desc: "School season driving education need growth. Recommend pre-stocking supplies.",
-        confidence: 89, impact: "medium", action: "Stock 200 education kits",
-    },
-]
+    dark: {
+        bg: "#0a0f08", card: "#1c2a18",
+        border: "rgba(120,180,80,0.12)", text: "#edf5e0", muted: "#7a9b6a", accent: "#78b450",
+        amber: "#e8a020", green: "#2dc9a0", blue: "#4a9fce", purple: "#9b7cf8", cyan: "#3ec9b0",
+    }
+};
 
-// Heatmap zones — now uses card-friendly palette, no dark bg
-const HEATMAP_ZONES = [
-    { zone: "Dharavi",   x: 35, y: 30, intensity: 0.95, needs: 47, cat: "medical"   },
-    { zone: "Bandra",    x: 60, y: 20, intensity: 0.6,  needs: 23, cat: "food"      },
-    { zone: "Kurla",     x: 55, y: 45, intensity: 0.75, needs: 38, cat: "water"     },
-    { zone: "Sion",      x: 30, y: 52, intensity: 0.55, needs: 19, cat: "shelter"   },
-    { zone: "Andheri",   x: 70, y: 58, intensity: 0.5,  needs: 31, cat: "food"      },
-    { zone: "Chembur",   x: 45, y: 70, intensity: 0.65, needs: 29, cat: "medical"   },
-    { zone: "Ghatkopar", x: 75, y: 40, intensity: 0.85, needs: 43, cat: "water"     },
-    { zone: "Mankhurd",  x: 80, y: 65, intensity: 0.4,  needs: 22, cat: "education" },
-    { zone: "Goregaon",  x: 25, y: 38, intensity: 0.45, needs: 18, cat: "food"      },
-]
+// ─── EXACT Dashboard Sidebar ───────────────────────────────────────────────────
+const NAV = [
+    { icon: LayoutDashboard, label: "Dashboard",  path: "/dashboard",  ic: "#e8734a" },
+    { icon: Map,             label: "Heatmap",     path: "/heatmap",    ic: "#4a9fce" },
+    { icon: CheckSquare,     label: "Task Board",  path: "/tasks",      ic: "#2dc9a0" },
+    { icon: Users,           label: "Volunteers",  path: "/volunteers", ic: "#9b7cf8" },
+    { icon: Heart,           label: "Survey",      path: "/survey",     ic: "#e05a7a" },
+    { icon: ClipboardList,   label: "Reports",     path: "/reports",    ic: "#c07a0a" },
+    { icon: BarChart2,       label: "Analytics",   path: "/analytics",  ic: "#4a9fce", active: true },
+    { icon: Settings,        label: "Settings",    path: "/settings",   ic: "#7a9b6a" },
+];
 
-const REAL_TIME = [
-    { time: "14:32", event: "AI scored need #1847 — Medical · Dharavi · Urgency 5",         type: "score",    zone: "Dharavi"  },
-    { time: "14:30", event: "Volunteer Priya M. matched to need #1845 in 2.3 sec",           type: "match",    zone: "Kurla"    },
-    { time: "14:28", event: "Duplicate detected: #1844 merged with #1831",                   type: "dedup",    zone: "Andheri"  },
-    { time: "14:25", event: "Critical alert: 3 simultaneous medical needs in Zone A",        type: "alert",    zone: "Zone A"   },
-    { time: "14:22", event: "Batch of 5 needs scored — avg urgency 3.6",                    type: "batch",    zone: "Multiple" },
-    { time: "14:18", event: "Volunteer Rahul S. completed task — 99% satisfaction",          type: "complete", zone: "Dharavi"  },
-    { time: "14:15", event: "AI predicted surge — 4 extra volunteers pre-positioned",        type: "predict",  zone: "Kurla"    },
-    { time: "14:10", event: "Zone Chembur water alert escalated to Level 3",                 type: "alert",    zone: "Chembur"  },
-]
-
-const MODEL_METRICS = [
-    { label: "Urgency Prediction",   score: 96.8, color: T.accent  },
-    { label: "Volunteer Matching",   score: 94.2, color: T.green   },
-    { label: "Duplicate Detection",  score: 98.1, color: T.cyan    },
-    { label: "Category Auto-tag",    score: 92.7, color: T.amber   },
-    { label: "Zone Classification",  score: 95.5, color: T.pink    },
-    { label: "ETA Prediction",       score: 89.3, color: T.purple  },
-]
-
-const HOURLY = [
-    {h:"6am",v:5},{h:"8am",v:18},{h:"10am",v:32},{h:"12pm",v:41},
-    {h:"2pm",v:38},{h:"4pm",v:45},{h:"6pm",v:52},{h:"8pm",v:29},
-    {h:"10pm",v:14},{h:"12am",v:7},
-]
-
-const intensityToColor = (v) => {
-    if (v > 0.85) return { fill: T.red,    alpha: "30" }
-    if (v > 0.7)  return { fill: T.amber,  alpha: "35" }
-    if (v > 0.55) return { fill: T.cyan,   alpha: "35" }
-    return              { fill: T.s300,    alpha: "40" }
-}
-
-// Reusable card wrapper
-const Card = ({ children, style = {} }) => (
-    <div style={{
-        background: T.card, border: `1px solid ${T.border}`,
-        borderRadius: 16, padding: "18px 20px", ...style,
-    }}>{children}</div>
-)
-
-// Section header inside a card
-const SH = ({ title, sub, icon: Icon, color = T.accent }) => (
-    <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 14 }}>
-        <div style={{
-            width: 28, height: 28, borderRadius: 7,
-            background: `${color}18`,
-            display: "flex", alignItems: "center", justifyContent: "center",
-        }}>
-            <Icon size={13} style={{ color }} />
-        </div>
-        <div>
-            <p style={{ fontSize: 13, fontWeight: 800, color: T.text, margin: 0 }}>{title}</p>
-            {sub && <p style={{ fontSize: 10, color: T.muted, margin: 0 }}>{sub}</p>}
-        </div>
-    </div>
-)
-
-// Heatmap — light themed, no dark background
-const LiveHeatmap = () => {
-    const [hovered, setHovered] = useState(null)
-
+function Sidebar({ exp, onToggle }) {
+    const { dark, toggle } = useContext(ThemeCtx);
     return (
-        <Card>
-            <SH title="Need Density Heatmap" sub="Real-time by zone" icon={Globe} color={T.cyan} />
-
-            {/* Map area — light surface, no dark background */}
-            <div style={{
-                position: "relative", height: 220, borderRadius: 10, overflow: "hidden",
-                background: T.surface, border: `1px solid ${T.border}`,
-            }}>
-                {/* SVG grid lines */}
-                <svg style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: .3 }}>
-                    {[20, 40, 60, 80].map(p => (
-                        <g key={p}>
-                            <line x1={`${p}%`} y1="0" x2={`${p}%`} y2="100%" stroke={T.faint} strokeWidth="1" strokeDasharray="4 4" />
-                            <line x1="0" y1={`${p}%`} x2="100%" y2={`${p}%`} stroke={T.faint} strokeWidth="1" strokeDasharray="4 4" />
-                        </g>
-                    ))}
-                </svg>
-
-                {/* City label */}
-                <p style={{
-                    position: "absolute", bottom: 8, left: 10, color: T.muted,
-                    fontSize: 9, fontWeight: 700, letterSpacing: ".12em",
-                }}>MUMBAI</p>
-
-                {/* Zone dots */}
-                {HEATMAP_ZONES.map((dot, i) => {
-                    const c = intensityToColor(dot.intensity)
-                    const sz = dot.intensity * 50 + 16
-                    return (
-                        <div key={dot.zone} style={{
-                            position: "absolute",
-                            left: `${dot.x}%`, top: `${dot.y}%`,
-                            transform: "translate(-50%,-50%)", zIndex: 2,
-                        }}>
-                            {/* Glow ring */}
-                            <motion.div
-                                animate={{ scale: [1, 1.2, 1], opacity: [0.35, 0.6, 0.35] }}
-                                transition={{ duration: 2.5 + i * 0.3, repeat: Infinity }}
-                                style={{
-                                    position: "absolute",
-                                    width: sz, height: sz, borderRadius: "50%",
-                                    background: `${c.fill}${c.alpha}`,
-                                    transform: "translate(-50%,-50%)",
-                                    left: "50%", top: "50%",
-                                }}
-                            />
-                            {/* Dot */}
-                            <motion.div
-                                whileHover={{ scale: 1.5 }}
-                                onHoverStart={() => setHovered(i)}
-                                onHoverEnd={() => setHovered(null)}
-                                style={{
-                                    width: 10, height: 10, borderRadius: "50%",
-                                    background: c.fill, cursor: "pointer",
-                                    border: `2px solid ${T.card}`,
-                                    position: "relative", zIndex: 3,
-                                }}
-                            />
-                            {/* Tooltip */}
-                            <AnimatePresence>
-                                {hovered === i && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 4 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0 }}
-                                        style={{
-                                            position: "absolute", bottom: "calc(100% + 7px)",
-                                            left: "50%", transform: "translateX(-50%)",
-                                            whiteSpace: "nowrap",
-                                            background: T.text, borderRadius: 8, padding: "6px 10px",
-                                            fontSize: 10, color: "#fff", zIndex: 10, pointerEvents: "none",
-                                        }}>
-                                        <p style={{ fontWeight: 700, margin: "0 0 1px" }}>{dot.zone}</p>
-                                        <p style={{ color: "rgba(255,255,255,0.7)", margin: 0 }}>{dot.needs} needs · {dot.cat}</p>
-                                    </motion.div>
-                                )}
-                            </AnimatePresence>
-                        </div>
-                    )
-                })}
-
-                {/* Legend */}
-                <div style={{ position: "absolute", bottom: 8, right: 8, display: "flex", gap: 8 }}>
-                    {[
-                        { label: "Critical", color: T.red    },
-                        { label: "High",     color: T.amber  },
-                        { label: "Low",      color: T.s300   },
-                    ].map(l => (
-                        <div key={l.label} style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                            <div style={{ width: 6, height: 6, borderRadius: "50%", background: l.color }} />
-                            <span style={{ fontSize: 8.5, color: T.muted, fontWeight: 600 }}>{l.label}</span>
-                        </div>
-                    ))}
+        <motion.aside
+            animate={{ width: exp ? 220 : 68 }}
+            transition={{ type: "spring", stiffness: 320, damping: 32 }}
+            style={{
+                background: "#eef2eb",
+                borderRight: "1px solid rgba(45,90,45,0.10)",
+                height: "100vh", position: "fixed", left: 0, top: 0,
+                overflow: "hidden", display: "flex", flexDirection: "column", zIndex: 100,
+            }}
+        >
+            {/* Logo */}
+            <div style={{ padding: "18px 14px 14px", display: "flex", alignItems: "center", gap: 10, borderBottom: "1px solid rgba(45,90,45,0.08)", flexShrink: 0 }}>
+                <div style={{ width: 34, height: 34, background: "#1a2e1a", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                    <Zap size={18} color="#fff" fill="#fff" />
                 </div>
+                {exp && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+                        <div style={{ fontSize: 15, fontWeight: 800, color: "#1a2e1a", fontFamily: "DM Sans, sans-serif", lineHeight: 1.1 }}>CivicPulse</div>
+                        <div style={{ fontSize: 10, color: "#5a7a5a", fontFamily: "DM Sans, sans-serif", marginTop: 1 }}>NGO Dashboard</div>
+                    </motion.div>
+                )}
             </div>
-        </Card>
-    )
-}
 
-// AI Insights
-const AIInsights = () => {
-    const [expanded, setExpanded] = useState(null)
-    const IMPACT_COLOR = { high: T.amber, critical: T.red, medium: T.cyan }
-
-    return (
-        <Card>
-            <SH title="AI Predictions & Alerts" sub="Live intelligence" icon={Brain} color={T.accent} />
-            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                {AI_INSIGHTS.map((ins, i) => (
-                    <motion.div key={ins.id}
-                                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
-                                transition={{ delay: i * 0.07 }}
-                                onClick={() => setExpanded(expanded === ins.id ? null : ins.id)}
-                                style={{
-                                    borderRadius: 10, border: `1px solid ${ins.color}22`,
-                                    background: `${ins.color}06`, cursor: "pointer", overflow: "hidden",
-                                }}>
-                        <div style={{ padding: "10px 12px", display: "flex", alignItems: "center", gap: 9 }}>
+            {/* Nav */}
+            <nav style={{ flex: 1, padding: "10px 8px", overflowY: "auto", overflowX: "hidden" }}>
+                {NAV.map(item => {
+                    const Icon = item.icon;
+                    return (
+                        <motion.a key={item.path} href={item.path}
+                                  whileHover={{ backgroundColor: "rgba(45,90,45,0.06)" }}
+                                  style={{
+                                      display: "flex", alignItems: "center",
+                                      gap: 11, padding: exp ? "9px 10px" : "9px 0",
+                                      justifyContent: exp ? "flex-start" : "center",
+                                      borderRadius: 8, textDecoration: "none", marginBottom: 2,
+                                      position: "relative",
+                                      background: item.active ? "rgba(45,90,45,0.08)" : "transparent",
+                                      transition: "background 0.15s",
+                                  }}
+                        >
+                            {item.active && <div style={{ position: "absolute", left: 0, top: 6, bottom: 6, width: 3, background: "#2d5a2d", borderRadius: "0 3px 3px 0" }} />}
                             <div style={{
                                 width: 28, height: 28, borderRadius: 7,
-                                background: `${ins.color}18`, flexShrink: 0,
-                                display: "flex", alignItems: "center", justifyContent: "center",
+                                background: item.active ? `${item.ic}22` : "rgba(45,90,45,0.07)",
+                                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
                             }}>
-                                <ins.icon size={13} style={{ color: ins.color }} />
+                                <Icon size={15} color={item.active ? item.ic : "#5a7a5a"} />
                             </div>
-                            <div style={{ flex: 1, minWidth: 0 }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-                                    <p style={{ fontSize: 12, fontWeight: 700, color: T.text, margin: 0 }}>{ins.title}</p>
-                                    <span style={{
-                                        fontSize: 9, fontWeight: 700, padding: "1px 6px", borderRadius: 20,
-                                        background: `${IMPACT_COLOR[ins.impact] || T.muted}18`,
-                                        color: IMPACT_COLOR[ins.impact] || T.muted, flexShrink: 0,
-                                    }}>{ins.impact}</span>
-                                </div>
-                                {/* Confidence bar */}
-                                <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
-                                    <div style={{ flex: 1, height: 2, borderRadius: 1, background: T.faint, overflow: "hidden" }}>
-                                        <motion.div initial={{ width: 0 }} animate={{ width: `${ins.confidence}%` }}
-                                                    transition={{ delay: .2 + i * .07, duration: .5 }}
-                                                    style={{ height: "100%", background: ins.color, borderRadius: 1 }} />
-                                    </div>
-                                    <span style={{ fontSize: 9.5, color: ins.color, fontWeight: 700, flexShrink: 0 }}>
-                                        {ins.confidence}%
-                                    </span>
-                                </div>
+                            {exp && <span style={{ fontSize: 13.5, fontWeight: item.active ? 700 : 500, color: item.active ? "#1a2e1a" : "#4a6a4a", fontFamily: "DM Sans, sans-serif", whiteSpace: "nowrap" }}>{item.label}</span>}
+                        </motion.a>
+                    );
+                })}
+            </nav>
+
+            {/* Bottom */}
+            <div style={{ padding: "10px 10px 14px", borderTop: "1px solid rgba(45,90,45,0.08)", flexShrink: 0 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 6px", marginBottom: 8 }}>
+                    <motion.button onClick={toggle} style={{
+                        width: 44, height: 24, borderRadius: 999,
+                        background: dark ? "linear-gradient(90deg,#1a1a3a,#0a0a1a)" : "linear-gradient(90deg,#f0c040,#87ceeb)",
+                        border: "none", cursor: "pointer", position: "relative", padding: 0, flexShrink: 0,
+                    }}>
+                        <motion.div animate={{ x: dark ? 22 : 2 }} transition={{ type: "spring", stiffness: 450, damping: 28 }}
+                                    style={{ width: 20, height: 20, borderRadius: "50%", background: dark ? "#c8c8d8" : "#fff", position: "absolute", top: 2, boxShadow: "0 1px 4px rgba(0,0,0,0.2)" }} />
+                    </motion.button>
+                    {exp && <span style={{ fontSize: 12.5, fontWeight: 500, color: "#4a6a4a", fontFamily: "DM Sans, sans-serif", whiteSpace: "nowrap" }}>{dark ? "Dark Mode" : "Light Mode"}</span>}
+                </div>
+                <div style={{ display: "flex", alignItems: "center", gap: 9, padding: "8px 8px", background: "rgba(45,90,45,0.06)", borderRadius: 10, marginBottom: 8, cursor: "pointer" }}>
+                    <div style={{ width: 30, height: 30, borderRadius: 8, background: "#2d5a2d", display: "flex", alignItems: "center", justifyContent: "center", fontSize: 11, fontWeight: 800, color: "#fff", flexShrink: 0 }}>RS</div>
+                    {exp && <div><div style={{ fontSize: 12.5, fontWeight: 700, color: "#1a2e1a", fontFamily: "DM Sans, sans-serif" }}>Riya Sharma</div><div style={{ fontSize: 10.5, color: "#5a7a5a", fontFamily: "DM Sans, sans-serif" }}>Coordinator</div></div>}
+                </div>
+                <motion.button onClick={onToggle} whileHover={{ backgroundColor: "rgba(45,90,45,0.08)" }}
+                               style={{ display: "flex", alignItems: "center", gap: 8, padding: "7px 8px", background: "transparent", border: "none", borderRadius: 8, cursor: "pointer", width: "100%" }}>
+                    <motion.div animate={{ rotate: exp ? 0 : 180 }} transition={{ duration: 0.3 }}>
+                        <ChevronLeft size={15} color="#5a7a5a" />
+                    </motion.div>
+                    {exp && <span style={{ fontSize: 12.5, fontWeight: 500, color: "#4a6a4a", fontFamily: "DM Sans, sans-serif" }}>Collapse</span>}
+                </motion.button>
+            </div>
+        </motion.aside>
+    );
+}
+
+// ─── UI Components ─────────────────────────────────────────────────────────────
+function PillToggle({ options, value, onChange }) {
+    const { dark } = useContext(ThemeCtx);
+    const t = dark ? TK.dark : TK.light;
+    const idx = options.indexOf(value);
+    return (
+        <div style={{ position: "relative", background: dark ? "#1c2a18" : "#e2e8de", borderRadius: 999, padding: 4, display: "flex", border: `1px solid ${t.border}` }}>
+            <motion.div animate={{ x: `${idx * 100}%` }} transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                        style={{ position: "absolute", top: 4, left: 4, width: `calc(${100 / options.length}% - ${8 / options.length}px)`, height: "calc(100% - 8px)", background: "#2d5a2d", borderRadius: 999 }} />
+            {options.map(opt => (
+                <button key={opt} onClick={() => onChange(opt)} style={{
+                    position: "relative", zIndex: 1, background: "transparent", border: "none",
+                    borderRadius: 999, padding: "6px 14px", fontSize: 13, fontWeight: 600,
+                    fontFamily: "DM Sans, sans-serif", cursor: "pointer",
+                    color: value === opt ? "#fff" : t.muted, transition: "color 0.3s", flex: 1, whiteSpace: "nowrap",
+                }}>{opt}</button>
+            ))}
+        </div>
+    );
+}
+
+function NotifCard({ color = "#4a9fce", title, children, tag }) {
+    const { dark } = useContext(ThemeCtx);
+    const tagC = { critical: "#e05a3a", warning: "#e8a020", info: "#4a9fce", trend: "#9b7cf8" };
+    return (
+        <motion.div whileHover={{ scale: 1.02, boxShadow: `0 0 20px ${color}25` }}
+                    style={{ background: dark ? "#18181b" : "#fff", borderRadius: 11, overflow: "hidden", border: dark ? "1px solid rgba(255,255,255,0.06)" : "1px solid rgba(45,90,45,0.12)", display: "flex", height: "100%" }}>
+            <div style={{ width: 4, flexShrink: 0, background: `linear-gradient(180deg,${color},${color}55)` }} />
+            <div style={{ padding: "12px 14px", flex: 1 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 5 }}>
+                    <div style={{ color, fontSize: 12, fontWeight: 700, fontFamily: "DM Sans, sans-serif" }}>{title}</div>
+                    {tag && <span style={{ background: `${tagC[tag]}20`, color: tagC[tag], fontSize: 9, fontWeight: 800, padding: "2px 7px", borderRadius: 999, textTransform: "uppercase", letterSpacing: "0.06em", flexShrink: 0, marginLeft: 6 }}>{tag}</span>}
+                </div>
+                <div style={{ color: dark ? "#99999d" : "#5a7a5a", fontSize: 11.5, lineHeight: 1.5, fontFamily: "DM Sans, sans-serif" }}>{children}</div>
+                <div style={{ marginTop: 8 }}>
+                    <span style={{ color, fontSize: 11, fontWeight: 600, cursor: "pointer", fontFamily: "DM Sans, sans-serif" }}>Take action →</span>
+                </div>
+            </div>
+        </motion.div>
+    );
+}
+
+function useCountUp(n, dur = 1100) {
+    const [v, setV] = useState(0);
+    useEffect(() => {
+        const s = Date.now();
+        const id = setInterval(() => {
+            const p = Math.min((Date.now() - s) / dur, 1);
+            setV(Math.round((1 - Math.pow(1 - p, 3)) * n));
+            if (p >= 1) clearInterval(id);
+        }, 16);
+        return () => clearInterval(id);
+    }, [n]);
+    return v;
+}
+
+function Ring({ value, color, label, size = 88 }) {
+    const { dark } = useContext(ThemeCtx);
+    const t = dark ? TK.dark : TK.light;
+    const r = size / 2 - 7;
+    const c = 2 * Math.PI * r;
+    const counted = useCountUp(value);
+    return (
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 5 }}>
+            <div style={{ position: "relative", width: size, height: size }}>
+                <svg width={size} height={size}>
+                    <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={dark ? "#2a3a28" : "#e0e8dc"} strokeWidth={5} />
+                    <motion.circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeWidth={5} strokeLinecap="round"
+                                   strokeDasharray={c} initial={{ strokeDashoffset: c }} animate={{ strokeDashoffset: c * (1 - value / 100) }}
+                                   transition={{ duration: 1.1, ease: "easeOut" }} style={{ transform: "rotate(-90deg)", transformOrigin: "center" }} />
+                </svg>
+                <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 15, fontWeight: 800, color: t.text, fontFamily: "DM Sans, sans-serif" }}>{counted}%</div>
+            </div>
+            <div style={{ fontSize: 11, color: t.muted, textAlign: "center", fontFamily: "DM Sans, sans-serif" }}>{label}</div>
+        </div>
+    );
+}
+
+function ScanLine() {
+    return (
+        <motion.div animate={{ y: ["0%", "100%"] }} transition={{ repeat: Infinity, duration: 4, ease: "linear", repeatDelay: 2 }}
+                    style={{ position: "absolute", left: 0, right: 0, height: 2, background: "linear-gradient(90deg,transparent,rgba(45,201,160,0.10),transparent)", pointerEvents: "none", zIndex: 10 }} />
+    );
+}
+
+function DkTooltip({ active, payload, label }) {
+    if (!active || !payload?.length) return null;
+    return (
+        <div style={{ background: "#18181b", borderRadius: 9, overflow: "hidden", display: "flex", minWidth: 140, boxShadow: "0 8px 28px rgba(0,0,0,0.4)" }}>
+            <div style={{ width: 3, background: "linear-gradient(180deg,#2dc9a0,#4a9fce)", flexShrink: 0 }} />
+            <div style={{ padding: "9px 12px" }}>
+                <div style={{ color: "#4ade80", fontSize: 11, fontWeight: 700, marginBottom: 4 }}>{label}</div>
+                {payload.map((p, i) => (
+                    <div key={i} style={{ fontSize: 11, marginBottom: 2 }}>
+                        <span style={{ color: p.color || p.stroke }}>{p.name}: </span>
+                        <span style={{ color: "#edf5e0", fontWeight: 700 }}>{p.value}</span>
+                    </div>
+                ))}
+            </div>
+        </div>
+    );
+}
+
+// ─── Data ──────────────────────────────────────────────────────────────────────
+const weekData = [
+    { day: "Mon", reported: 18, resolved: 14 }, { day: "Tue", reported: 24, resolved: 20 },
+    { day: "Wed", reported: 31, resolved: 26 }, { day: "Thu", reported: 22, resolved: 19 },
+    { day: "Fri", reported: 28, resolved: 25 }, { day: "Sat", reported: 15, resolved: 13 },
+    { day: "Sun", reported: 12, resolved: 10 },
+];
+
+const hourData = Array.from({ length: 24 }, (_, h) => ({
+    label: h === 0 ? "12a" : h < 12 ? `${h}a` : h === 12 ? "12p" : `${h-12}p`,
+    vol: [2,1,1,0,1,2,4,8,11,14,16,18,14,12,18,22,20,14,10,8,6,5,4,3][h],
+    peak: h >= 14 && h <= 16,
+}));
+
+const CATS = ["Food Aid","Medical","Education","Shelter","Livelihood"];
+const DAYS = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];
+const hmGrid = CATS.map(c => ({ c, vals: DAYS.map(() => Math.floor(Math.random() * 18 + 3)) }));
+
+const volunteers = [
+    { r: 1, name: "Priya Sharma", tasks: 94, hrs: 186, rel: 98, zone: "Dharavi", av: "PS" },
+    { r: 2, name: "Arjun Mehta",  tasks: 87, hrs: 162, rel: 95, zone: "Kurla",   av: "AM" },
+    { r: 3, name: "Meera Nair",   tasks: 81, hrs: 154, rel: 92, zone: "Govandi", av: "MN" },
+    { r: 4, name: "Rajan Kumar",  tasks: 74, hrs: 138, rel: 89, zone: "Mankhurd",av: "RK" },
+    { r: 5, name: "Sita Rao",     tasks: 68, hrs: 127, rel: 87, zone: "Chembur", av: "SR" },
+];
+
+const insights = [
+    { color: "#e05a3a", tag: "critical", title: "High Need Cluster — Govandi East", text: "Needs up 40% this week. 3 medical requests unassigned >6 hrs." },
+    { color: "#e8a020", tag: "warning",  title: "Volunteer Availability Drop",       text: "Weekend pool 28% smaller. Activate standby list for Saturday." },
+    { color: "#4a9fce", tag: "info",     title: "Resolution Rate Improving",         text: "7-day rate hit 84%, up from 76%. AI matching +12% efficiency." },
+    { color: "#9b7cf8", tag: "trend",    title: "Predictive: Food Aid Spike",        text: "Model forecasts 35% increase in food aid requests next week." },
+];
+
+const liveEvents = [
+    { color: "#4a9fce", text: "New need reported in Dharavi — Food Aid", time: "2m ago" },
+    { color: "#e8a020", text: "Priya matched to Medical request #482", time: "5m ago" },
+    { color: "#2dc9a0", text: "Task #319 resolved by Arjun in 1.8h", time: "8m ago" },
+    { color: "#9b7cf8", text: "AI flagged cluster risk in Govandi: High", time: "12m ago" },
+    { color: "#4a9fce", text: "Daily digest sent to 24 coordinators", time: "15m ago" },
+];
+
+// ─── Main ──────────────────────────────────────────────────────────────────────
+export default function AnalyticsPage() {
+    const [dark, setDark] = useState(false); // DEFAULT LIGHT
+    const [exp, setExp] = useState(true);
+    const [period, setPeriod] = useState("Week");
+    const [spin, setSpin] = useState(false);
+    const t = dark ? TK.dark : TK.light;
+    const sw = exp ? 220 : 68;
+
+    return (
+        <ThemeCtx.Provider value={{ dark, toggle: () => setDark(d => !d) }}>
+            <div style={{ minHeight: "100vh", background: t.bg, fontFamily: "DM Sans, sans-serif", color: t.text, display: "flex" }}>
+                <Sidebar exp={exp} onToggle={() => setExp(v => !v)} />
+
+                <motion.main animate={{ marginLeft: sw }} transition={{ type: "spring", stiffness: 320, damping: 32 }}
+                             style={{ flex: 1, minHeight: "100vh" }}>
+
+                    {/* Topbar */}
+                    <div style={{
+                        background: dark ? "#111a0e" : "#eef2eb",
+                        borderBottom: `1px solid ${t.border}`,
+                        padding: "0 24px", height: 62,
+                        display: "flex", alignItems: "center", gap: 14,
+                        position: "sticky", top: 0, zIndex: 50,
+                    }}>
+                        <div style={{ fontSize: 17, fontWeight: 800, color: t.text, fontFamily: "DM Sans, sans-serif" }}>Analytics & AI Insights</div>
+                        <div style={{ flex: 1 }} />
+                        <PillToggle options={["Today","Week","Month","All Time"]} value={period} onChange={setPeriod} />
+                        <div style={{ display: "flex", alignItems: "center", gap: 7, background: dark ? "rgba(155,124,248,0.14)" : "rgba(90,58,138,0.07)", border: "1px solid rgba(155,124,248,0.22)", borderRadius: 999, padding: "5px 13px" }}>
+                            <motion.div animate={{ opacity: [1,0.3,1] }} transition={{ repeat: Infinity, duration: 1.5 }} style={{ width: 7, height: 7, borderRadius: "50%", background: "#9b7cf8" }} />
+                            <span style={{ fontSize: 12.5, fontWeight: 700, color: "#9b7cf8", fontFamily: "DM Sans, sans-serif" }}>AI Analysis</span>
+                        </div>
+                        <motion.button onClick={() => { setSpin(true); setTimeout(() => setSpin(false), 900); }}
+                                       animate={{ rotate: spin ? 360 : 0 }} transition={{ duration: 0.7, ease: "linear" }}
+                                       style={{ background: "none", border: "none", cursor: "pointer", color: t.muted, padding: 5, borderRadius: 7, display: "flex", alignItems: "center" }}>
+                            <RefreshCw size={16} />
+                        </motion.button>
+                    </div>
+
+                    {/* Page Content */}
+                    <div style={{ padding: "18px 22px" }}>
+
+                        {/* AI Insights */}
+                        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }}
+                                    style={{ marginBottom: 16, background: dark ? "#1c2a18" : "#fff", borderRadius: 14, padding: "16px 18px", border: `1px solid ${t.border}` }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 14 }}>
+                                <Brain size={17} color={t.purple} />
+                                <span style={{ fontSize: 14, fontWeight: 800, color: t.text, fontFamily: "DM Sans, sans-serif" }}>AI-Generated Insights</span>
                             </div>
-                            <motion.div animate={{ rotate: expanded === ins.id ? 90 : 0 }}>
-                                <ChevronRight size={13} style={{ color: T.muted, flexShrink: 0 }} />
+                            <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10 }}>
+                                {insights.map((ins, i) => (
+                                    <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.07 }} style={{ height: "100%" }}>
+                                        <NotifCard color={ins.color} title={ins.title} tag={ins.tag}>{ins.text}</NotifCard>
+                                    </motion.div>
+                                ))}
+                            </div>
+                        </motion.div>
+
+                        {/* Charts */}
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 14 }}>
+                            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.18 }}
+                                        style={{ background: dark ? "#1c2a18" : "#fff", borderRadius: 14, padding: "16px 18px", border: `1px solid ${t.border}`, position: "relative", overflow: "hidden" }}>
+                                <ScanLine />
+                                <div style={{ fontSize: 13.5, fontWeight: 700, color: t.text, marginBottom: 14, fontFamily: "DM Sans, sans-serif" }}>Weekly Trend</div>
+                                <ResponsiveContainer width="100%" height={185}>
+                                    <AreaChart data={weekData}>
+                                        <defs>
+                                            <linearGradient id="gA" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2d5a2d" stopOpacity={0.3} /><stop offset="95%" stopColor="#2d5a2d" stopOpacity={0} /></linearGradient>
+                                            <linearGradient id="gB" x1="0" y1="0" x2="0" y2="1"><stop offset="5%" stopColor="#2dc9a0" stopOpacity={0.3} /><stop offset="95%" stopColor="#2dc9a0" stopOpacity={0} /></linearGradient>
+                                        </defs>
+                                        <CartesianGrid strokeDasharray="3 3" stroke={dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)"} />
+                                        <XAxis dataKey="day" tick={{ fill: t.muted, fontSize: 11 }} axisLine={false} tickLine={false} />
+                                        <YAxis tick={{ fill: t.muted, fontSize: 11 }} axisLine={false} tickLine={false} />
+                                        <Tooltip content={<DkTooltip />} />
+                                        <Area type="monotone" dataKey="reported" name="Reported" stroke="#2d5a2d" strokeWidth={2} fill="url(#gA)" dot={{ fill: "#2d5a2d", r: 3 }} />
+                                        <Area type="monotone" dataKey="resolved"  name="Resolved"  stroke="#2dc9a0" strokeWidth={2} fill="url(#gB)" dot={{ fill: "#2dc9a0", r: 3 }} />
+                                    </AreaChart>
+                                </ResponsiveContainer>
+                            </motion.div>
+
+                            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.23 }}
+                                        style={{ background: dark ? "#1c2a18" : "#fff", borderRadius: 14, padding: "16px 18px", border: `1px solid ${t.border}`, position: "relative", overflow: "hidden" }}>
+                                <ScanLine />
+                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                                    <div style={{ fontSize: 13.5, fontWeight: 700, color: t.text, fontFamily: "DM Sans, sans-serif" }}>Hourly Distribution</div>
+                                    <span style={{ background: `${t.amber}20`, color: t.amber, fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 999 }}>⚡ Peak: 2pm–4pm</span>
+                                </div>
+                                <ResponsiveContainer width="100%" height={185}>
+                                    <BarChart data={hourData} barCategoryGap="20%">
+                                        <CartesianGrid strokeDasharray="3 3" stroke={dark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)"} />
+                                        <XAxis dataKey="label" tick={{ fill: t.muted, fontSize: 9 }} axisLine={false} tickLine={false} interval={2} />
+                                        <YAxis tick={{ fill: t.muted, fontSize: 11 }} axisLine={false} tickLine={false} />
+                                        <Tooltip content={<DkTooltip />} />
+                                        <Bar dataKey="vol" name="Volume" radius={[3,3,0,0]}>
+                                            {hourData.map((d, i) => <Cell key={i} fill={d.peak ? t.amber : (dark ? "#2d5a2d" : "#4ade80")} />)}
+                                        </Bar>
+                                    </BarChart>
+                                </ResponsiveContainer>
                             </motion.div>
                         </div>
 
-                        <AnimatePresence>
-                            {expanded === ins.id && (
-                                <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }}
-                                            exit={{ height: 0, opacity: 0 }} transition={{ duration: .18 }}>
-                                    <div style={{ padding: "0 12px 12px", borderTop: `1px solid ${ins.color}18`, paddingTop: 9 }}>
-                                        <p style={{ fontSize: 11.5, color: T.muted, margin: "0 0 9px", lineHeight: 1.6 }}>{ins.desc}</p>
-                                        <div style={{
-                                            display: "flex", alignItems: "center", gap: 7, padding: "7px 10px",
-                                            borderRadius: 7, background: `${ins.color}10`, border: `1px solid ${ins.color}25`,
-                                        }}>
-                                            <Zap size={11} style={{ color: ins.color }} />
-                                            <span style={{ fontSize: 11, fontWeight: 700, color: ins.color }}>
-                                                Action: {ins.action}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-                    </motion.div>
-                ))}
-            </div>
-        </Card>
-    )
-}
-
-// Real-time log
-const RealTimeLog = () => {
-    const [paused, setPaused] = useState(false)
-    const TYPE_ICON = { score: "🤖", match: "🔗", dedup: "🔄", alert: "🚨", batch: "📦", complete: "✅", predict: "🧠" }
-    const TYPE_COLOR = { score: T.accent, match: T.green, dedup: T.cyan, alert: T.red, batch: T.amber, complete: T.green, predict: T.accent }
-
-    return (
-        <Card>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-                <SH title="AI Activity Log" sub="Live system events" icon={Radio} color={T.green} />
-                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <motion.div
-                        animate={{ opacity: [1, .3, 1] }}
-                        transition={{ duration: 1.5, repeat: Infinity }}
-                        style={{ width: 6, height: 6, borderRadius: "50%", background: T.s300 }}
-                    />
-                    <span style={{ fontSize: 10, fontWeight: 700, color: T.s300 }}>Live</span>
-                    <button onClick={() => setPaused(p => !p)}
-                            style={{
-                                marginLeft: 4, padding: "3px 8px", borderRadius: 6,
-                                border: `1px solid ${T.border}`, background: "transparent",
-                                color: T.muted, fontSize: 10, fontWeight: 600, cursor: "pointer",
-                                fontFamily: "'DM Sans',sans-serif",
-                            }}>{paused ? "Resume" : "Pause"}</button>
-                </div>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", maxHeight: 280, overflowY: "auto" }}>
-                {REAL_TIME.map((item, i) => {
-                    const icon = TYPE_ICON[item.type] || "🤖"
-                    const color = TYPE_COLOR[item.type] || T.accent
-                    return (
-                        <div key={i} style={{
-                            display: "flex", gap: 9, padding: "8px 0",
-                            borderBottom: i < REAL_TIME.length - 1 ? `1px solid ${T.border}` : "none",
-                        }}>
-                            <span style={{ fontSize: 14, flexShrink: 0 }}>{icon}</span>
-                            <div style={{ flex: 1 }}>
-                                <p style={{ fontSize: 11.5, color: T.text, fontWeight: 600, margin: "0 0 2px", lineHeight: 1.4 }}>
-                                    {item.event}
-                                </p>
-                                <div style={{ display: "flex", gap: 8 }}>
-                                    <span style={{ fontSize: 9.5, color: T.muted, fontFamily: "monospace" }}>{item.time}</span>
-                                    <span style={{ fontSize: 9.5, color, fontWeight: 700 }}>{item.zone}</span>
+                        {/* 3-col secondary */}
+                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1.2fr", gap: 14, marginBottom: 14 }}>
+                            {/* Rings */}
+                            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.28 }}
+                                        style={{ background: dark ? "#1c2a18" : "#fff", borderRadius: 14, padding: "16px 18px", border: `1px solid ${t.border}` }}>
+                                <div style={{ fontSize: 13.5, fontWeight: 700, color: t.text, marginBottom: 14, fontFamily: "DM Sans, sans-serif" }}>Model Performance</div>
+                                <div style={{ display: "flex", justifyContent: "space-around", gap: 8 }}>
+                                    <Ring value={94} color={t.green} label="Match Accuracy" />
+                                    <Ring value={87} color={t.blue}  label="Response Rate" />
+                                    <Ring value={84} color={t.cyan}  label="Resolution" />
                                 </div>
-                            </div>
+                            </motion.div>
+
+                            {/* Live Feed */}
+                            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.33 }}
+                                        style={{ background: dark ? "#1c2a18" : "#fff", borderRadius: 14, padding: "16px 18px", border: `1px solid ${t.border}`, overflow: "hidden" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 12 }}>
+                                    <motion.div animate={{ opacity: [1,0.3,1] }} transition={{ repeat: Infinity, duration: 1 }} style={{ width: 7, height: 7, borderRadius: "50%", background: t.green }} />
+                                    <span style={{ fontSize: 13.5, fontWeight: 700, color: t.text, fontFamily: "DM Sans, sans-serif" }}>Live Activity</span>
+                                </div>
+                                <div style={{ display: "flex", flexDirection: "column", gap: 7 }}>
+                                    {liveEvents.map((ev, i) => (
+                                        <motion.div key={i} initial={{ opacity: 0, x: -14 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.38 + i * 0.06 }}
+                                                    style={{ background: dark ? "#18181b" : "#f4f7f2", borderRadius: 7, overflow: "hidden", display: "flex", border: dark ? "1px solid rgba(255,255,255,0.04)" : "1px solid rgba(45,90,45,0.07)" }}>
+                                            <div style={{ width: 3, background: `linear-gradient(180deg,${ev.color},${ev.color}77)`, flexShrink: 0 }} />
+                                            <div style={{ padding: "6px 10px" }}>
+                                                <div style={{ fontSize: 11, color: dark ? "#99999d" : "#5a7a5a", lineHeight: 1.4, fontFamily: "DM Sans, sans-serif" }}>{ev.text}</div>
+                                                <div style={{ fontSize: 10, color: t.muted, marginTop: 2 }}>{ev.time}</div>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            </motion.div>
+
+                            {/* Heatmap */}
+                            <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.36 }}
+                                        style={{ background: dark ? "#1c2a18" : "#fff", borderRadius: 14, padding: "16px 18px", border: `1px solid ${t.border}` }}>
+                                <div style={{ fontSize: 13.5, fontWeight: 700, color: t.text, marginBottom: 12, fontFamily: "DM Sans, sans-serif" }}>Category Heatmap</div>
+                                <div style={{ display: "flex", gap: 4, marginBottom: 5 }}>
+                                    <div style={{ width: 68 }} />
+                                    {DAYS.map(d => <div key={d} style={{ flex: 1, textAlign: "center", fontSize: 9, color: t.muted, fontWeight: 700 }}>{d}</div>)}
+                                </div>
+                                {hmGrid.map((row, ri) => (
+                                    <div key={row.c} style={{ display: "flex", gap: 4, marginBottom: 5, alignItems: "center" }}>
+                                        <div style={{ width: 68, fontSize: 9, color: t.muted, fontWeight: 600, fontFamily: "DM Sans, sans-serif" }}>{row.c}</div>
+                                        {row.vals.map((v, ci) => (
+                                            <motion.div key={ci} initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: ri * 0.04 + ci * 0.015 }}
+                                                        style={{ flex: 1, height: 19, borderRadius: 3, background: `rgba(45,90,45,${v / 21})`, border: `1px solid rgba(45,90,45,${v / 28})` }} />
+                                        ))}
+                                    </div>
+                                ))}
+                            </motion.div>
                         </div>
-                    )
-                })}
-            </div>
-        </Card>
-    )
-}
 
-// Model performance
-const ModelPerf = () => (
-    <Card>
-        <SH title="AI Model Performance" sub="Accuracy across all tasks" icon={Cpu} color={T.purple} />
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            {MODEL_METRICS.map((m, i) => (
-                <motion.div key={m.label}
-                            initial={{ opacity: 0, x: -6 }} animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: i * .06 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                        <span style={{ fontSize: 12, color: T.text, fontWeight: 600 }}>{m.label}</span>
-                        <span style={{ fontSize: 12, color: m.color, fontWeight: 800 }}>{m.score}%</span>
-                    </div>
-                    <div style={{ height: 5, borderRadius: 3, background: T.faint, overflow: "hidden" }}>
-                        <motion.div
-                            initial={{ width: 0 }} animate={{ width: `${m.score}%` }}
-                            transition={{ delay: .2 + i * .06, duration: .6, ease: "easeOut" }}
-                            style={{ height: "100%", borderRadius: 3, background: m.color }}
-                        />
-                    </div>
-                </motion.div>
-            ))}
-        </div>
-        <div style={{
-            marginTop: 14, padding: "10px 12px", borderRadius: 9,
-            background: `${T.accent}10`, border: `1px solid ${T.accent}22`,
-            display: "flex", alignItems: "center", gap: 8,
-        }}>
-            <Database size={12} style={{ color: T.accent, flexShrink: 0 }} />
-            <div>
-                <p style={{ fontSize: 11, fontWeight: 700, color: T.text, margin: 0 }}>CivicPulse-v2.4</p>
-                <p style={{ fontSize: 10, color: T.muted, margin: 0 }}>Trained on 24,847 historical needs</p>
-            </div>
-        </div>
-    </Card>
-)
-
-// Hourly bar chart
-const HourlyChart = () => {
-    const max = Math.max(...HOURLY.map(h => h.v))
-    return (
-        <Card>
-            <SH title="Hourly Submission Pattern" sub="Today's activity by hour" icon={Clock} color={T.amber} />
-            <div style={{ display: "flex", alignItems: "flex-end", gap: 6, height: 90 }}>
-                {HOURLY.map((h, i) => (
-                    <div key={h.h} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
-                        <motion.div
-                            initial={{ height: 0 }} animate={{ height: `${(h.v / max) * 100}%` }}
-                            transition={{ delay: i * .04, duration: .5, ease: "easeOut" }}
-                            style={{
-                                width: "100%", borderRadius: "3px 3px 0 0",
-                                background: `linear-gradient(180deg,${T.amber},${T.amber}70)`,
-                                minHeight: 3,
-                            }}
-                        />
-                        <span style={{ fontSize: 8.5, color: T.muted }}>{h.h}</span>
-                    </div>
-                ))}
-            </div>
-        </Card>
-    )
-}
-
-export default function AnalyticsPage() {
-    const [lastUpdate, setLastUpdate] = useState(new Date())
-
-    useEffect(() => {
-        const t = setInterval(() => setLastUpdate(new Date()), 30000)
-        return () => clearInterval(t)
-    }, [])
-
-    return (
-        <div style={{
-            minHeight: "100vh", background: T.bg, color: T.text,
-            fontFamily: "'DM Sans',sans-serif", padding: "28px 30px",
-        }}>
-            <style>{`
-                @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800;900&display=swap');
-                * { box-sizing: border-box; margin: 0; padding: 0; }
-                ::-webkit-scrollbar { width: 4px; }
-                ::-webkit-scrollbar-thumb { background: rgba(90,120,99,0.3); border-radius: 2px; }
-            `}</style>
-
-            <div style={{ maxWidth: 1280, margin: "0 auto" }}>
-
-                {/* Header */}
-                <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }}
-                            style={{
-                                display: "flex", alignItems: "center", justifyContent: "space-between",
-                                marginBottom: 24, flexWrap: "wrap", gap: 10,
-                            }}>
-                    <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 3 }}>
-                            <div style={{
-                                width: 34, height: 34, borderRadius: 9,
-                                background: `${T.accent}18`,
-                                display: "flex", alignItems: "center", justifyContent: "center",
-                            }}>
-                                <Brain size={16} style={{ color: T.accent }} />
+                        {/* Volunteer Table */}
+                        <motion.div initial={{ opacity: 0, y: 14 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.42 }}
+                                    style={{ background: dark ? "#1c2a18" : "#fff", borderRadius: 14, overflow: "hidden", border: `1px solid ${t.border}`, position: "relative" }}>
+                            <ScanLine />
+                            <div style={{ padding: "14px 18px", borderBottom: `1px solid ${t.border}`, display: "flex", alignItems: "center", gap: 8 }}>
+                                <Award size={16} color={t.accent} />
+                                <span style={{ fontSize: 13.5, fontWeight: 700, color: t.text, fontFamily: "DM Sans, sans-serif" }}>Volunteer Performance — Top 5</span>
                             </div>
-                            <h1 style={{ fontSize: 22, fontWeight: 900, color: T.text, letterSpacing: "-.4px" }}>
-                                AI Analytics
-                            </h1>
-                        </div>
-                        <p style={{ fontSize: 12, color: T.muted, paddingLeft: 44 }}>
-                            Last updated {lastUpdate.toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" })}
-                        </p>
-                    </div>
-
-                    <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                        <div style={{
-                            display: "flex", alignItems: "center", gap: 6, padding: "7px 12px",
-                            borderRadius: 9, background: `${T.accent}12`, border: `1px solid ${T.accent}25`,
-                        }}>
-                            <motion.div animate={{ opacity: [1, .4, 1] }} transition={{ duration: 1.5, repeat: Infinity }}
-                                        style={{ width: 6, height: 6, borderRadius: "50%", background: T.s300 }} />
-                            <span style={{ fontSize: 11, fontWeight: 700, color: T.accent }}>AI Engine Active</span>
-                        </div>
-                        <button onClick={() => setLastUpdate(new Date())}
-                                style={{
-                                    display: "flex", alignItems: "center", gap: 5, padding: "7px 12px",
-                                    borderRadius: 9, border: `1px solid ${T.border}`, background: T.card,
-                                    color: T.muted, fontSize: 11, fontWeight: 600, cursor: "pointer",
-                                    fontFamily: "'DM Sans',sans-serif",
-                                }}>
-                            <RefreshCw size={12} /> Refresh
-                        </button>
-                    </div>
-                </motion.div>
-
-                {/* Top strip — 4 stats (not 5, avoids overflow) */}
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4,1fr)", gap: 10, marginBottom: 14 }}>
-                    {[
-                        { label: "Needs Today",    value: "127",  color: T.accent,  icon: Activity  },
-                        { label: "Avg Match Time", value: "2.3s", color: T.cyan,    icon: Clock     },
-                        { label: "Duplicates Cut", value: "23",   color: T.amber,   icon: Layers    },
-                        { label: "AI Predictions", value: "8",    color: T.purple,  icon: Brain     },
-                    ].map((s, i) => (
-                        <motion.div key={s.label}
-                                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: i * .06 }}
-                                    style={{
-                                        background: T.card, border: `1px solid ${T.border}`,
-                                        borderRadius: 12, padding: "14px 16px",
-                                        display: "flex", alignItems: "center", gap: 10,
-                                    }}>
-                            <div style={{
-                                width: 32, height: 32, borderRadius: 8,
-                                background: `${s.color}14`,
-                                display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                            }}>
-                                <s.icon size={14} style={{ color: s.color }} />
-                            </div>
-                            <div>
-                                <p style={{ fontSize: 20, fontWeight: 900, color: s.color, margin: 0 }}>{s.value}</p>
-                                <p style={{ fontSize: 10, color: T.muted, margin: "2px 0 0" }}>{s.label}</p>
-                            </div>
+                            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                                <thead>
+                                <tr style={{ background: dark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.02)" }}>
+                                    {["Rank","Volunteer","Tasks","Hours","Reliability","Zone"].map(h => (
+                                        <th key={h} style={{ padding: "10px 16px", textAlign: "left", fontSize: 10, fontWeight: 700, color: t.muted, textTransform: "uppercase", letterSpacing: "0.06em", fontFamily: "DM Sans, sans-serif" }}>{h}</th>
+                                    ))}
+                                </tr>
+                                </thead>
+                                <tbody>
+                                {volunteers.map((v, i) => (
+                                    <motion.tr key={v.r} initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: 0.46 + i * 0.06 }}
+                                               whileHover={{ background: dark ? "rgba(120,180,80,0.04)" : "rgba(45,90,45,0.03)" }}
+                                               style={{ borderBottom: `1px solid ${t.border}` }}>
+                                        <td style={{ padding: "11px 16px", fontSize: 15 }}>{v.r <= 3 ? ["🥇","🥈","🥉"][v.r-1] : v.r}</td>
+                                        <td style={{ padding: "11px 16px" }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: 9 }}>
+                                                <div style={{ width: 29, height: 29, borderRadius: "50%", background: `linear-gradient(135deg,${t.accent}38,${t.accent}78)`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 9.5, fontWeight: 800, color: t.accent }}>{v.av}</div>
+                                                <span style={{ fontSize: 13, fontWeight: 600, color: t.text, fontFamily: "DM Sans, sans-serif" }}>{v.name}</span>
+                                            </div>
+                                        </td>
+                                        <td style={{ padding: "11px 16px", fontSize: 13, fontWeight: 700, color: t.text }}>{v.tasks}</td>
+                                        <td style={{ padding: "11px 16px", fontSize: 13, color: t.muted }}>{v.hrs}h</td>
+                                        <td style={{ padding: "11px 16px", minWidth: 130 }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                <div style={{ flex: 1, height: 4, borderRadius: 999, background: dark ? "#2a3a28" : "#e0e8dc", overflow: "hidden" }}>
+                                                    <motion.div initial={{ width: 0 }} animate={{ width: `${v.rel}%` }} transition={{ delay: 0.5 + i * 0.06, duration: 0.8 }}
+                                                                style={{ height: "100%", background: `linear-gradient(90deg,${t.accent},#4ade80)`, borderRadius: 999 }} />
+                                                </div>
+                                                <span style={{ fontSize: 11, fontWeight: 700, color: t.accent, minWidth: 32 }}>{v.rel}%</span>
+                                            </div>
+                                        </td>
+                                        <td style={{ padding: "11px 16px" }}>
+                                            <span style={{ background: `${t.blue}18`, color: t.blue, fontSize: 10, fontWeight: 700, padding: "3px 9px", borderRadius: 999 }}>{v.zone}</span>
+                                        </td>
+                                    </motion.tr>
+                                ))}
+                                </tbody>
+                            </table>
                         </motion.div>
-                    ))}
-                </div>
-
-                {/* Row 2: Heatmap + Insights */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-                    <LiveHeatmap />
-                    <AIInsights />
-                </div>
-
-                {/* Row 3: Log + Model perf */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginBottom: 12 }}>
-                    <RealTimeLog />
-                    <ModelPerf />
-                </div>
-
-                {/* Row 4: Hourly */}
-                <HourlyChart />
+                    </div>
+                </motion.main>
             </div>
-        </div>
-    )
+        </ThemeCtx.Provider>
+    );
 }
