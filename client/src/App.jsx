@@ -6,7 +6,6 @@ import DashboardPage  from "./pages/DashboardPage"
 import HeatmapPage    from "./pages/HeatmapPage"
 import TasksPage      from "./pages/TasksPage"
 import VolunteersPage from "./pages/VolunteersPage"
-import ImpactPage     from "./pages/ImpactPage"
 import VolunteerHome  from "./pages/VolunteerHome"
 import ReportNeedPage from "./pages/ReportNeedPage"
 import SurveyPage    from "./pages/SurveyPage"
@@ -27,7 +26,6 @@ const App = () => (
             <Route path="/heatmap"    element={<HeatmapPage />} />
             <Route path="/tasks"      element={<TasksPage />} />
             <Route path="/volunteers" element={<VolunteersPage />} />
-            <Route path="/impact"     element={<ImpactPage />} />
             <Route path="/report"    element={<ReportNeedPage />} />
 
             {/* Volunteer */}
