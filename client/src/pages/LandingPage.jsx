@@ -1171,6 +1171,9 @@ const Navbar = ({ onAuthClick, onNgoRegister }) => {
     const textCol = dark ? "#edf5e0" : "#1C352D"
     const mutedCol = dark ? "#7a9b6a" : "#90AB8B"
 
+    const navigate = useNavigate()
+
+
     return (
         <Motion.nav style={{ position:"fixed", top:0, left:0, right:0, zIndex:999,
             background:navBg, backdropFilter:"blur(20px)",
@@ -1224,8 +1227,8 @@ const Navbar = ({ onAuthClick, onNgoRegister }) => {
                         <GradientBtn onClick={() => onAuthClick("login")} dark={dark} outline small>
                             Sign In
                         </GradientBtn>
-                        <GradientBtn onClick={() => onAuthClick("signup")} dark={dark} small>
-                            Join Free <Zap size={12}/>
+                        <GradientBtn onClick={() => navigate("/donor")} dark={dark} small>
+                            DONOR  <Zap size={12}/>
                         </GradientBtn>
                     </div>
 
@@ -1863,6 +1866,7 @@ const ContactSection = () => {
         </section>
     )
 }
+
 
 /* ─── FOOTER ─────────────────────────────────────────────────────────────── */
 const Footer = () => {

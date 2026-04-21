@@ -682,7 +682,7 @@ function MapPreview({ dark }) {
 // ─── MAIN PAGE ────────────────────────────────────────────────────────────────
 
 export default function DonorsPage() {
-    const [dark, setDark] = useState(true);
+    const [dark, setDark] = useState(false);
     const [activeCategory, setActiveCategory] = useState("All");
     const [sortBy, setSortBy] = useState("Urgency");
     const [selectedNeed, setSelectedNeed] = useState(null);
@@ -742,7 +742,7 @@ export default function DonorsPage() {
                         whileTap={{ scale: 0.92 }}
                         onClick={() => setDark(d => !d)}
                         style={{
-                            background: dark ? "#1e3318" : "#e8f5e0",
+                            background: dark ? "#182913" : "#e8f5e0",
                             border: `1px solid ${border}`,
                             borderRadius: "99px",
                             padding: "6px 14px",
@@ -756,7 +756,7 @@ export default function DonorsPage() {
                             gap: "6px",
                         }}
                     >
-                        {dark ? "☀️ Light" : "🌙 Dark"}
+                        {dark ?"🌙 Dark" : "☀️ Light"}
                     </motion.button>
                 </div>
             </nav>
