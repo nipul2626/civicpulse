@@ -12,6 +12,7 @@ import SurveyPage    from "./pages/SurveyPage"
 import ReportsPage   from "./pages/ReportsPage"
 import AnalyticsPage from "./pages/AnalyticsPage"
 import SettingsPage  from "./pages/SettingsPage"
+import DonorsPage from "./pages/DonorsPage.jsx";
 
 const App = () => (
     <BrowserRouter>
@@ -30,6 +31,7 @@ const App = () => (
 
             {/* Volunteer */}
             <Route path="/home" element={<VolunteerHome />} />
+            <Route path="/donor" element={<DonorsPage />} />
 
             <Route path="/survey"    element={<SurveyPage />}    />
             <Route path="/reports"   element={<ReportsPage />}   />

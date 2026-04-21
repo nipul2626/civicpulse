@@ -11,6 +11,7 @@ import {
     Shield, Phone, Mail, Globe, Calendar, Flame
 } from "lucide-react"
 
+
 /* ─── THEME CONTEXT ──────────────────────────────────────────────────────── */
 const ThemeCtx = createContext({ dark: false, toggle: () => {} })
 const useTheme = () => useContext(ThemeCtx)
@@ -991,6 +992,112 @@ const AssignModal = ({ need, onClose }) => {
     )
 }
 
+
+
+// DonorActivityWidget
+import { Link } from "react-router-dom";
+
+function DonorActivityWidget({ dark }) {
+    const recentActivity = [
+        { amount: "₹500", need: "Water Tanker · Mankhurd", time: "4 min ago" },
+        { amount: "₹1,000", need: "Medical Supplies · Dharavi", time: "12 min ago" },
+        { amount: "₹200", need: "Food Rations · Sion", time: "31 min ago" },
+    ];
+
+    const cardBg = dark ? "#111f0d" : "#ffffff";
+    const border = dark ? "#1e3318" : "#e5f0df";
+    const textPrimary = dark ? "#e8f5e2" : "#1a2e13";
+    const textSecondary = dark ? "#7eb85a" : "#4a7c35";
+    const green = dark ? "#78b450" : "#3D8A25";
+
+    return (
+        <div style={{
+            background: cardBg,
+            border: `1px solid ${border}`,
+            borderRadius: "14px",
+            padding: "16px",
+            fontFamily: "'Outfit', sans-serif",
+        }}>
+            {/* Header */}
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "14px" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
+                    <motion.div
+                        animate={{ opacity: [1, 0.3, 1] }}
+                        transition={{ duration: 1.5, repeat: Infinity }}
+                        style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#22c55e" }}
+                    />
+                    <span style={{ fontSize: "14px", fontWeight: 800, color: textPrimary }}>Donor Activity</span>
+                </div>
+                <Link to="/donors" style={{ fontSize: "11px", fontWeight: 600, color: green, textDecoration: "none" }}>
+                    Public page →
+                </Link>
+            </div>
+
+            {/* Activity feed */}
+            <div style={{ display: "flex", flexDirection: "column", gap: "8px", marginBottom: "14px" }}>
+                {recentActivity.map((item, i) => (
+                    <div key={i} style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "8px 10px",
+                        background: dark ? "#0d1a09" : "#f5faf2",
+                        borderRadius: "8px",
+                        border: `1px solid ${border}`,
+                    }}>
+                        <div>
+                            <div style={{ fontSize: "13px", fontWeight: 700, color: green }}>{item.amount}</div>
+                            <div style={{ fontSize: "11px", color: textSecondary }}>{item.need}</div>
+                        </div>
+                        <div style={{ fontSize: "10px", color: dark ? "#3D8A25" : "#8ab870", textAlign: "right" }}>
+                            {item.time}
+                        </div>
+                    </div>
+                ))}
+            </div>
+
+            {/* Stats row */}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px", marginBottom: "12px" }}>
+                {[
+                    { val: "₹14,200", label: "Raised today" },
+                    { val: "23", label: "Donors today" },
+                ].map(stat => (
+                    <div key={stat.label} style={{
+                        background: dark ? "#0d1a09" : "#f5faf2",
+                        border: `1px solid ${border}`,
+                        borderRadius: "8px",
+                        padding: "8px 10px",
+                        textAlign: "center",
+                    }}>
+                        <div style={{ fontSize: "16px", fontWeight: 800, color: green }}>{stat.val}</div>
+                        <div style={{ fontSize: "10px", color: textSecondary }}>{stat.label}</div>
+                    </div>
+                ))}
+            </div>
+
+            {/* CTA */}
+            <Link
+                to="/donors"
+                style={{
+                    display: "block",
+                    textAlign: "center",
+                    background: `linear-gradient(135deg, ${green}, ${dark ? "#5a9e3a" : "#2d6b1c"})`,
+                    color: "#fff",
+                    textDecoration: "none",
+                    borderRadius: "8px",
+                    padding: "9px",
+                    fontWeight: 700,
+                    fontSize: "13px",
+                    letterSpacing: "0.01em",
+                }}
+            >
+                View Donor Page →
+            </Link>
+        </div>
+    );
+}
+
+
 /* ─── DASHBOARD PAGE ─────────────────────────────────────────────────────── */
 const DashboardInner = () => {
     const [activeNav, setActiveNav] = useState("dashboard")
@@ -1024,6 +1131,7 @@ const DashboardInner = () => {
                         <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
                             <LiveMap/>
                             <ByCategory/>
+                            <DonorActivityWidget dark={dark} />
                         </div>
                     </div>
                     <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14 }}>
