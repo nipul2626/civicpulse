@@ -286,9 +286,28 @@ const Topbar = ({ onNewNeed }) => {
                                padding:"7px 14px 7px 30px", color:c.text, fontSize:12, outline:"none", width:200,
                                fontFamily:"'DM Sans',sans-serif" }}/>
                 </div>
-                <GradBtn onClick={onNewNeed} gradient="linear-gradient(90deg,#e05a3a,#e8a020)">
-                    <Plus size={12}/> Report Need
-                </GradBtn>
+                <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={onNewNeed}
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "7px 14px",
+                        borderRadius: 10,
+                        background: "linear-gradient(90deg, #e05a3a, #e8a020)",
+                        border: "1px solid rgba(232, 160, 32, 0.5)",
+                        color: "#fff",
+                        fontWeight: 700,
+                        fontSize: 12,
+                        cursor: "pointer",
+                        fontFamily: "'DM Sans', sans-serif",
+                    }}
+                >
+                    <Plus size={12} />
+                    Report Need
+                </motion.button>
                 <motion.button whileHover={{ scale:1.03 }} whileTap={{ scale:0.97 }} onClick={() => navigate("/heatmap")}
                                style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 14px", borderRadius:10,
                                    background:c.card, border:`1px solid ${c.border}`, color:c.text, fontWeight:700, fontSize:12, cursor:"pointer" }}>
