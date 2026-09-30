@@ -312,20 +312,68 @@ const SubmitModal = ({ onClose, onSubmit, dark }) => {
                         <label style={{ fontSize:10, fontWeight:700, color:dark?"#7a9b6a":"#3B4953", display:"block", marginBottom:5, textTransform:"uppercase", letterSpacing:".6px" }}>Description</label>
                         <textarea value={form.desc} onChange={set("desc")} rows={3} placeholder="Additional context..." style={{ ...ib, resize:"none" }}/>
                     </div>
-                    <GradBtn full onClick={async () => {
-                        if (!form.title.trim()) return
-                        setLoading(true)
-                        try {
-                            await onSubmit(form)
-                            onClose()
-                        } catch (err) {
-                            toast.error("Failed to submit need")
-                        } finally {
-                            setLoading(false)
-                        }
-                    }}>
-                        <Zap size={14}/> {loading ? "Submitting..." : "Submit to AI Scoring Engine"}
-                    </GradBtn>
+                    <motion.button
+                        whileHover={{
+                            scale: 1.015,
+                            boxShadow: "0 0 28px rgba(91, 190, 65, 0.25)"
+                        }}
+                        whileTap={{ scale: 0.985 }}
+                        disabled={loading}
+                        onClick={async () => {
+                            if (!form.title.trim()) return
+
+                            setLoading(true)
+
+                            try {
+                                await onSubmit(form)
+                                onClose()
+                            } catch (err) {
+                                toast.error("Failed to submit need")
+                            } finally {
+                                setLoading(false)
+                            }
+                        }}
+                        style={{
+                            width: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: 8,
+
+                            padding: "11px 16px",
+                            borderRadius: 14,
+
+                            background: `
+    radial-gradient(
+        ellipse at center,
+        #182c1a 0%,
+        #1b361c 35%,
+        #20431f 68%,
+        #2a5a24 100%
+    )
+`,
+
+                            border: "1px solid rgba(91, 190, 65, 0.75)",
+
+                            color: "#edf5e0",
+                            fontWeight: 800,
+                            fontSize: 12,
+                            fontFamily: "'DM Sans', sans-serif",
+
+                            cursor: loading ? "wait" : "pointer",
+                            opacity: loading ? 0.7 : 1,
+
+                            boxShadow: `
+    inset 0 0 24px rgba(91, 190, 65, 0.13),
+    0 0 14px rgba(91, 190, 65, 0.09)
+`,
+
+                            transition: "all 0.2s ease",
+                        }}
+                    >
+                        <Zap size={14} />
+                        {loading ? "Submitting..." : "Submit to AI Scoring Engine"}
+                    </motion.button>
                 </div>
             </motion.div>
         </motion.div>
@@ -596,14 +644,119 @@ export default function HeatmapPage() {
                                             </div>
                                         ))}
                                     </div>
-                                    <GradBtn full onClick={handleFindVolunteers}><Users size={12}/> Find & Assign Volunteer <ChevronLeft size={12} style={{ transform:"rotate(180deg)" }}/></GradBtn>
+                                    <motion.button
+                                        whileHover={{
+                                            scale: 1.015,
+                                            boxShadow: "0 0 24px rgba(91, 190, 65, 0.20)"
+                                        }}
+                                        whileTap={{ scale: 0.985 }}
+                                        onClick={handleFindVolunteers}
+                                        style={{
+                                            width: "100%",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            gap: 7,
+
+                                            padding: "10px 14px",
+                                            borderRadius: 14,
+
+                                            background: `
+            radial-gradient(
+                ellipse at center,
+                #182c1a 0%,
+                #1b361c 35%,
+                #20431f 68%,
+                #2a5a24 100%
+            )
+        `,
+
+                                            border: "1px solid rgba(91, 190, 65, 0.75)",
+
+                                            color: "#edf5e0",
+                                            fontWeight: 800,
+                                            fontSize: 12,
+                                            fontFamily: "'DM Sans', sans-serif",
+
+                                            cursor: "pointer",
+
+                                            boxShadow: `
+            inset 0 0 24px rgba(91, 190, 65, 0.13),
+            0 0 14px rgba(91, 190, 65, 0.09)
+        `,
+
+                                            transition: "all 0.2s ease",
+                                        }}
+                                    >
+                                        <Users size={12} />
+                                        Find & Assign Volunteer
+                                        <ChevronLeft
+                                            size={12}
+                                            style={{ transform: "rotate(180deg)" }}
+                                        />
+                                    </motion.button>
                                 </motion.div>
                             )}
                         </AnimatePresence>
 
                         {/* Submit button */}
-                        <div style={{ padding:"14px 16px", borderTop:`1px solid ${dark?"rgba(120,180,80,0.07)":"rgba(90,120,99,0.09)"}` }}>
-                            <GradBtn full onClick={()=>setShowModal(true)}><Plus size={13}/> Report New Need</GradBtn>
+                        <div
+                            style={{
+                                padding: "14px 16px",
+                                borderTop: `1px solid ${
+                                    dark
+                                        ? "rgba(120,180,80,0.07)"
+                                        : "rgba(90,120,99,0.09)"
+                                }`
+                            }}
+                        >
+                            <motion.button
+                                whileHover={{
+                                    scale: 1.015,
+                                    boxShadow: "0 0 24px rgba(91, 190, 65, 0.20)"
+                                }}
+                                whileTap={{ scale: 0.985 }}
+                                onClick={() => setShowModal(true)}
+                                style={{
+                                    width: "100%",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    gap: 7,
+
+                                    padding: "10px 14px",
+                                    borderRadius: 14,
+
+                                    background: `
+                radial-gradient(
+                    ellipse at center,
+                    #182c1a 0%,
+                    #1b361c 35%,
+                    #20431f 68%,
+                    #2a5a24 100%
+                )
+            `,
+
+                                    border: "1px solid rgba(91, 190, 65, 0.75)",
+
+                                    color: "#edf5e0",
+                                    fontWeight: 800,
+                                    fontSize: 12,
+                                    fontFamily: "'DM Sans', sans-serif",
+
+                                    cursor: "pointer",
+
+                                    boxShadow: `
+                inset 0 0 24px rgba(91, 190, 65, 0.13),
+                0 0 14px rgba(91, 190, 65, 0.09)
+            `,
+
+                                    transition: "all 0.2s ease",
+                                }}
+                            >
+                                <Plus size={13} strokeWidth={2.5} />
+                                Report New Need
+                            </motion.button>
                         </div>
                     </div>
 
