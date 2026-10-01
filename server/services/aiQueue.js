@@ -156,15 +156,90 @@ async function processNextBatch() {
 
             // Update the actual need document with AI scores
             if (job.payload.needId) {
-                await db.collection(COLLECTIONS.NEEDS).doc(job.payload.needId).update({
-                    urgencyScore: result.urgencyScore,
-                    aiCategory: result.category,
-                    affectedCount: result.affectedCount,
-                    vulnerabilityFlag: result.vulnerabilityFlag,
-                    aiSummary: result.summary,
-                    status: 'active',
-                    processedAt: new Date().toISOString(),
+
+                const needRef =
+                    db
+                        .collection(COLLECTIONS.NEEDS)
+                        .doc(job.payload.needId);
+
+                const needDoc =
+                    await needRef.get();
+
+                if (!needDoc.exists) {
+                    console.warn(
+                        `⚠️ Need ${job.payload.needId} no longer exists`
+                    );
+
+                    return;
+                }
+
+                const currentNeed =
+                    needDoc.data();
+
+                /*
+                 * Verification is independent of AI urgency.
+                 *
+                 * If verification is already approved/verified,
+                 * AI processing may activate the need.
+                 *
+                 * If verification requires review, AI may still
+                 * enrich the report, but it MUST NOT activate it.
+                 */
+
+                const verificationStatus =
+                    currentNeed.verification?.status;
+
+                const isVerified =
+                    verificationStatus === 'verified' ||
+                    verificationStatus === 'approved';
+
+                const nextStatus =
+                    isVerified
+                        ? 'active'
+                        : 'pending_review';
+
+                await needRef.update({
+
+                    urgencyScore:
+                    result.urgencyScore,
+
+                    aiCategory:
+                    result.category,
+
+                    affectedCount:
+                        result.affectedCount ||
+                        currentNeed.affectedCount ||
+                        1,
+
+                    vulnerabilityFlag:
+                    result.vulnerabilityFlag,
+
+                    aiSummary:
+                    result.summary,
+
+                    aiDuplicateRisk:
+                        result.duplicateRisk ?? false,
+
+                    status:
+                    nextStatus,
+
+                    processedAt:
+                        new Date().toISOString(),
+
+                    verification: {
+                        ...(currentNeed.verification || {}),
+
+                        aiDuplicateRisk:
+                            result.duplicateRisk ?? false,
+
+                        lastAIReview:
+                            new Date().toISOString(),
+                    },
                 });
+
+                console.log(
+                    `🤖 AI processed ${job.payload.needId} → ${nextStatus}`
+                );
             }
 
             // Cache result

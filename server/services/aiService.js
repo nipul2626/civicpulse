@@ -37,7 +37,7 @@ async function callGroqWithGeminiFallback(prompt, options = {}) {
     // Try Groq first
     try {
         const completion = await groq.chat.completions.create({
-            model: "llama-3.3-70b-versatile",
+            model: "qwen/qwen3.8-27b",
             messages: [{ role: 'user', content: prompt }],
             max_tokens: options.maxTokens || 1000,
         });
@@ -48,21 +48,26 @@ async function callGroqWithGeminiFallback(prompt, options = {}) {
             usedFallback: false,
         };
     } catch (groqErr) {
-        const isRateLimit   = groqErr.status === 429;
-        const isServerError = groqErr.status >= 500;
+        const isRateLimit       = groqErr.status === 429;
+        const isServerError     = groqErr.status >= 500;
+        const isPermissionError = groqErr.status === 403;
 
-        if (isRateLimit || isServerError) {
+        if (isRateLimit || isServerError || isPermissionError) {
             aiMetrics.record('groq', 'error');
-            console.warn(`⚠️  Groq failed (${groqErr.status}), trying Gemini...`);
+            console.warn(
+                `⚠️ Groq failed (${groqErr.status}), trying Gemini fallback...`
+            );
         } else {
             aiMetrics.record('groq', 'error');
-            throw groqErr; // Bad request — don't fallback, surface the error
+            throw groqErr;
         }
     }
 
     // Layer 4: Gemini fallback
     try {
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+        const model = genAI.getGenerativeModel({
+            model: "gemini-2.5-flash"
+        });
         const result = await model.generateContent(prompt);
         aiMetrics.record('gemini');
         return {
@@ -360,7 +365,7 @@ Return ONLY this JSON:
 }
 
 async function transcribeAudio(audioBase64, mimeType = 'audio/webm') {
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash' });
+    const model = genAI.getGenerativeModel({ model: 'whisper-large-v3' });
     const result = await model.generateContent([
         { inlineData: { mimeType, data: audioBase64 } },
         'Transcribe this audio accurately. Return only the transcribed text, nothing else.',

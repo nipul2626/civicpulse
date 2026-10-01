@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react"
+import { useState, useEffect } from "react"
 import { MapContainer, TileLayer, useMap, Marker, Popup } from "react-leaflet"
 import { motion, AnimatePresence } from "framer-motion"
 import { NavLink, useNavigate } from "react-router-dom"
@@ -62,10 +62,12 @@ const makePinIcon = (need) => {
     const pulse = urgency === 5
     const size  = urgency >= 5 ? 36 : urgency >= 4 ? 30 : 24
     const emoji = CAT_EMOJI[need.category] || "📍"
+    const pinFontSize = Math.floor(size * 0.36)
+
     const html = `
     <div style="position:relative;width:${size}px;height:${size}px">
       ${pulse ? `<div style="position:absolute;inset:0;border-radius:50%;background:${color};opacity:.25;animation:civicPulse 1.8s ease-out infinite"></div>` : ""}
-      <div style="position:absolute;inset:0;border-radius:50%;background:white;border:3px solid ${color};display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px ${color}88;font-size:${Math.floor(size*0.36)}px">${emoji}</div>
+      <div style="position:absolute;inset:0;border-radius:50%;background:white;border:3px solid ${color};display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,0.18);font-size:${pinFontSize}px">${emoji}</div>
     </div>`
     return L.divIcon({ html, className:"", iconSize:[size,size], iconAnchor:[size/2,size/2] })
 }
@@ -327,7 +329,7 @@ const SubmitModal = ({ onClose, onSubmit, dark }) => {
                             try {
                                 await onSubmit(form)
                                 onClose()
-                            } catch (err) {
+                            } catch {
                                 toast.error("Failed to submit need")
                             } finally {
                                 setLoading(false)
@@ -467,10 +469,56 @@ export default function HeatmapPage() {
     // SSE: real-time heatmap updates
     useSSE(orgId || "", {
         "heatmap:new-need": (data) => {
-            const newNeed = { ...data, id:data.id, lat:data.lat, lng:data.lng, category:data.category, status:data.status }
-            setNeeds(p => [newNeed, ...p])
+            console.log("🔥 heatmap:new-need received:", data)
+
+            const lat = Number(data?.lat)
+            const lng = Number(data?.lng)
+
+            if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+                console.error("❌ Invalid heatmap coordinates:", {
+                    lat: data?.lat,
+                    lng: data?.lng,
+                    data,
+                })
+                return
+            }
+
+            const newNeed = {
+                ...data,
+                id: data?.id || Date.now(),
+                lat,
+                lng,
+                category: data?.category || "other",
+                status: data?.status || "pending_ai",
+                urgencyScore: data?.urgencyScore ?? 50,
+            }
+
+            setNeeds((prev) => {
+                const existingIndex = prev.findIndex(
+                    (need) => need.id === newNeed.id
+                )
+
+                if (existingIndex !== -1) {
+                    const updated = [...prev]
+                    updated[existingIndex] = {
+                        ...updated[existingIndex],
+                        ...newNeed,
+                    }
+                    return updated
+                }
+
+                return [newNeed, ...prev]
+            })
+
             addHeatmapNeed(newNeed)
-            addActivityEvent({ id:Date.now(), icon:"🗺️", type:"submit", text:`New ${data.category} need on heatmap`, time:"just now" })
+
+            addActivityEvent({
+                id: Date.now(),
+                icon: "🗺️",
+                type: "submit",
+                text: `New ${newNeed.category} need on heatmap`,
+                time: "just now",
+            })
         },
         "heatmap:need-resolved": (data) => {
             setNeeds(p => p.filter(n => n.id !== data.needId))
@@ -485,13 +533,38 @@ export default function HeatmapPage() {
 
     useEffect(() => { injectMapStyles(dark) }, [dark])
 
-    const filtered = needs.filter(n => {
+    const filtered = needs.filter((n) => {
         const q = search.toLowerCase()
-        const urgency = Math.min(5, Math.max(1, Math.round((n.urgencyScore||50)/20)))
-        return (!q || (n.title||"").toLowerCase().includes(q) || (n.category||"").toLowerCase().includes(q) || (n.address||"").toLowerCase().includes(q)) &&
-            (catFilter==="all" || n.category===catFilter) &&
-            (urgencyFilter===0 || urgency===urgencyFilter) &&
-            (statusFilter==="all" || n.status===statusFilter)
+
+        const urgencyScore = Number(n.urgencyScore ?? 50)
+        const urgency = Math.min(
+            5,
+            Math.max(1, Math.round(urgencyScore / 20))
+        )
+
+        const matchesSearch =
+            !q ||
+            (n.title || "").toLowerCase().includes(q) ||
+            (n.category || "").toLowerCase().includes(q) ||
+            (n.address || "").toLowerCase().includes(q)
+
+        const matchesCategory =
+            catFilter === "all" || n.category === catFilter
+
+        const matchesUrgency =
+            urgencyFilter === 0 || urgency === urgencyFilter
+
+        const matchesStatus =
+            statusFilter === "all" ||
+            n.status === statusFilter ||
+            (statusFilter === "unassigned" && n.status === "pending_ai")
+
+        return (
+            matchesSearch &&
+            matchesCategory &&
+            matchesUrgency &&
+            matchesStatus
+        )
     })
 
     const critical  = needs.filter(n => (n.urgencyScore||0) >= 80).length
@@ -528,17 +601,39 @@ export default function HeatmapPage() {
     }
 
     const handleSubmit = async (form) => {
-        const res = await submitNeed({
-            title: form.title,
-            description: form.desc,
-            category: form.category,
-            location: { lat: 19.076+(Math.random()-.5)*.05, lng: 72.877+(Math.random()-.5)*.05, address: form.zone },
-            affectedCount: parseInt(form.people)||50,
-        })
-        const newNeed = { id: res.data?.needId||res.needId||Date.now(), lat:19.076+(Math.random()-.5)*.05, lng:72.877+(Math.random()-.5)*.05, category:form.category, urgencyScore:50, status:"pending_ai", title:form.title, affectedCount:parseInt(form.people)||50, address:form.zone }
-        setNeeds(p => [newNeed, ...p])
-        addHeatmapNeed(newNeed)
-        toast.success(`Need submitted! Queue position: #${res.data?.queuePosition||res.queuePosition||"—"}`)
+        try {
+            // Generate coordinates ONCE
+            const lat = 19.076 + (Math.random() - 0.5) * 0.05
+            const lng = 72.877 + (Math.random() - 0.5) * 0.05
+
+            const res = await submitNeed({
+                title: form.title,
+                description: form.desc,
+                category: form.category,
+                location: {
+                    lat,
+                    lng,
+                    address: form.zone,
+                },
+                affectedCount: parseInt(form.people) || 50,
+            })
+
+            toast.success(
+                `Need submitted! Queue position: #${
+                    res?.data?.queuePosition || res?.queuePosition || "—"
+                }`
+            )
+        } catch (error) {
+            console.error("Failed to submit need:", error)
+
+            toast.error(
+                error?.response?.data?.error ||
+                error?.message ||
+                "Failed to submit need"
+            )
+
+            throw error
+        }
     }
 
     return (
@@ -763,11 +858,21 @@ export default function HeatmapPage() {
                     {/* MAP */}
                     <div style={{ flex:1, position:"relative", overflow:"hidden" }}>
                         <MapContainer center={[19.076, 72.877]} zoom={12} style={{ width:"100%", height:"100%", zIndex:1 }} zoomControl={true}>
-                            <TileLayer url="https://{s}.basemaps.cartocdn.com/light_nolabels/{z}/{x}/{y}{r}.png" attribution="© CartoDB"/>
-                            <TileLayer url="https://{s}.basemaps.cartocdn.com/light_only_labels/{z}/{x}/{y}{r}.png" pane="shadowPane"/>
+                            <TileLayer
+                                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                                attribution="&copy; OpenStreetMap contributors"
+                            />
                             {flyCoords && <FlyTo coords={flyCoords}/>}
-                            {filtered.map(need=>(
-                                <Marker key={need.id} position={[need.lat, need.lng]} icon={makePinIcon(need)} eventHandlers={{ click:()=>handleNeedClick(need) }}>
+                            {filtered
+                                .filter(
+                                    (need) =>
+                                        Number.isFinite(Number(need.lat)) &&
+                                        Number.isFinite(Number(need.lng))
+                                )
+                                .map((need) => (
+                                    <Marker
+                                        key={need.id}
+                                        position={[Number(need.lat), Number(need.lng)]}icon={makePinIcon(need)} eventHandlers={{ click:()=>handleNeedClick(need) }}>
                                     <Popup maxWidth={220} minWidth={200}>
                                         <div style={{ padding:"14px 16px", fontFamily:"'DM Sans',sans-serif" }}>
                                             <p style={{ fontSize:14, fontWeight:900, color:"#1C352D", margin:"0 0 6px" }}>{CAT_EMOJI[need.category]||"📍"} {need.title||need.category}</p>

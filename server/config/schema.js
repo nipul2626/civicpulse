@@ -29,6 +29,24 @@ const SCHEMAS = {
         photoURL: 'string',
         createdAt: 'timestamp',
     },
+    verification: {
+        score: 'number',
+        status: 'string',
+        requiresHumanReview: 'boolean',
+        signals: 'object',
+        details: 'object',
+        relatedReports: 'array',
+        reasons: 'array',
+        verificationMethod: 'string',
+        verifiedAt: 'timestamp',
+        reviewedBy: 'string',
+        reviewedAt: 'timestamp',
+        reviewDecision: 'string',
+        aiDuplicateRisk: 'boolean',
+    },
+    reporterKey: 'string',
+    duplicateReports: 'number',
+    lastReportedAt: 'timestamp',
     volunteer: {
         id: 'string',
         userId: 'string',
@@ -48,7 +66,8 @@ const SCHEMAS = {
         description: 'string',
         category: 'string', // food | water | medical | shelter | education | livelihood | sanitation | other
         urgencyScore: 'number', // 1-5
-        status: 'string', // pending_ai | active | assigned | resolved
+        status: 'string',
+// pending_ai | pending_review | active | assigned | resolved | rejected | spam
         location: { lat: 'number', lng: 'number', address: 'string' },
         affectedCount: 'number',
         vulnerabilityFlag: 'boolean',
@@ -117,5 +136,6 @@ const CATEGORY_PRIORITY = {
     sanitation: 2,
     other: 2,
 };
+
 
 module.exports = { COLLECTIONS, SCHEMAS, VALID_CATEGORIES, CATEGORY_PRIORITY };

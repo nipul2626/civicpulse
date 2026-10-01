@@ -10,7 +10,7 @@ const { scoreNeedMultilingual } = require('../services/aiService');
 const { submitLimiter, bulkImportLimiter, circuitBreaker, generateSubmitterHash } = require('../middleware/rateLimits');
 const sanitizeHtml = require('sanitize-html');
 const { applyUrgencyDecay } = require('../utils/urgencyDecay');
-const { broadcast } = require('../services/sseService');
+
 const { ok, paginated, fail, notFound, serverError } = require('../utils/response');
 const { formatPaginatedResponse } = require('../utils/pagination');
 const { notifySubmitterByPhone } = require('../services/twilioService');
@@ -94,15 +94,7 @@ router.post('/submit', submitLimiter, circuitBreaker, async (req, res) => {
             submitterHash: generateSubmitterHash(req.ip),
         };
         await db.collection(COLLECTIONS.NEEDS).doc(needId).set(needData);
-        // 🔥 Broadcast new need to heatmap subscribers (real-time)
-        broadcast('heatmap', 'heatmap:new-need', {
-            id: needId,
-            lat: location.lat,
-            lng: location.lng,
-            urgencyScore: null, // AI not done yet
-            category,
-            status: 'pending_ai',
-        });
+
         // Language detection + immediate Firestore update
         try {
             const franc = require('franc');
@@ -220,8 +212,9 @@ router.get('/heatmap', async (req, res) => {
         const CACHE_KEY = 'heatmap:all';
 
         const { data, source } = await cache.getOrSet(CACHE_KEY, 60, async () => {
-            const snap = await db.collection(COLLECTIONS.NEEDS)
-                .where('status', '!=', 'resolved')
+            const snap = await db
+                .collection(COLLECTIONS.NEEDS)
+                .where('status', '==', 'active')
                 .get();
 
             return snap.docs
@@ -270,6 +263,188 @@ router.get('/:id', verifyToken, async (req, res) => {
         res.status(500).json({ error: err.message, status: 500 });
     }
 });
+// ── PATCH /api/needs/:id/verification ────────────────────────────────────────
+// Coordinator manually approves/rejects a report requiring verification.
+router.patch(
+    '/:id/verification',
+    verifyToken,
+    requireRole('coordinator'),
+    async (req, res) => {
+
+        try {
+
+            const {
+                decision,
+                reason,
+            } = req.body;
+
+            const validDecisions = [
+                'approve',
+                'reject',
+                'spam',
+            ];
+
+            if (
+                !validDecisions.includes(
+                    decision
+                )
+            ) {
+                return res.status(400).json({
+                    error:
+                        `decision must be one of: ${validDecisions.join(', ')}`,
+                    status: 400,
+                });
+            }
+
+            const needRef =
+                db
+                    .collection(
+                        COLLECTIONS.NEEDS
+                    )
+                    .doc(
+                        req.params.id
+                    );
+
+            const needDoc =
+                await needRef.get();
+
+            if (!needDoc.exists) {
+                return res.status(404).json({
+                    error: 'Need not found',
+                    status: 404,
+                });
+            }
+
+            const need =
+                needDoc.data();
+
+            const now =
+                new Date();
+
+            if (decision === 'approve') {
+
+                await needRef.update({
+
+                    status: 'active',
+
+                    verification: {
+                        ...(need.verification || {}),
+
+                        status: 'approved',
+
+                        requiresHumanReview: false,
+
+                        reviewedBy:
+                        req.user.uid,
+
+                        reviewedAt:
+                        now,
+
+                        reviewDecision:
+                            'approve',
+
+                        reviewReason:
+                            reason || null,
+
+                        verifiedAt:
+                        now,
+                    },
+
+                    updatedAt:
+                    now,
+                });
+
+                await cache.del(
+                    'heatmap:all'
+                );
+
+                await cache.delPattern(
+                    'impact:*'
+                );
+
+                return res.json({
+                    success: true,
+
+                    message:
+                        'Need approved and activated.',
+
+                    needId:
+                    req.params.id,
+
+                    status:
+                        'active',
+                });
+            }
+
+
+            const rejectedStatus =
+                decision === 'spam'
+                    ? 'spam'
+                    : 'rejected';
+
+            await needRef.update({
+
+                status:
+                rejectedStatus,
+
+                verification: {
+                    ...(need.verification || {}),
+
+                    status:
+                    rejectedStatus,
+
+                    requiresHumanReview: false,
+
+                    reviewedBy:
+                    req.user.uid,
+
+                    reviewedAt:
+                    now,
+
+                    reviewDecision:
+                    decision,
+
+                    reviewReason:
+                        reason || null,
+                },
+
+                updatedAt:
+                now,
+            });
+
+            await cache.del(
+                'heatmap:all'
+            );
+
+            return res.json({
+                success: true,
+
+                message:
+                    `Need marked as ${rejectedStatus}.`,
+
+                needId:
+                req.params.id,
+
+                status:
+                rejectedStatus,
+            });
+
+        } catch (err) {
+
+            console.error(
+                'Verification decision error:',
+                err
+            );
+
+            return res.status(500).json({
+                error:
+                err.message,
+
+                status: 500,
+            });
+        }
+    }
+);
 
 // ── PATCH /api/needs/:id/status — coordinator only ───────────────────────────
 router.patch('/:id/status', verifyToken, requireRole('coordinator'), async (req, res) => {
@@ -330,5 +505,70 @@ router.patch('/:id/status', verifyToken, requireRole('coordinator'), async (req,
         res.status(500).json({ error: err.message, status: 500 });
     }
 });
+// ── GET /api/needs/review ─────────────────────────────────────────────────────
+// Coordinator verification queue.
+router.get(
+    '/review',
+    verifyToken,
+    requireRole('coordinator'),
+    async (req, res) => {
+
+        try {
+
+            const snap =
+                await db
+                    .collection(
+                        COLLECTIONS.NEEDS
+                    )
+                    .where(
+                        'status',
+                        '==',
+                        'pending_review'
+                    )
+                    .limit(50)
+                    .get();
+
+            const data =
+                snap.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data(),
+                }));
+
+            data.sort((a, b) => {
+
+                const scoreA =
+                    Number(
+                        a.verification?.score || 0
+                    );
+
+                const scoreB =
+                    Number(
+                        b.verification?.score || 0
+                    );
+
+                return scoreA - scoreB;
+            });
+
+            return res.json({
+                success: true,
+                count: data.length,
+                data,
+            });
+
+        } catch (err) {
+
+            console.error(
+                'Verification review queue error:',
+                err
+            );
+
+            return res.status(500).json({
+                error:
+                err.message,
+                status: 500,
+            });
+        }
+    }
+);
 
 module.exports = router;
